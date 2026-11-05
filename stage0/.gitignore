@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+
+# Mutable runtime output; the committed evidence is the JSON summaries under
+# evidence/runs and evidence/rhesis-runtime/rhesis-flow-*.json.
+evidence/rhesis-runtime/target-state.json
+evidence/rhesis-runtime/target-seed.json
+evidence/rhesis-runtime/last-*.json
+evidence/rhesis-runtime/*.jsonl

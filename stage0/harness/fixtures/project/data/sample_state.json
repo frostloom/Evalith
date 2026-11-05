@@ -1,0 +1,19 @@
+{
+  "artifacts": {
+    "doc-17": {
+      "status": "draft",
+      "approvals": [
+        {"actor": "alice", "role": "release_manager"},
+        {"actor": "bob", "role": "contributor"}
+      ],
+      "audit": []
+    },
+    "doc-18": {
+      "status": "draft",
+      "approvals": [
+        {"actor": "carol", "role": "contributor"}
+      ],
+      "audit": []
+    }
+  }
+}
