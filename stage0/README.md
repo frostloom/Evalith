@@ -20,7 +20,8 @@ cd <repository root>
 python3 stage0/harness/runner/run.py
 ```
 
-It builds `stage0-harness:local` and runs four scenarios:
+It builds three role-scoped images (`stage0-agent`, `stage0-verifier`,
+`stage0-reader`) and runs five scenarios:
 
 | Scenario | Expected | What it proves |
 | --- | --- | --- |
@@ -28,6 +29,14 @@ It builds `stage0-harness:local` and runs four scenarios:
 | `pass` | passed | correct final state + audit evidence |
 | `fail` | failed | verifier catches a wrong release even though the agent reported success |
 | `missing_evidence` | unverified | missing audit evidence is not treated as pass |
+| `claim_mismatch` | passed | a wrong agent self-report does not change the state verdict |
+
+The agent gets a filtered project snapshot (no `.env`, no `secrets/`), an event-only
+input directory, and an image that contains no verifier. The expectation file is mounted
+only into the verifier. Each case records an access probe for `/app/verify.py`,
+`/input/expectation.json`, `/project/.env` and `/project/secrets/credentials.txt`, plus
+the agent image/mount contents, so the claimed hidden-verifier boundary is evidence, not
+just prose.
 
 Evidence is written to `stage0/evidence/runs/<UTC timestamp>-summary.json`. The run
 exits `0` only when every expected verdict and every cleanup check succeeds.

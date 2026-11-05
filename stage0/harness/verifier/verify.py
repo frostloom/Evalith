@@ -60,6 +60,19 @@ def main(argv: list[str]) -> int:
     def add(name: str, status: str, detail: str) -> None:
         checks.append({"check": name, "status": status, "detail": detail})
 
+    observed = (response or {}).get("observed") or {}
+    agent_claim = observed.get("reported_decision", observed.get("decision"))
+    expected_claim = (expectation or {}).get("expected_decision")
+    claim_diagnostics = {
+        "reported": agent_claim,
+        "expected": expected_claim,
+        "matches": (
+            None
+            if expected_claim is None or agent_claim is None
+            else agent_claim == expected_claim
+        ),
+    }
+
     if state is None:
         add("state_readable", "unverified", f"state file missing or invalid: {state_path}")
         verdict = "unverified"
@@ -123,19 +136,27 @@ def main(argv: list[str]) -> int:
                         f"{untouched_id} changed to {untouched.get('status')}",
                     )
 
-        agent_claim = (((response or {}).get("observed") or {}).get("decision"))
-        expected_claim = expectation.get("expected_decision")
-        if expected_claim is not None and agent_claim is not None:
-            if agent_claim == expected_claim:
-                add("agent_claim_matches", "passed", f"agent reported {agent_claim}")
-            else:
-                # The claim is not the verdict. Record it without letting it decide.
+        hidden = observed.get("hidden_access")
+        if not isinstance(hidden, dict) or not hidden:
+            add(
+                "hidden_material",
+                "unverified",
+                "agent did not report whether verifier/expectation/secret paths were reachable",
+            )
+        else:
+            readable = sorted(path for path, state in hidden.items() if state == "readable")
+            if readable:
                 add(
-                    "agent_claim_matches",
+                    "hidden_material",
                     "failed",
-                    f"agent reported {agent_claim}, expected {expected_claim}",
+                    "agent could read material it must not see: " + ", ".join(readable),
                 )
+            else:
+                add("hidden_material", "passed", "verifier, expectation and secret paths absent")
 
+        # The agent's own claim is diagnostic only: it must never change the state
+        # verdict. A correct state with missing evidence stays 'unverified' even when
+        # the agent reports a different decision.
         failed = [c for c in checks if c["status"] == "failed"]
         unverified = [c for c in checks if c["status"] == "unverified"]
         if failed:
@@ -151,7 +172,7 @@ def main(argv: list[str]) -> int:
             "verdict": verdict,
             "checks": checks,
             "expectation": expectation,
-            "agent_claim": (response or {}).get("observed", {}).get("decision"),
+            "claim_diagnostics": claim_diagnostics,
         },
     )
     return {"passed": 0, "failed": 2, "unverified": 3}[verdict]

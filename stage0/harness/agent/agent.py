@@ -58,6 +58,23 @@ def probe_write(path: Path) -> str:
         return f"read-only: {type(exc).__name__}"
 
 
+def probe_hidden_paths() -> dict:
+    """Record whether material the agent must not see is reachable.
+
+    The runner gives the agent only a filtered project snapshot and an event file, and
+    the agent image contains no verifier. A 'readable' result is an isolation failure.
+    """
+    candidates = (
+        "/app/verify.py",
+        "/input/expectation.json",
+        "/project/.env",
+        "/project/secrets/credentials.txt",
+    )
+    return {
+        path: ("readable" if Path(path).exists() else "absent") for path in candidates
+    }
+
+
 def main(argv: list[str]) -> int:
     if len(argv) < 5:
         print(
@@ -114,6 +131,16 @@ def main(argv: list[str]) -> int:
 
     observed["network"] = probe_network()
     observed["project_write"] = probe_write(project_root / ".stage0-write-probe")
+    observed["hidden_access"] = probe_hidden_paths()
+
+    # A wrong-claim variant lets the runner prove that the agent's self-report does not
+    # decide the independent state verdict.
+    reported_decision = observed["decision"]
+    if mode == "wrong_claim":
+        reported_decision = (
+            "rejected" if observed["decision"] == "released" else "released"
+        )
+    observed["reported_decision"] = reported_decision
 
     dump_json(state_path, state)
     dump_json(
@@ -122,7 +149,7 @@ def main(argv: list[str]) -> int:
             "ok": True,
             "agent": "stage0-synthetic-release-gate",
             "observed": observed,
-            "response_text": f"decision={observed['decision']}",
+            "response_text": f"decision={reported_decision}",
         },
     )
     return 0

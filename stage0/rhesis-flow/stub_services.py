@@ -115,25 +115,30 @@ def completion_content(body: dict) -> str:
     return "OK"
 
 
+def send_json(handler: BaseHTTPRequestHandler, status: int, payload: dict) -> None:
+    data = json.dumps(payload).encode("utf-8")
+    handler.send_response(status)
+    handler.send_header("Content-Type", "application/json")
+    handler.send_header("Content-Length", str(len(data)))
+    handler.end_headers()
+    handler.wfile.write(data)
+
+
 class LLMHandler(BaseHTTPRequestHandler):
     server_version = "stage0-stub-llm/1.0"
 
     def log_message(self, fmt: str, *args) -> None:  # keep container logs quiet
         return
 
-    def _send(self, status: int, payload: dict) -> None:
-        data = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
-
     def do_GET(self) -> None:
         if self.path.rstrip("/").endswith("/models"):
-            self._send(200, {"object": "list", "data": [{"id": "stage0-stub-model", "object": "model"}]})
+            send_json(
+                self,
+                200,
+                {"object": "list", "data": [{"id": "stage0-stub-model", "object": "model"}]},
+            )
         else:
-            self._send(200, {"status": "ok", "role": "stage0-stub-llm"})
+            send_json(self, 200, {"status": "ok", "role": "stage0-stub-llm"})
 
     def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length") or 0)
@@ -155,7 +160,8 @@ class LLMHandler(BaseHTTPRequestHandler):
                 "content_sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
             },
         )
-        self._send(
+        send_json(
+            self,
             200,
             {
                 "id": "chatcmpl-stage0-stub",
@@ -180,16 +186,8 @@ class TargetHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:
         return
 
-    def _send(self, status: int, payload: dict) -> None:
-        data = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
-
     def do_GET(self) -> None:
-        self._send(200, {"status": "ok", "role": "stage0-target"})
+        send_json(self, 200, {"status": "ok", "role": "stage0-target"})
 
     def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length") or 0)
@@ -202,7 +200,7 @@ class TargetHandler(BaseHTTPRequestHandler):
         if self.path.rstrip("/").endswith("/reset"):
             seed = load_json(TARGET_SEED, DEFAULT_SEED)
             write_json(TARGET_STATE, seed)
-            self._send(200, {"status": "reset"})
+            send_json(self, 200, {"status": "reset"})
             return
 
         parameters = body.get("test_parameters") or {}
@@ -260,7 +258,7 @@ class TargetHandler(BaseHTTPRequestHandler):
                 "response": response,
             },
         )
-        self._send(200, response)
+        send_json(self, 200, response)
 
 
 def serve(handler, port: int) -> None:

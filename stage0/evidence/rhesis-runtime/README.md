@@ -64,6 +64,12 @@ release that violates the synthetic policy, and for a release with no audit evid
 The independent verifier says failed and unverified respectively. A metric pass is not
 a state check.
 
+This JSON was produced before the harness verifier's claim-diagnostic refactor. The
+verdicts are unchanged: the failed case already failed the state checks, and the
+missing-evidence case had a matching claim. The harness evidence
+(`stage0/evidence/runs/20261105T064738Z-summary.json`) is the post-fix evidence for the
+claim behavior.
+
 ## IDs from the run
 
 ```text

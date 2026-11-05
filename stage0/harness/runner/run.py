@@ -31,7 +31,9 @@ HARNESS = HERE.parent
 REPO = HARNESS.parent.parent
 FIXTURES = HARNESS / "fixtures" / "project"
 EVIDENCE = REPO / "stage0" / "evidence" / "runs"
-IMAGE = "stage0-harness:local"
+AGENT_IMAGE = "stage0-agent:local"
+VERIFIER_IMAGE = "stage0-verifier:local"
+READER_IMAGE = "stage0-reader:local"
 RUN_PREFIX = "stage0-"
 
 
@@ -54,16 +56,23 @@ def docker(*args: str, check: bool = True) -> subprocess.CompletedProcess:
     return run(["docker", *args], check=check)
 
 
-def build_image() -> None:
-    docker(
-        "build",
-        "-t",
-        IMAGE,
-        "-f",
-        str(HARNESS / "Dockerfile"),
-        str(HARNESS),
-        check=True,
-    )
+def build_images() -> None:
+    for target, image in (
+        ("agent", AGENT_IMAGE),
+        ("verifier", VERIFIER_IMAGE),
+        ("reader", READER_IMAGE),
+    ):
+        docker(
+            "build",
+            "--target",
+            target,
+            "-t",
+            image,
+            "-f",
+            str(HARNESS / "Dockerfile"),
+            str(HARNESS),
+            check=True,
+        )
 
 
 def make_project_copy(root: Path) -> Path:
@@ -76,6 +85,28 @@ def make_project_copy(root: Path) -> Path:
     return project
 
 
+def make_agent_project(project: Path, destination: Path) -> Path:
+    """Copy only material the agent may see.
+
+    ``.env``, the synthetic ``secrets/`` directory, the escaping symlink and caches are
+    excluded before the mount exists. The scanner's exclusion list is therefore also the
+    mount's content list, not just a report about it.
+    """
+    shutil.copytree(
+        project,
+        destination,
+        ignore=shutil.ignore_patterns(".env*", "secrets", "leak-outside", "__pycache__"),
+    )
+    for path in destination.rglob("*"):
+        if path.is_symlink():
+            path.unlink()
+    return destination
+
+
+def relative_files(root: Path) -> list[str]:
+    return sorted(str(path.relative_to(root)) for path in root.rglob("*") if path.is_file())
+
+
 def seed_state(root: Path) -> Path:
     source = FIXTURES / "data" / "sample_state.json"
     seed = root / "seed.json"
@@ -84,15 +115,20 @@ def seed_state(root: Path) -> Path:
 
 
 def event_for(case: str) -> dict:
-    if case in {"pass", "missing_evidence"}:
+    if case in {"pass", "missing_evidence", "claim_mismatch"}:
         actor = "alice"
     else:
         actor = "bob"  # contributor; the naive agent will still release
+    mode = "normal"
+    if case == "missing_evidence":
+        mode = "missing_evidence"
+    elif case == "claim_mismatch":
+        mode = "wrong_claim"
     return {
         "artifact_id": "doc-17",
         "action": "release",
         "actor": actor,
-        "mode": "missing_evidence" if case == "missing_evidence" else "normal",
+        "mode": mode,
     }
 
 
@@ -113,7 +149,7 @@ def expectation_for(case: str) -> dict:
             "expected_decision": "rejected",
             "untouched_artifact": "doc-18",
         }
-    if case == "missing_evidence":
+    if case in {"missing_evidence", "claim_mismatch"}:
         return {
             "artifact_id": "doc-17",
             "expected_status": "released",
@@ -124,11 +160,17 @@ def expectation_for(case: str) -> dict:
     raise ValueError(f"unknown case {case}")
 
 
-EXPECTED_VERDICT = {"pass": "passed", "fail": "failed", "missing_evidence": "unverified"}
+EXPECTED_VERDICT = {
+    "pass": "passed",
+    "fail": "failed",
+    "missing_evidence": "unverified",
+    "claim_mismatch": "passed",
+}
 
 
 def container_run(
     *,
+    image: str,
     name: str,
     volumes: list[str],
     entrypoint: list[str],
@@ -161,7 +203,7 @@ def container_run(
     ]
     for volume in volumes:
         cmd.extend(["-v", volume])
-    cmd.extend([IMAGE, *entrypoint])
+    cmd.extend([image, *entrypoint])
     started = docker(*cmd, check=False)
     if started.returncode != 0:
         return (
@@ -192,7 +234,7 @@ def volume_read(volume: str, path: str) -> str | None:
         f"{volume}:{path.rsplit('/', 1)[0]}:ro",
         "--entrypoint",
         "python",
-        IMAGE,
+        READER_IMAGE,
         "-c",
         (
             "import sys;"
@@ -229,224 +271,334 @@ def container_inspect(name: str) -> dict | None:
     }
 
 
-def cleanup(run_id: str, volumes: list[str]) -> dict:
-    names = [f"{RUN_PREFIX}agent-{run_id}", f"{RUN_PREFIX}verify-{run_id}"]
+def resource_exists(kind: str, name: str) -> tuple[bool, str | None]:
+    """Return (exists, error). A missing resource is not a Docker error."""
+    if kind == "container":
+        result = docker("inspect", name, check=False)
+    else:
+        result = docker("volume", "inspect", name, check=False)
+    if result.returncode == 0:
+        return True, None
+    stderr = (result.stderr or "").strip()
+    lowered = stderr.lower()
+    if "no such" in lowered or "not found" in lowered:
+        return False, None
+    return False, stderr or f"docker inspect exited {result.returncode}"
+
+
+def cleanup(run_id: str, names: list[str], volumes: list[str]) -> dict:
+    """Remove this run's resources and verify they are actually gone.
+
+    Only resources named by this run are checked, so a concurrent unrelated container
+    cannot make the check fail and a surviving resource cannot be hidden by filtering it
+    out. A nonzero ``rm`` exit is recorded; the authoritative result is whether the
+    resource still exists afterwards.
+    """
+    actions = []
     for name in names:
-        docker("rm", "-f", name, check=False)
+        result = docker("rm", "-f", name, check=False)
+        actions.append(
+            {
+                "resource": name,
+                "kind": "container",
+                "rm_exit": result.returncode,
+                "stderr": result.stderr.strip(),
+            }
+        )
     for volume in volumes:
-        docker("volume", "rm", "-f", volume, check=False)
-    leftover_containers = docker(
-        "ps", "-a", "--filter", f"name={RUN_PREFIX}", "--format", "{{.Names}}", check=False
-    ).stdout.split()
-    leftover_volumes = docker(
-        "volume", "ls", "--filter", f"name={RUN_PREFIX}", "--format", "{{.Name}}", check=False
-    ).stdout.split()
+        result = docker("volume", "rm", "-f", volume, check=False)
+        actions.append(
+            {
+                "resource": volume,
+                "kind": "volume",
+                "rm_exit": result.returncode,
+                "stderr": result.stderr.strip(),
+            }
+        )
+
+    inspection_errors = []
+    leftover_containers = []
+    for name in names:
+        exists, error = resource_exists("container", name)
+        if exists:
+            leftover_containers.append(name)
+        if error:
+            inspection_errors.append({"resource": name, "kind": "container", "error": error})
+    leftover_volumes = []
+    for volume in volumes:
+        exists, error = resource_exists("volume", volume)
+        if exists:
+            leftover_volumes.append(volume)
+        if error:
+            inspection_errors.append({"resource": volume, "kind": "volume", "error": error})
+    command_failures = [
+        action
+        for action in actions
+        if action["rm_exit"] != 0
+        and (
+            action["resource"] in leftover_containers
+            or action["resource"] in leftover_volumes
+        )
+    ]
     return {
-        "removed_containers": names,
-        "removed_volumes": volumes,
-        "leftover_containers": [n for n in leftover_containers if n not in names],
-        "leftover_volumes": [v for v in leftover_volumes if v not in volumes],
-        "clean": not [n for n in leftover_containers if n not in names]
-        and not [v for v in leftover_volumes if v not in volumes],
+        "run_id": run_id,
+        "checked_containers": names,
+        "checked_volumes": volumes,
+        "actions": actions,
+        "leftover_containers": leftover_containers,
+        "leftover_volumes": leftover_volumes,
+        "command_failures": command_failures,
+        "inspection_errors": inspection_errors,
+        "clean": not leftover_containers
+        and not leftover_volumes
+        and not command_failures
+        and not inspection_errors,
     }
 
 
 def run_access(root: Path, run_id: str) -> dict:
     project = make_project_copy(root)
     out_volume = f"{RUN_PREFIX}access-{run_id}"
-    docker("volume", "create", out_volume, check=True)
-    docker(
-        "run",
-        "--rm",
-        "--user",
-        "0:0",
-        "-v",
-        f"{out_volume}:/out",
-        "--entrypoint",
-        "chown",
-        IMAGE,
-        "65534:65534",
-        "/out",
-        check=True,
-    )
-    reader_result = docker(
-        "run",
-        "--rm",
-        "--name",
-        f"{RUN_PREFIX}reader-{run_id}",
-        "--network",
-        "none",
-        "--read-only",
-        "--cap-drop",
-        "ALL",
-        "--security-opt",
-        "no-new-privileges",
-        "--user",
-        "65534:65534",
-        "-v",
-        f"{project}:/project:ro",
-        "-v",
-        f"{out_volume}:/out",
-        "--tmpfs",
-        "/tmp:rw,noexec,nosuid,size=16m",
-        "--entrypoint",
-        "python",
-        IMAGE,
-        "/app/read_project.py",
-        "--root",
-        "/project",
-        "--output",
-        "/out/manifest.json",
-        check=False,
-    )
-    raw = volume_read(out_volume, "/out/manifest.json")
-    manifest = json.loads(raw) if raw else None
-    docker("volume", "rm", "-f", out_volume, check=False)
-
-    paths = {entry["path"] for entry in (manifest or {}).get("files", [])}
-    skipped = {entry["path"]: entry["reason"] for entry in (manifest or {}).get("skipped", [])}
-    checks = {
-        "readme_included": "README.md" in paths,
-        "policy_included": "docs/RELEASE_POLICY.md" in paths,
-        "source_included": "src/release_gate.py" in paths,
-        "env_excluded": ".env" not in paths and skipped.get(".env") == "excluded_name",
-        "secrets_dir_excluded": "secrets/credentials.txt" not in paths,
-        "symlink_escape_rejected": "leak-outside" not in paths
-        and skipped.get("leak-outside") == "symlink_escape",
-        "project_mount_read_only": (manifest or {}).get("project_mount_writable") is False,
-        "no_secret_markers": not (manifest or {}).get("secret_markers_found"),
-    }
-    return {
+    reader_name = f"{RUN_PREFIX}reader-{run_id}"
+    result: dict = {
         "scenario": "local_project_access",
         "run_id": run_id,
-        "checks": checks,
-        "passed": all(checks.values()),
-        "manifest": manifest,
-        "reader_exit": reader_result.returncode,
-        "reader_stderr": reader_result.stderr.strip(),
-        "cleanup": cleanup(run_id, []),
+        "checks": {},
+        "passed": False,
+        "manifest": None,
     }
+    try:
+        docker("volume", "create", out_volume, check=True)
+        docker(
+            "run",
+            "--rm",
+            "--user",
+            "0:0",
+            "-v",
+            f"{out_volume}:/out",
+            "--entrypoint",
+            "chown",
+            READER_IMAGE,
+            "65534:65534",
+            "/out",
+            check=True,
+        )
+        reader_result, _ = container_run(
+            image=READER_IMAGE,
+            name=reader_name,
+            volumes=[f"{project}:/project:ro", f"{out_volume}:/out"],
+            entrypoint=[
+                "python",
+                "/app/read_project.py",
+                "--root",
+                "/project",
+                "--output",
+                "/out/manifest.json",
+            ],
+        )
+        raw = volume_read(out_volume, "/out/manifest.json")
+        manifest = json.loads(raw) if raw else None
+        paths = {entry["path"] for entry in (manifest or {}).get("files", [])}
+        skipped = {
+            entry["path"]: entry["reason"] for entry in (manifest or {}).get("skipped", [])
+        }
+        checks = {
+            "readme_included": "README.md" in paths,
+            "policy_included": "docs/RELEASE_POLICY.md" in paths,
+            "source_included": "src/release_gate.py" in paths,
+            "env_excluded": ".env" not in paths and skipped.get(".env") == "excluded_name",
+            "secrets_dir_excluded": "secrets/credentials.txt" not in paths,
+            "symlink_escape_rejected": "leak-outside" not in paths
+            and skipped.get("leak-outside") == "symlink_escape",
+            "project_mount_read_only": (manifest or {}).get("project_mount_writable") is False,
+            "no_secret_markers": not (manifest or {}).get("secret_markers_found"),
+        }
+        result.update(
+            {
+                "checks": checks,
+                "passed": all(checks.values()),
+                "manifest": manifest,
+                "reader_exit": reader_result.returncode,
+                "reader_stderr": reader_result.stderr.strip(),
+            }
+        )
+    except Exception as error:  # keep the failure in evidence, then still clean up
+        result["error"] = f"{type(error).__name__}: {error}"
+    finally:
+        result["cleanup"] = cleanup(run_id, [reader_name], [out_volume])
+    return result
 
 
 def run_case(case: str, root: Path, run_id: str) -> dict:
-    project = make_project_copy(root)
-    seed = seed_state(root)
-    input_dir = root / "input"
-    input_dir.mkdir()
-    event_path = input_dir / "event.json"
-    expectation_path = input_dir / "expectation.json"
-    event_path.write_text(json.dumps(event_for(case), indent=2) + "\n", encoding="utf-8")
-    expectation_path.write_text(
-        json.dumps(expectation_for(case), indent=2) + "\n", encoding="utf-8"
-    )
-
     state_volume = f"{RUN_PREFIX}state-{run_id}"
     out_volume = f"{RUN_PREFIX}out-{run_id}"
-    docker("volume", "create", state_volume, check=True)
-    docker("volume", "create", out_volume, check=True)
-    # Give the non-root user ownership of the two writable volumes only.
-    docker(
-        "run",
-        "--rm",
-        "--user",
-        "0:0",
-        "-v",
-        f"{state_volume}:/state",
-        "-v",
-        f"{out_volume}:/out",
-        "--entrypoint",
-        "chown",
-        IMAGE,
-        "65534:65534",
-        "/state",
-        "/out",
-        check=True,
-    )
-
     agent_name = f"{RUN_PREFIX}agent-{run_id}"
-    agent_result, agent_inspect = container_run(
-        name=agent_name,
-        volumes=[
-            f"{project}:/project:ro",
-            f"{input_dir}:/input:ro",
-            f"{seed}:/seed/initial.json:ro",
-            f"{state_volume}:/state",
-            f"{out_volume}:/out",
-        ],
-        entrypoint=[
-            "python",
-            "/app/agent.py",
-            "/input/event.json",
-            "/seed/initial.json",
-            "/state/state.json",
-            "/out/response.json",
-            "/project",
-        ],
-    )
     verify_name = f"{RUN_PREFIX}verify-{run_id}"
-    verifier_result, verifier_inspect = container_run(
-        name=verify_name,
-        volumes=[
-            f"{state_volume}:/state:ro",
-            f"{out_volume}:/out",
-            f"{input_dir}:/input:ro",
-        ],
-        entrypoint=[
-            "python",
-            "/app/verify.py",
-            "/state/state.json",
-            "/out/response.json",
-            "/input/expectation.json",
-            "/out/verdict.json",
-        ],
-    )
-
-    verdict_raw = volume_read(out_volume, "/out/verdict.json")
-    verdict = json.loads(verdict_raw) if verdict_raw else None
-    response_raw = volume_read(out_volume, "/out/response.json")
-    response = json.loads(response_raw) if response_raw else None
-
-    observed_verdict = (verdict or {}).get("verdict")
     expected_verdict = EXPECTED_VERDICT[case]
-    case_ok = observed_verdict == expected_verdict and verifier_result.returncode == {
-        "passed": 0,
-        "failed": 2,
-        "unverified": 3,
-    }[expected_verdict]
-
-    cleanup_info = cleanup(run_id, [state_volume, out_volume])
-
-    return {
+    result: dict = {
         "scenario": "synthetic_release_gate",
         "case": case,
         "run_id": run_id,
         "expected_verdict": expected_verdict,
-        "observed_verdict": observed_verdict,
-        "case_ok": case_ok,
-        "agent_exit": agent_result.returncode,
-        "verifier_exit": verifier_result.returncode,
-        "agent_observed": (response or {}).get("observed"),
-        "verdict": verdict,
-        "isolation": {
-            "network_mode": agent_inspect.get("network_mode"),
-            "readonly_rootfs": agent_inspect.get("readonly_rootfs"),
-            "cap_drop": agent_inspect.get("cap_drop"),
-            "user": agent_inspect.get("user"),
-            "binds": agent_inspect.get("binds"),
-        },
-        "cleanup": cleanup_info,
-        "agent_isolation": agent_inspect,
-        "verifier_isolation": verifier_inspect,
-        "agent_stderr": agent_result.stderr.strip(),
-        "verifier_stderr": verifier_result.stderr.strip(),
+        "observed_verdict": None,
+        "case_ok": False,
+        "agent_input_files": [],
+        "agent_project_files": [],
     }
 
+    try:
+        project = make_project_copy(root)
+        agent_project = make_agent_project(project, root / "agent-project")
+        seed = seed_state(root)
+        agent_input = root / "agent-input"
+        verifier_input = root / "verifier-input"
+        agent_input.mkdir()
+        verifier_input.mkdir()
+        (agent_input / "event.json").write_text(
+            json.dumps(event_for(case), indent=2) + "\n", encoding="utf-8"
+        )
+        (verifier_input / "expectation.json").write_text(
+            json.dumps(expectation_for(case), indent=2) + "\n", encoding="utf-8"
+        )
+        result["agent_input_files"] = relative_files(agent_input)
+        result["agent_project_files"] = relative_files(agent_project)
+
+        docker("volume", "create", state_volume, check=True)
+        docker("volume", "create", out_volume, check=True)
+        # Give the non-root user ownership of the two writable volumes only.
+        docker(
+            "run",
+            "--rm",
+            "--user",
+            "0:0",
+            "-v",
+            f"{state_volume}:/state",
+            "-v",
+            f"{out_volume}:/out",
+            "--entrypoint",
+            "chown",
+            AGENT_IMAGE,
+            "65534:65534",
+            "/state",
+            "/out",
+            check=True,
+        )
+
+        agent_result, agent_inspect = container_run(
+            image=AGENT_IMAGE,
+            name=agent_name,
+            volumes=[
+                f"{agent_project}:/project:ro",
+                f"{agent_input}:/input:ro",
+                f"{seed}:/seed/initial.json:ro",
+                f"{state_volume}:/state",
+                f"{out_volume}:/out",
+            ],
+            entrypoint=[
+                "python",
+                "/app/agent.py",
+                "/input/event.json",
+                "/seed/initial.json",
+                "/state/state.json",
+                "/out/response.json",
+                "/project",
+            ],
+        )
+        verifier_result, verifier_inspect = container_run(
+            image=VERIFIER_IMAGE,
+            name=verify_name,
+            volumes=[
+                f"{state_volume}:/state:ro",
+                f"{out_volume}:/out",
+                f"{verifier_input}:/input:ro",
+            ],
+            entrypoint=[
+                "python",
+                "/app/verify.py",
+                "/state/state.json",
+                "/out/response.json",
+                "/input/expectation.json",
+                "/out/verdict.json",
+            ],
+        )
+
+        verdict_raw = volume_read(out_volume, "/out/verdict.json")
+        verdict = json.loads(verdict_raw) if verdict_raw else None
+        response_raw = volume_read(out_volume, "/out/response.json")
+        response = json.loads(response_raw) if response_raw else None
+
+        observed_verdict = (verdict or {}).get("verdict")
+        agent_observations = (response or {}).get("observed") or {}
+
+        image_probe = docker(
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            "--read-only",
+            "--user",
+            "65534:65534",
+            "--entrypoint",
+            "sh",
+            AGENT_IMAGE,
+            "-c",
+            "test -e /app/verify.py",
+            check=False,
+        )
+        project_files = relative_files(agent_project)
+        input_files = relative_files(agent_input)
+        project_filtered = not any(
+            path == ".env"
+            or path.startswith(".env")
+            or path == "secrets"
+            or path.startswith("secrets/")
+            for path in project_files
+        )
+        only_event = input_files == ["event.json"]
+        case_ok = (
+            observed_verdict == expected_verdict
+            and verifier_result.returncode
+            == {"passed": 0, "failed": 2, "unverified": 3}[expected_verdict]
+            and image_probe.returncode != 0
+            and project_filtered
+            and only_event
+        )
+        result.update(
+            {
+                "observed_verdict": observed_verdict,
+                "case_ok": case_ok,
+                "agent_exit": agent_result.returncode,
+                "verifier_exit": verifier_result.returncode,
+                "agent_observed": agent_observations,
+                "hidden_material": agent_observations.get("hidden_access"),
+                "agent_image_has_verifier": image_probe.returncode == 0,
+                "agent_project_filtered": project_filtered,
+                "agent_input_only_event": only_event,
+                "verdict": verdict,
+                "isolation": {
+                    "network_mode": agent_inspect.get("network_mode"),
+                    "readonly_rootfs": agent_inspect.get("readonly_rootfs"),
+                    "cap_drop": agent_inspect.get("cap_drop"),
+                    "user": agent_inspect.get("user"),
+                    "binds": agent_inspect.get("binds"),
+                },
+                "agent_isolation": agent_inspect,
+                "verifier_isolation": verifier_inspect,
+                "agent_stderr": agent_result.stderr.strip(),
+                "verifier_stderr": verifier_result.stderr.strip(),
+            }
+        )
+    except Exception as error:  # record the failure, then always attempt cleanup
+        result["error"] = f"{type(error).__name__}: {error}"
+    finally:
+        result["cleanup"] = cleanup(run_id, [agent_name, verify_name], [state_volume, out_volume])
+    return result
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--cases",
-        default="pass,fail,missing_evidence",
+        default="pass,fail,missing_evidence,claim_mismatch",
         help="comma-separated cases to run",
     )
     parser.add_argument("--skip-build", action="store_true")
@@ -459,10 +611,19 @@ def main() -> int:
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     EVIDENCE.mkdir(parents=True, exist_ok=True)
-    summary = {"started_at": stamp, "image": IMAGE, "access": None, "cases": []}
+    summary = {
+        "started_at": stamp,
+        "images": {
+            "agent": AGENT_IMAGE,
+            "verifier": VERIFIER_IMAGE,
+            "reader": READER_IMAGE,
+        },
+        "access": None,
+        "cases": [],
+    }
 
     if not args.skip_build:
-        build_image()
+        build_images()
 
     with tempfile.TemporaryDirectory(prefix="stage0-run-") as tmp:
         root = Path(tmp)
@@ -482,13 +643,16 @@ def main() -> int:
                 f"case {case}: expected={result['expected_verdict']} "
                 f"observed={result['observed_verdict']} ({status}), "
                 f"cleanup={'clean' if result['cleanup']['clean'] else 'LEFTOVER'}"
+                + (f", error={result['error']}" if result.get("error") else "")
             )
 
     summary["finished_at"] = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     summary["all_ok"] = bool(
         summary["access"]
         and summary["access"]["passed"]
+        and summary["access"]["cleanup"]["clean"]
         and all(case["case_ok"] for case in summary["cases"])
+        and all(not case.get("error") for case in summary["cases"])
         and all(case["cleanup"]["clean"] for case in summary["cases"])
     )
     output = EVIDENCE / f"{stamp}-summary.json"
