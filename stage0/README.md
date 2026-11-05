@@ -21,7 +21,7 @@ python3 stage0/harness/runner/run.py
 ```
 
 It builds three role-scoped images (`stage0-agent`, `stage0-verifier`,
-`stage0-reader`) and runs two access checks plus six cases:
+`stage0-reader`) and runs two access checks plus nine cases:
 
 | Scenario | Expected | What it proves |
 | --- | --- | --- |
@@ -33,6 +33,9 @@ It builds three role-scoped images (`stage0-agent`, `stage0-verifier`,
 | `claim_mismatch` | passed | a wrong agent self-report does not change the state verdict |
 | `unrelated_mutation` | failed | changing an unrelated artifact's approvals while keeping its status is caught by a full-snapshot comparison |
 | `agent_crash` | rejected | agent writes valid state/response but exits 1; the runner rejects it as an execution failure even though the verifier passes |
+| `malformed_audit` | failed | release audit is a string, not a list; the verifier rejects the malformed collection |
+| `null_audit` | failed | release audit is `[null]`; the verifier rejects a non-object entry |
+| `missing_audit` | unverified | released artifact has no audit field; the verifier reports the missing evidence |
 
 The agent gets a filtered project snapshot (no `.env`, no `secrets/`), an event-only
 input directory, and an image that contains no verifier. The expectation file is mounted

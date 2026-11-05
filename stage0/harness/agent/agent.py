@@ -129,6 +129,16 @@ def main(argv: list[str]) -> int:
     else:
         observed["decision"] = "unknown_artifact"
 
+    # Calibration: valid release transition, malformed audit evidence. The verifier
+    # must reject a non-list audit or an entry without action/actor.
+    if mode in {"malformed_audit", "null_audit", "missing_audit"} and artifact is not None:
+        if mode == "malformed_audit":
+            artifact["audit"] = "not-a-list"
+        elif mode == "null_audit":
+            artifact["audit"] = [None]
+        else:
+            artifact.pop("audit", None)
+
     # A deliberately unrelated mutation: keep doc-18's status as draft but change
     # another field. The verifier must compare the complete initial snapshot.
     if mode == "unrelated_mutation":

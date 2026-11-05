@@ -7,16 +7,16 @@
       "assistant_messages": 1,
       "error": null,
       "last_assistant_excerpt": "OK",
-      "session_id": "7eb4f726-5fda-49fa-8bae-aebaff10aaec"
+      "session_id": "0a818dec-d4b8-49e6-91f8-45789e31afbb"
     },
     "connection": {
       "message": "Successfully connected to litellm_proxy. Model is responding correctly.",
       "success": true
     },
-    "endpoint_id": "fca17842-31c3-4327-9c65-e0869a876c90",
-    "model_id": "74625e49-8364-4068-ade4-423b927966a1",
-    "project_id": "54bdd70d-9510-429a-ac4b-6536f5627a19",
-    "test_set_type_id": "a6e1c06a-467a-44e0-a4a6-dc6490ca3a12"
+    "endpoint_id": "c4af47a4-1e95-47cd-94a0-c370018ddd44",
+    "model_id": "7369115a-8704-40b5-8645-b73ea422ae01",
+    "project_id": "ce100312-1357-43f5-a39c-53f533bd7c47",
+    "test_set_type_id": "05a986dd-95d3-43ba-817e-6e75d20fdaee"
   },
   "scenarios": [
     {
@@ -48,7 +48,7 @@
             },
             {
               "check": "audit_entries",
-              "detail": "1 audit entry",
+              "detail": "1 valid release audit entry",
               "status": "passed"
             },
             {
@@ -83,22 +83,22 @@
           "verdict": "passed"
         }
       },
-      "metric_id": "ddf4f499-1eeb-4320-9475-c7713ac96285",
+      "metric_id": "90e1ef26-1fb2-482d-960a-dba7e74c1ee5",
       "rhesis_execution_ok": true,
       "rhesis_result_count": 1,
       "rhesis_results": [
         {
           "execution": "ok",
-          "test_id": "66983e2d-f254-4ced-91b2-8b01e15c21d7",
+          "test_id": "387f3bf2-f466-4190-89d7-df54adad357b",
           "test_metrics": {
-            "execution_time": 405.66799999999995,
+            "execution_time": 95.843,
             "metrics": {
-              "stage0-stub-judge-1793867176-pass": {
+              "stage0-stub-judge-1793868523-pass": {
                 "backend": "rhesis",
                 "class_name": "NumericJudge",
                 "description": "Deterministic stub judge; it always returns 1.0.",
                 "is_successful": true,
-                "name": "stage0-stub-judge-1793867176-pass",
+                "name": "stage0-stub-judge-1793868523-pass",
                 "reason": "Stage 0 stub judge: always returns 1.0 so the harness can show that a metric is not an independent state check.",
                 "score": 1.0,
                 "threshold": 0.5
@@ -129,8 +129,8 @@
               "connection_type": "REST",
               "headers": {
                 "Content-Type": "application/json",
-                "X-Organization-ID": "7d6fb34c-46bd-4092-ada6-59b6f5ac63a1",
-                "X-User-ID": "3708b25f-4180-42b8-a01a-497056071a90"
+                "X-Organization-ID": "21a91dcd-053e-40a8-833e-17a42c2e466e",
+                "X-User-ID": "5743a57b-a5ef-4fbe-826e-a96f61cec5ba"
               },
               "method": "POST",
               "url": "http://stage0-stub:18082/invoke"
@@ -168,7 +168,7 @@
       "rhesis_verdicts": [
         "pass"
       ],
-      "run_id": "14fa0ebd-2b68-4255-ae4c-682e0e52bede",
+      "run_id": "96cb6031-69eb-47b0-9aa5-452113813756",
       "scenario": "pass",
       "target_request": {
         "observed": {
@@ -192,8 +192,8 @@
         },
         "status": "ok"
       },
-      "test_id": "66983e2d-f254-4ced-91b2-8b01e15c21d7",
-      "test_set_id": "b86d6699-ce5d-432d-909b-8a51b24aec04",
+      "test_id": "387f3bf2-f466-4190-89d7-df54adad357b",
+      "test_set_id": "18c7c94e-f211-4cee-8221-781528372a53",
       "timed_out": false
     },
     {
@@ -260,22 +260,22 @@
           "verdict": "failed"
         }
       },
-      "metric_id": "c6e575c7-b97b-4a97-a8fe-8d078137cab8",
+      "metric_id": "c0cd2dc1-662c-4cfd-a025-f33b4c905fb4",
       "rhesis_execution_ok": true,
       "rhesis_result_count": 1,
       "rhesis_results": [
         {
           "execution": "ok",
-          "test_id": "cc9dd497-d634-4024-8595-f2087d270c83",
+          "test_id": "04e75ef0-0d6a-480a-ae9f-2fa00b9b8359",
           "test_metrics": {
-            "execution_time": 74.294,
+            "execution_time": 56.415,
             "metrics": {
-              "stage0-stub-judge-1793867190-fail": {
+              "stage0-stub-judge-1793868531-fail": {
                 "backend": "rhesis",
                 "class_name": "NumericJudge",
                 "description": "Deterministic stub judge; it always returns 1.0.",
                 "is_successful": true,
-                "name": "stage0-stub-judge-1793867190-fail",
+                "name": "stage0-stub-judge-1793868531-fail",
                 "reason": "Stage 0 stub judge: always returns 1.0 so the harness can show that a metric is not an independent state check.",
                 "score": 1.0,
                 "threshold": 0.5
@@ -306,8 +306,8 @@
               "connection_type": "REST",
               "headers": {
                 "Content-Type": "application/json",
-                "X-Organization-ID": "7d6fb34c-46bd-4092-ada6-59b6f5ac63a1",
-                "X-User-ID": "3708b25f-4180-42b8-a01a-497056071a90"
+                "X-Organization-ID": "21a91dcd-053e-40a8-833e-17a42c2e466e",
+                "X-User-ID": "5743a57b-a5ef-4fbe-826e-a96f61cec5ba"
               },
               "method": "POST",
               "url": "http://stage0-stub:18082/invoke"
@@ -345,7 +345,7 @@
       "rhesis_verdicts": [
         "pass"
       ],
-      "run_id": "3ff09a43-15f9-4ea0-86a1-540cc620c930",
+      "run_id": "a21c1407-73f3-4ae4-bd63-7b9076d1d379",
       "scenario": "fail",
       "target_request": {
         "observed": {
@@ -369,8 +369,8 @@
         },
         "status": "ok"
       },
-      "test_id": "cc9dd497-d634-4024-8595-f2087d270c83",
-      "test_set_id": "0a3bd1f5-3741-4415-992e-fe63f6b9a889",
+      "test_id": "04e75ef0-0d6a-480a-ae9f-2fa00b9b8359",
+      "test_set_id": "a0ca3aa2-dd85-4bca-b869-6ed50495879c",
       "timed_out": false
     },
     {
@@ -437,22 +437,22 @@
           "verdict": "unverified"
         }
       },
-      "metric_id": "3747a59a-374b-4a7e-bc4f-6c572c38cd51",
+      "metric_id": "f6eb8d90-92f6-4c49-9614-d625a4833e0e",
       "rhesis_execution_ok": true,
       "rhesis_result_count": 1,
       "rhesis_results": [
         {
           "execution": "ok",
-          "test_id": "141e8ae8-17d9-4cdf-b2b4-6f9dc8e4048d",
+          "test_id": "0c558749-6c29-410c-8380-1321e3fe6b86",
           "test_metrics": {
-            "execution_time": 66.762,
+            "execution_time": 34.113,
             "metrics": {
-              "stage0-stub-judge-1793867193-missing_evidence": {
+              "stage0-stub-judge-1793868534-missing_evidence": {
                 "backend": "rhesis",
                 "class_name": "NumericJudge",
                 "description": "Deterministic stub judge; it always returns 1.0.",
                 "is_successful": true,
-                "name": "stage0-stub-judge-1793867193-missing_evidence",
+                "name": "stage0-stub-judge-1793868534-missing_evidence",
                 "reason": "Stage 0 stub judge: always returns 1.0 so the harness can show that a metric is not an independent state check.",
                 "score": 1.0,
                 "threshold": 0.5
@@ -483,8 +483,8 @@
               "connection_type": "REST",
               "headers": {
                 "Content-Type": "application/json",
-                "X-Organization-ID": "7d6fb34c-46bd-4092-ada6-59b6f5ac63a1",
-                "X-User-ID": "3708b25f-4180-42b8-a01a-497056071a90"
+                "X-Organization-ID": "21a91dcd-053e-40a8-833e-17a42c2e466e",
+                "X-User-ID": "5743a57b-a5ef-4fbe-826e-a96f61cec5ba"
               },
               "method": "POST",
               "url": "http://stage0-stub:18082/invoke"
@@ -522,7 +522,7 @@
       "rhesis_verdicts": [
         "pass"
       ],
-      "run_id": "a0ba80ec-0c6f-421a-8e1f-0e8c246f7345",
+      "run_id": "f231e49b-d1f6-43b8-bc6e-99b1c1c880fc",
       "scenario": "missing_evidence",
       "target_request": {
         "observed": {
@@ -546,8 +546,8 @@
         },
         "status": "ok"
       },
-      "test_id": "141e8ae8-17d9-4cdf-b2b4-6f9dc8e4048d",
-      "test_set_id": "16228a30-498d-4d1c-88ce-089a8772231f",
+      "test_id": "0c558749-6c29-410c-8380-1321e3fe6b86",
+      "test_set_id": "83ab3c06-883b-45d0-ab8b-842f062591e5",
       "timed_out": false
     }
   ]

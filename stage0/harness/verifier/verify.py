@@ -103,27 +103,63 @@ def main(argv: list[str]) -> int:
                 )
 
             expected_audit = expectation["expected_audit_entries"]
-            audit = artifact.get("audit") or []
-            if expected_audit == 0:
-                if len(audit) == 0:
-                    add("audit_entries", "passed", "no release audit entry, as expected")
-                else:
-                    add("audit_entries", "failed", f"expected no audit entry, found {len(audit)}")
+            if "audit" not in artifact:
+                add(
+                    "audit_entries",
+                    "unverified",
+                    "audit field is missing; cannot confirm the release audit evidence",
+                )
             else:
-                if len(audit) == 0:
-                    add(
-                        "audit_entries",
-                        "unverified",
-                        "release audit entry is missing; cannot confirm the side effect",
-                    )
-                elif len(audit) == expected_audit:
-                    add("audit_entries", "passed", f"{expected_audit} audit entry")
-                else:
+                audit = artifact.get("audit")
+                if not isinstance(audit, list):
                     add(
                         "audit_entries",
                         "failed",
-                        f"expected {expected_audit} audit entries, found {len(audit)}",
+                        f"audit must be a list, found {type(audit).__name__}",
                     )
+                else:
+                    invalid = []
+                    for index, entry in enumerate(audit):
+                        if not isinstance(entry, dict):
+                            invalid.append(f"[{index}] is {type(entry).__name__}")
+                            continue
+                        action = entry.get("action")
+                        actor = entry.get("actor")
+                        if not isinstance(action, str) or not action.strip():
+                            invalid.append(f"[{index}] has no string action")
+                        elif not isinstance(actor, str) or not actor.strip():
+                            invalid.append(f"[{index}] has no string actor")
+                    if invalid:
+                        add(
+                            "audit_entries",
+                            "failed",
+                            "malformed audit evidence: " + "; ".join(invalid),
+                        )
+                    elif expected_audit == 0:
+                        if len(audit) == 0:
+                            add("audit_entries", "passed", "no release audit entry, as expected")
+                        else:
+                            add("audit_entries", "failed", f"expected no audit entry, found {len(audit)}")
+                    elif len(audit) == 0:
+                        add(
+                            "audit_entries",
+                            "unverified",
+                            "release audit entry is missing; cannot confirm the side effect",
+                        )
+                    elif len(audit) != expected_audit:
+                        add(
+                            "audit_entries",
+                            "failed",
+                            f"expected {expected_audit} audit entries, found {len(audit)}",
+                        )
+                    elif any(entry.get("action") != "release" for entry in audit):
+                        add(
+                            "audit_entries",
+                            "failed",
+                            "audit entry does not record a release action",
+                        )
+                    else:
+                        add("audit_entries", "passed", f"{expected_audit} valid release audit entry")
 
             untouched_id = expectation.get("untouched_artifact")
             if untouched_id:

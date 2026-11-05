@@ -123,6 +123,9 @@ def event_for(case: str) -> dict:
         "claim_mismatch",
         "unrelated_mutation",
         "agent_crash",
+        "malformed_audit",
+        "null_audit",
+        "missing_audit",
     }:
         actor = "alice"
     else:
@@ -136,6 +139,12 @@ def event_for(case: str) -> dict:
         mode = "unrelated_mutation"
     elif case == "agent_crash":
         mode = "crash_after_write"
+    elif case == "malformed_audit":
+        mode = "malformed_audit"
+    elif case == "null_audit":
+        mode = "null_audit"
+    elif case == "missing_audit":
+        mode = "missing_audit"
     return {
         "artifact_id": "doc-17",
         "action": "release",
@@ -156,6 +165,9 @@ def expectation_for(case: str) -> dict:
         "claim_mismatch",
         "unrelated_mutation",
         "agent_crash",
+        "malformed_audit",
+        "null_audit",
+        "missing_audit",
     }:
         return {
             **base,
@@ -179,6 +191,9 @@ EXPECTED_VERDICT = {
     "claim_mismatch": "passed",
     "unrelated_mutation": "failed",
     "agent_crash": "passed",
+    "malformed_audit": "failed",
+    "null_audit": "failed",
+    "missing_audit": "unverified",
 }
 
 EXPECTED_CASE_OK = {
@@ -188,6 +203,9 @@ EXPECTED_CASE_OK = {
     "claim_mismatch": True,
     "unrelated_mutation": True,
     "agent_crash": False,
+    "malformed_audit": True,
+    "null_audit": True,
+    "missing_audit": True,
 }
 
 
@@ -753,7 +771,10 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--cases",
-        default="pass,fail,missing_evidence,claim_mismatch,unrelated_mutation,agent_crash",
+        default=(
+            "pass,fail,missing_evidence,claim_mismatch,unrelated_mutation,agent_crash,"
+            "malformed_audit,null_audit,missing_audit"
+        ),
         help="comma-separated cases to run",
     )
     parser.add_argument("--skip-build", action="store_true")
