@@ -30,6 +30,8 @@ HERE = Path(__file__).resolve().parent
 HARNESS = HERE.parent
 REPO = HARNESS.parent.parent
 FIXTURES = HARNESS / "fixtures" / "project"
+SAMPLE_STATE = json.loads((FIXTURES / "data" / "sample_state.json").read_text(encoding="utf-8"))
+UNTOUCHED_SNAPSHOT = SAMPLE_STATE["artifacts"]["doc-18"]
 EVIDENCE = REPO / "stage0" / "evidence" / "runs"
 AGENT_IMAGE = "stage0-agent:local"
 VERIFIER_IMAGE = "stage0-verifier:local"
@@ -115,7 +117,7 @@ def seed_state(root: Path) -> Path:
 
 
 def event_for(case: str) -> dict:
-    if case in {"pass", "missing_evidence", "claim_mismatch"}:
+    if case in {"pass", "missing_evidence", "claim_mismatch", "unrelated_mutation"}:
         actor = "alice"
     else:
         actor = "bob"  # contributor; the naive agent will still release
@@ -124,6 +126,8 @@ def event_for(case: str) -> dict:
         mode = "missing_evidence"
     elif case == "claim_mismatch":
         mode = "wrong_claim"
+    elif case == "unrelated_mutation":
+        mode = "unrelated_mutation"
     return {
         "artifact_id": "doc-17",
         "action": "release",
@@ -133,38 +137,33 @@ def event_for(case: str) -> dict:
 
 
 def expectation_for(case: str) -> dict:
-    if case == "pass":
+    base = {
+        "artifact_id": "doc-17",
+        "untouched_artifact": "doc-18",
+        "untouched_artifact_snapshot": UNTOUCHED_SNAPSHOT,
+    }
+    if case in {"pass", "missing_evidence", "claim_mismatch", "unrelated_mutation"}:
         return {
-            "artifact_id": "doc-17",
+            **base,
             "expected_status": "released",
             "expected_audit_entries": 1,
             "expected_decision": "released",
-            "untouched_artifact": "doc-18",
         }
     if case == "fail":
         return {
-            "artifact_id": "doc-17",
+            **base,
             "expected_status": "draft",
             "expected_audit_entries": 0,
             "expected_decision": "rejected",
-            "untouched_artifact": "doc-18",
-        }
-    if case in {"missing_evidence", "claim_mismatch"}:
-        return {
-            "artifact_id": "doc-17",
-            "expected_status": "released",
-            "expected_audit_entries": 1,
-            "expected_decision": "released",
-            "untouched_artifact": "doc-18",
         }
     raise ValueError(f"unknown case {case}")
-
 
 EXPECTED_VERDICT = {
     "pass": "passed",
     "fail": "failed",
     "missing_evidence": "unverified",
     "claim_mismatch": "passed",
+    "unrelated_mutation": "failed",
 }
 
 
@@ -515,6 +514,7 @@ def run_case(case: str, root: Path, run_id: str) -> dict:
             entrypoint=[
                 "python",
                 "/app/verify.py",
+                "--require-hidden-access",
                 "/state/state.json",
                 "/out/response.json",
                 "/input/expectation.json",
@@ -598,7 +598,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--cases",
-        default="pass,fail,missing_evidence,claim_mismatch",
+        default="pass,fail,missing_evidence,claim_mismatch,unrelated_mutation",
         help="comma-separated cases to run",
     )
     parser.add_argument("--skip-build", action="store_true")

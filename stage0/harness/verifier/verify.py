@@ -43,14 +43,17 @@ def write_json(path: str, payload: dict) -> None:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) < 5:
+    require_hidden_access = "--require-hidden-access" in argv[1:]
+    args = [arg for arg in argv[1:] if arg != "--require-hidden-access"]
+    if len(args) < 4:
         print(
-            "usage: verify.py <state> <response> <expectation> <verdict>",
+            "usage: verify.py [--require-hidden-access] "
+            "<state> <response> <expectation> <verdict>",
             file=sys.stderr,
         )
         return 2
 
-    state_path, response_path, expectation_path, verdict_path = argv[1:5]
+    state_path, response_path, expectation_path, verdict_path = args[:4]
     state = load_json(state_path)
     response = load_json(response_path)
     expectation = load_json(expectation_path)
@@ -125,25 +128,39 @@ def main(argv: list[str]) -> int:
             untouched_id = expectation.get("untouched_artifact")
             if untouched_id:
                 untouched = (state.get("artifacts") or {}).get(untouched_id)
+                untouched_snapshot = expectation.get("untouched_artifact_snapshot")
                 if untouched is None:
                     add("untouched_artifact", "unverified", f"{untouched_id} missing from state")
-                elif untouched.get("status") == "draft":
-                    add("untouched_artifact", "passed", f"{untouched_id} still draft")
+                elif untouched_snapshot is None:
+                    add(
+                        "untouched_artifact",
+                        "unverified",
+                        f"no initial snapshot for {untouched_id}; cannot prove it is unchanged",
+                    )
+                elif untouched == untouched_snapshot:
+                    add(
+                        "untouched_artifact",
+                        "passed",
+                        f"{untouched_id} exactly matches its initial state",
+                    )
                 else:
+                    changed = sorted(
+                        key
+                        for key in set(untouched) | set(untouched_snapshot)
+                        if untouched.get(key) != untouched_snapshot.get(key)
+                    )
                     add(
                         "untouched_artifact",
                         "failed",
-                        f"{untouched_id} changed to {untouched.get('status')}",
+                        f"{untouched_id} changed outside the expected transition: "
+                        + ", ".join(changed),
                     )
 
+        # Isolation probes belong to the harness boundary, not to the shared state
+        # contract. The Rhesis runtime flow has no agent container to probe, so it
+        # opts out; the harness runner opts in with --require-hidden-access.
         hidden = observed.get("hidden_access")
-        if not isinstance(hidden, dict) or not hidden:
-            add(
-                "hidden_material",
-                "unverified",
-                "agent did not report whether verifier/expectation/secret paths were reachable",
-            )
-        else:
+        if isinstance(hidden, dict) and hidden:
             readable = sorted(path for path, state in hidden.items() if state == "readable")
             if readable:
                 add(
@@ -153,6 +170,12 @@ def main(argv: list[str]) -> int:
                 )
             else:
                 add("hidden_material", "passed", "verifier, expectation and secret paths absent")
+        elif require_hidden_access:
+            add(
+                "hidden_material",
+                "unverified",
+                "agent did not report whether verifier/expectation/secret paths were reachable",
+            )
 
         # The agent's own claim is diagnostic only: it must never change the state
         # verdict. A correct state with missing evidence stays 'unverified' even when

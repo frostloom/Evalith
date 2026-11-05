@@ -6,16 +6,16 @@
       "assistant_messages": 1,
       "error": null,
       "last_assistant_excerpt": "OK",
-      "session_id": "670518df-fe84-4441-ab0c-de2303d331f1"
+      "session_id": "ca2249b1-2c6d-45bd-8d6e-2c8b81542c81"
     },
     "connection": {
       "message": "Successfully connected to litellm_proxy. Model is responding correctly.",
       "success": true
     },
-    "endpoint_id": "0bd7924f-ce95-441c-b214-976fb84684d0",
-    "model_id": "de8eda55-b13c-444e-b80a-77b0e2f9bb6a",
-    "project_id": "716c59a6-be63-46f6-aeb3-483f608fd69f",
-    "test_set_type_id": "0865f6f5-a7ef-4b10-b3ce-5d30fd00a8de"
+    "endpoint_id": "e9a52cdc-e4d3-4a1e-9859-76ef6ec748c8",
+    "model_id": "45db1458-ae05-4b2f-81d4-0a5f6a346d89",
+    "project_id": "3521b1b4-e6bf-42bd-a67e-1f291dc58645",
+    "test_set_type_id": "191606ac-2d4d-41ad-ad96-16e5be4388c9"
   },
   "scenarios": [
     {
@@ -24,7 +24,6 @@
         "exit_code": 0,
         "stderr": "",
         "verdict": {
-          "agent_claim": "released",
           "checks": [
             {
               "check": "state_readable",
@@ -48,41 +47,51 @@
             },
             {
               "check": "untouched_artifact",
-              "detail": "doc-18 still draft",
-              "status": "passed"
-            },
-            {
-              "check": "agent_claim_matches",
-              "detail": "agent reported released",
+              "detail": "doc-18 exactly matches its initial state",
               "status": "passed"
             }
           ],
+          "claim_diagnostics": {
+            "expected": "released",
+            "matches": true,
+            "reported": "released"
+          },
           "expectation": {
             "artifact_id": "doc-17",
             "expected_audit_entries": 1,
             "expected_decision": "released",
             "expected_status": "released",
             "expected_verdict": "passed",
-            "untouched_artifact": "doc-18"
+            "untouched_artifact": "doc-18",
+            "untouched_artifact_snapshot": {
+              "approvals": [
+                {
+                  "actor": "carol",
+                  "role": "contributor"
+                }
+              ],
+              "audit": [],
+              "status": "draft"
+            }
           },
           "verdict": "passed"
         }
       },
-      "metric_id": "385293e3-b9f7-4d9f-acd6-fc94c441c6a0",
+      "metric_id": "3fe855ab-873f-44e7-945f-d821faf8d356",
       "rhesis_result_count": 1,
       "rhesis_results": [
         {
           "execution": "ok",
-          "test_id": "d5b65938-6b62-4083-82be-eedc82db940a",
+          "test_id": "39b216e2-4986-4362-b18c-69e4effa6979",
           "test_metrics": {
-            "execution_time": 195.585,
+            "execution_time": 174.401,
             "metrics": {
-              "stage0-stub-judge-1793859061-pass": {
+              "stage0-stub-judge-1793862410-pass": {
                 "backend": "rhesis",
                 "class_name": "NumericJudge",
                 "description": "Deterministic stub judge; it always returns 1.0.",
                 "is_successful": true,
-                "name": "stage0-stub-judge-1793859061-pass",
+                "name": "stage0-stub-judge-1793862410-pass",
                 "reason": "Stage 0 stub judge: always returns 1.0 so the harness can show that a metric is not an independent state check.",
                 "score": 1.0,
                 "threshold": 0.5
@@ -113,8 +122,8 @@
               "connection_type": "REST",
               "headers": {
                 "Content-Type": "application/json",
-                "X-Organization-ID": "90b02b87-9df0-480c-b3b7-b8f7b76dbb34",
-                "X-User-ID": "de026fa7-efeb-4014-a053-19fae9e0a508"
+                "X-Organization-ID": "964b02a1-e149-4e0a-86f0-cff54cc7e6eb",
+                "X-User-ID": "88057a93-6d57-4018-959a-84405d9b1f01"
               },
               "method": "POST",
               "url": "http://stage0-stub:18082/invoke"
@@ -151,7 +160,7 @@
       "rhesis_verdicts": [
         "pass"
       ],
-      "run_id": "d21d64b1-efcd-4d4f-812a-2ac4dcc76484",
+      "run_id": "b6835024-280e-4336-8cf8-1275fdb437bd",
       "scenario": "pass",
       "target_request": {
         "observed": {
@@ -175,8 +184,8 @@
         },
         "status": "ok"
       },
-      "test_id": "d5b65938-6b62-4083-82be-eedc82db940a",
-      "test_set_id": "b85eb326-6056-402b-a99e-ea8d60968297"
+      "test_id": "39b216e2-4986-4362-b18c-69e4effa6979",
+      "test_set_id": "d22d1c66-62df-47b3-8c0b-7a1e2e225df0"
     },
     {
       "expected_external_verdict": "failed",
@@ -184,7 +193,6 @@
         "exit_code": 2,
         "stderr": "",
         "verdict": {
-          "agent_claim": "released",
           "checks": [
             {
               "check": "state_readable",
@@ -208,41 +216,51 @@
             },
             {
               "check": "untouched_artifact",
-              "detail": "doc-18 still draft",
+              "detail": "doc-18 exactly matches its initial state",
               "status": "passed"
-            },
-            {
-              "check": "agent_claim_matches",
-              "detail": "agent reported released, expected rejected",
-              "status": "failed"
             }
           ],
+          "claim_diagnostics": {
+            "expected": "rejected",
+            "matches": false,
+            "reported": "released"
+          },
           "expectation": {
             "artifact_id": "doc-17",
             "expected_audit_entries": 0,
             "expected_decision": "rejected",
             "expected_status": "draft",
             "expected_verdict": "failed",
-            "untouched_artifact": "doc-18"
+            "untouched_artifact": "doc-18",
+            "untouched_artifact_snapshot": {
+              "approvals": [
+                {
+                  "actor": "carol",
+                  "role": "contributor"
+                }
+              ],
+              "audit": [],
+              "status": "draft"
+            }
           },
           "verdict": "failed"
         }
       },
-      "metric_id": "5abe8979-6b85-48e1-8322-5c4cda7aaf46",
+      "metric_id": "103ec54d-b8ba-4a49-afa1-d40cd88be855",
       "rhesis_result_count": 1,
       "rhesis_results": [
         {
           "execution": "ok",
-          "test_id": "6e9d7ec9-2741-46ee-ae2e-c6f5fea3451a",
+          "test_id": "d121ce0f-fbda-46ea-9ee6-6e7a0a219c1e",
           "test_metrics": {
-            "execution_time": 91.251,
+            "execution_time": 76.644,
             "metrics": {
-              "stage0-stub-judge-1793859064-fail": {
+              "stage0-stub-judge-1793862440-fail": {
                 "backend": "rhesis",
                 "class_name": "NumericJudge",
                 "description": "Deterministic stub judge; it always returns 1.0.",
                 "is_successful": true,
-                "name": "stage0-stub-judge-1793859064-fail",
+                "name": "stage0-stub-judge-1793862440-fail",
                 "reason": "Stage 0 stub judge: always returns 1.0 so the harness can show that a metric is not an independent state check.",
                 "score": 1.0,
                 "threshold": 0.5
@@ -273,8 +291,8 @@
               "connection_type": "REST",
               "headers": {
                 "Content-Type": "application/json",
-                "X-Organization-ID": "90b02b87-9df0-480c-b3b7-b8f7b76dbb34",
-                "X-User-ID": "de026fa7-efeb-4014-a053-19fae9e0a508"
+                "X-Organization-ID": "964b02a1-e149-4e0a-86f0-cff54cc7e6eb",
+                "X-User-ID": "88057a93-6d57-4018-959a-84405d9b1f01"
               },
               "method": "POST",
               "url": "http://stage0-stub:18082/invoke"
@@ -311,7 +329,7 @@
       "rhesis_verdicts": [
         "pass"
       ],
-      "run_id": "ff765c15-5273-4bec-b75a-127a52ad6c89",
+      "run_id": "cf266ad9-1fc6-48d6-837f-b29591bc1aee",
       "scenario": "fail",
       "target_request": {
         "observed": {
@@ -335,8 +353,8 @@
         },
         "status": "ok"
       },
-      "test_id": "6e9d7ec9-2741-46ee-ae2e-c6f5fea3451a",
-      "test_set_id": "fd0d04e7-fc5c-472e-9a46-541563bfe7ba"
+      "test_id": "d121ce0f-fbda-46ea-9ee6-6e7a0a219c1e",
+      "test_set_id": "6a397b2a-badc-4887-b9cc-d90fca8ba07e"
     },
     {
       "expected_external_verdict": "unverified",
@@ -344,7 +362,6 @@
         "exit_code": 3,
         "stderr": "",
         "verdict": {
-          "agent_claim": "released",
           "checks": [
             {
               "check": "state_readable",
@@ -368,41 +385,51 @@
             },
             {
               "check": "untouched_artifact",
-              "detail": "doc-18 still draft",
-              "status": "passed"
-            },
-            {
-              "check": "agent_claim_matches",
-              "detail": "agent reported released",
+              "detail": "doc-18 exactly matches its initial state",
               "status": "passed"
             }
           ],
+          "claim_diagnostics": {
+            "expected": "released",
+            "matches": true,
+            "reported": "released"
+          },
           "expectation": {
             "artifact_id": "doc-17",
             "expected_audit_entries": 1,
             "expected_decision": "released",
             "expected_status": "released",
             "expected_verdict": "unverified",
-            "untouched_artifact": "doc-18"
+            "untouched_artifact": "doc-18",
+            "untouched_artifact_snapshot": {
+              "approvals": [
+                {
+                  "actor": "carol",
+                  "role": "contributor"
+                }
+              ],
+              "audit": [],
+              "status": "draft"
+            }
           },
           "verdict": "unverified"
         }
       },
-      "metric_id": "e001f169-8c7b-45a3-a20a-41c1e967098a",
+      "metric_id": "1de7b8da-892b-4ae2-b8bb-fc59f984a33d",
       "rhesis_result_count": 1,
       "rhesis_results": [
         {
           "execution": "ok",
-          "test_id": "79395192-a7d6-46a2-8215-27351d513fcd",
+          "test_id": "77bcd831-801e-4b55-ae0d-840f15f124d5",
           "test_metrics": {
-            "execution_time": 44.614000000000004,
+            "execution_time": 149.817,
             "metrics": {
-              "stage0-stub-judge-1793859067-missing_evidence": {
+              "stage0-stub-judge-1793862443-missing_evidence": {
                 "backend": "rhesis",
                 "class_name": "NumericJudge",
                 "description": "Deterministic stub judge; it always returns 1.0.",
                 "is_successful": true,
-                "name": "stage0-stub-judge-1793859067-missing_evidence",
+                "name": "stage0-stub-judge-1793862443-missing_evidence",
                 "reason": "Stage 0 stub judge: always returns 1.0 so the harness can show that a metric is not an independent state check.",
                 "score": 1.0,
                 "threshold": 0.5
@@ -433,8 +460,8 @@
               "connection_type": "REST",
               "headers": {
                 "Content-Type": "application/json",
-                "X-Organization-ID": "90b02b87-9df0-480c-b3b7-b8f7b76dbb34",
-                "X-User-ID": "de026fa7-efeb-4014-a053-19fae9e0a508"
+                "X-Organization-ID": "964b02a1-e149-4e0a-86f0-cff54cc7e6eb",
+                "X-User-ID": "88057a93-6d57-4018-959a-84405d9b1f01"
               },
               "method": "POST",
               "url": "http://stage0-stub:18082/invoke"
@@ -471,7 +498,7 @@
       "rhesis_verdicts": [
         "pass"
       ],
-      "run_id": "6fd0a4f9-890d-4623-a264-39816660881c",
+      "run_id": "471fd033-a74c-47fb-af14-32c4f4297b11",
       "scenario": "missing_evidence",
       "target_request": {
         "observed": {
@@ -495,8 +522,8 @@
         },
         "status": "ok"
       },
-      "test_id": "79395192-a7d6-46a2-8215-27351d513fcd",
-      "test_set_id": "627738de-85ab-4303-832d-54a79eca1380"
+      "test_id": "77bcd831-801e-4b55-ae0d-840f15f124d5",
+      "test_set_id": "7bb9cac1-e734-4bff-9a89-af7f052bbb98"
     }
   ]
 }

@@ -38,6 +38,8 @@ EVIDENCE = REPO / "stage0" / "evidence" / "rhesis-runtime"
 STUB_DATA = EVIDENCE
 SAMPLE_STATE = REPO / "stage0" / "harness" / "fixtures" / "project" / "data" / "sample_state.json"
 VERIFIER = REPO / "stage0" / "harness" / "verifier" / "verify.py"
+SAMPLE_STATE_DATA = json.loads(SAMPLE_STATE.read_text(encoding="utf-8"))
+UNTOUCHED_SNAPSHOT = SAMPLE_STATE_DATA["artifacts"]["doc-18"]
 TOKEN: Optional[str] = None
 BASE_URL = "http://127.0.0.1:8080"
 STAMP = str(int(time.time()))
@@ -469,6 +471,7 @@ def main() -> int:
 
     for name, parameters, expected in scenarios:
         try:
+            expected = {**expected, "untouched_artifact_snapshot": UNTOUCHED_SNAPSHOT}
             result = create_scenario(common, name, parameters, expected)
         except Exception as error:  # keep going, record the failure
             result = {"scenario": name, "error": str(error)}

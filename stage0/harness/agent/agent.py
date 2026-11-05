@@ -129,6 +129,15 @@ def main(argv: list[str]) -> int:
     else:
         observed["decision"] = "unknown_artifact"
 
+    # A deliberately unrelated mutation: keep doc-18's status as draft but change
+    # another field. The verifier must compare the complete initial snapshot.
+    if mode == "unrelated_mutation":
+        unrelated = artifacts.get("doc-18")
+        if isinstance(unrelated, dict):
+            unrelated.setdefault("approvals", []).append(
+                {"actor": "mallory", "role": "contributor"}
+            )
+
     observed["network"] = probe_network()
     observed["project_write"] = probe_write(project_root / ".stage0-write-probe")
     observed["hidden_access"] = probe_hidden_paths()

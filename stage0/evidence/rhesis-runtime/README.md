@@ -48,7 +48,7 @@ No real model, credential, external service, or business data was used.
 
 ## Observed results
 
-`rhesis-flow-1793859070.json` contains the full output. The per-request `llm-requests.jsonl` / `target-requests.jsonl` files are local runtime artifacts (gitignored); the target request and raw response are also embedded in the JSON result. Key points:
+`rhesis-flow-1793862445.json` contains the full output. The per-request `llm-requests.jsonl` / `target-requests.jsonl` files are local runtime artifacts (gitignored); the target request and raw response are also embedded in the JSON result. Key points:
 
 | Check | Result |
 | --- | --- |
@@ -64,22 +64,23 @@ release that violates the synthetic policy, and for a release with no audit evid
 The independent verifier says failed and unverified respectively. A metric pass is not
 a state check.
 
-This JSON was produced before the harness verifier's claim-diagnostic refactor. The
-verdicts are unchanged: the failed case already failed the state checks, and the
-missing-evidence case had a matching claim. The harness evidence
-(`stage0/evidence/runs/20261105T065055Z-summary.json`) is the post-fix evidence for the
-claim behavior.
+This run uses the current shared verifier without `--require-hidden-access` (the
+Rhesis flow has no agent container to probe), and supplies the initial doc-18 snapshot
+for the complete untouched-artifact comparison. The pass case therefore returns
+`passed`; the fail and missing-evidence cases still return `failed` / `unverified`. The
+harness evidence (`stage0/evidence/runs/20261105T070245Z-summary.json`) is the
+isolation-flagged counterpart.
 
 ## IDs from the run
 
 ```text
-project_id    716c59a6-be63-46f6-aeb3-483f608fd69f
-model_id      de8eda55-b13c-444e-b80a-77b0e2f9bb6a
-endpoint_id   0bd7924f-ce95-441c-b214-976fb84684d0
-architect     670518df-fe84-4441-ab0c-de2303d331f1
-run pass      d21d64b1-efcd-4d4f-812a-2ac4dcc76484
-run fail      ff765c15-5273-4bec-b75a-127a52ad6c89
-run missing   6fd0a4f9-890d-4623-a264-39816660881c
+project_id    3521b1b4-e6bf-42bd-a67e-1f291dc58645
+model_id      45db1458-ae05-4b2f-81d4-0a5f6a346d89
+endpoint_id   e9a52cdc-e4d3-4a1e-9859-76ef6ec748c8
+architect     ca2249b1-2c6d-45bd-8d6e-2c8b81542c81
+run pass      b6835024-280e-4336-8cf8-1275fdb437bd
+run fail      cf266ad9-1fc6-48d6-837f-b29591bc1aee
+run missing   471fd033-a74c-47fb-af14-32c4f4297b11
 ```
 
 ## Reproduction and limits
