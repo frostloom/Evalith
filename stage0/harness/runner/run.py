@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Run the synthetic stage 0 validation cases.
 
-This runner builds a tiny image, creates a unique volume per case, runs the synthetic
-agent under a restrictive container configuration, runs an independent verifier against
-the resulting state, and removes every resource. It records the evidence as JSON under
-``stage0/evidence/runs`` and prints a summary.
+This runner builds three role-scoped images, creates a unique volume per case, runs the
+synthetic agent under a restrictive container configuration, runs an independent
+verifier against the resulting state, and removes every resource. It records the
+evidence as JSON under ``stage0/evidence/runs`` and prints a summary.
 
 It is intentionally stdlib-only and drives the Docker CLI. Run from the repository root:
 
@@ -357,7 +357,6 @@ def cleanup(run_id: str, names: list[str], volumes: list[str]) -> dict:
 
 
 def run_access(root: Path, run_id: str) -> dict:
-    project = make_project_copy(root)
     out_volume = f"{RUN_PREFIX}access-{run_id}"
     reader_name = f"{RUN_PREFIX}reader-{run_id}"
     result: dict = {
@@ -368,6 +367,7 @@ def run_access(root: Path, run_id: str) -> dict:
         "manifest": None,
     }
     try:
+        project = make_project_copy(root)
         docker("volume", "create", out_volume, check=True)
         docker(
             "run",

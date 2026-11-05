@@ -67,7 +67,7 @@ a state check.
 This JSON was produced before the harness verifier's claim-diagnostic refactor. The
 verdicts are unchanged: the failed case already failed the state checks, and the
 missing-evidence case had a matching claim. The harness evidence
-(`stage0/evidence/runs/20261105T064738Z-summary.json`) is the post-fix evidence for the
+(`stage0/evidence/runs/20261105T065055Z-summary.json`) is the post-fix evidence for the
 claim behavior.
 
 ## IDs from the run
