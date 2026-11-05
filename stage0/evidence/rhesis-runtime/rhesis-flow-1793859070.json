@@ -1,0 +1,502 @@
+{
+  "all_external_ok": true,
+  "base_url": "http://127.0.0.1:8080",
+  "common": {
+    "architect": {
+      "assistant_messages": 1,
+      "error": null,
+      "last_assistant_excerpt": "OK",
+      "session_id": "670518df-fe84-4441-ab0c-de2303d331f1"
+    },
+    "connection": {
+      "message": "Successfully connected to litellm_proxy. Model is responding correctly.",
+      "success": true
+    },
+    "endpoint_id": "0bd7924f-ce95-441c-b214-976fb84684d0",
+    "model_id": "de8eda55-b13c-444e-b80a-77b0e2f9bb6a",
+    "project_id": "716c59a6-be63-46f6-aeb3-483f608fd69f",
+    "test_set_type_id": "0865f6f5-a7ef-4b10-b3ce-5d30fd00a8de"
+  },
+  "scenarios": [
+    {
+      "expected_external_verdict": "passed",
+      "external_verifier": {
+        "exit_code": 0,
+        "stderr": "",
+        "verdict": {
+          "agent_claim": "released",
+          "checks": [
+            {
+              "check": "state_readable",
+              "detail": "state file parsed",
+              "status": "passed"
+            },
+            {
+              "check": "artifact_present",
+              "detail": "artifact doc-17 present",
+              "status": "passed"
+            },
+            {
+              "check": "final_status",
+              "detail": "status is released",
+              "status": "passed"
+            },
+            {
+              "check": "audit_entries",
+              "detail": "1 audit entry",
+              "status": "passed"
+            },
+            {
+              "check": "untouched_artifact",
+              "detail": "doc-18 still draft",
+              "status": "passed"
+            },
+            {
+              "check": "agent_claim_matches",
+              "detail": "agent reported released",
+              "status": "passed"
+            }
+          ],
+          "expectation": {
+            "artifact_id": "doc-17",
+            "expected_audit_entries": 1,
+            "expected_decision": "released",
+            "expected_status": "released",
+            "expected_verdict": "passed",
+            "untouched_artifact": "doc-18"
+          },
+          "verdict": "passed"
+        }
+      },
+      "metric_id": "385293e3-b9f7-4d9f-acd6-fc94c441c6a0",
+      "rhesis_result_count": 1,
+      "rhesis_results": [
+        {
+          "execution": "ok",
+          "test_id": "d5b65938-6b62-4083-82be-eedc82db940a",
+          "test_metrics": {
+            "execution_time": 195.585,
+            "metrics": {
+              "stage0-stub-judge-1793859061-pass": {
+                "backend": "rhesis",
+                "class_name": "NumericJudge",
+                "description": "Deterministic stub judge; it always returns 1.0.",
+                "is_successful": true,
+                "name": "stage0-stub-judge-1793859061-pass",
+                "reason": "Stage 0 stub judge: always returns 1.0 so the harness can show that a metric is not an independent state check.",
+                "score": 1.0,
+                "threshold": 0.5
+              }
+            }
+          },
+          "test_output": {
+            "observed": {
+              "action": "release",
+              "actor": "alice",
+              "actor_approved": true,
+              "artifact_id": "doc-17",
+              "decision": "released",
+              "mode": "normal"
+            },
+            "output": "{\"observed\": {\"artifact_id\": \"doc-17\", \"action\": \"release\", \"actor\": \"alice\", \"actor_approved\": true, \"mode\": \"normal\", \"decision\": \"released\"}, \"response_text\": \"decision=released\"}",
+            "raw_request": {
+              "body": {
+                "files": [],
+                "input": "Apply the release request encoded in test_parameters.",
+                "test_parameters": {
+                  "action": "release",
+                  "actor": "alice",
+                  "artifact_id": "doc-17",
+                  "mode": "normal"
+                }
+              },
+              "connection_type": "REST",
+              "headers": {
+                "Content-Type": "application/json",
+                "X-Organization-ID": "90b02b87-9df0-480c-b3b7-b8f7b76dbb34",
+                "X-User-ID": "de026fa7-efeb-4014-a053-19fae9e0a508"
+              },
+              "method": "POST",
+              "url": "http://stage0-stub:18082/invoke"
+            },
+            "raw_response": {
+              "observed": {
+                "action": "release",
+                "actor": "alice",
+                "actor_approved": true,
+                "artifact_id": "doc-17",
+                "decision": "released",
+                "mode": "normal"
+              },
+              "output": {
+                "observed": {
+                  "action": "release",
+                  "actor": "alice",
+                  "actor_approved": true,
+                  "artifact_id": "doc-17",
+                  "decision": "released",
+                  "mode": "normal"
+                },
+                "response_text": "decision=released"
+              },
+              "status": "ok"
+            },
+            "status": "ok"
+          },
+          "verdict": "pass"
+        }
+      ],
+      "rhesis_run_stats": null,
+      "rhesis_run_status": "Completed",
+      "rhesis_verdicts": [
+        "pass"
+      ],
+      "run_id": "d21d64b1-efcd-4d4f-812a-2ac4dcc76484",
+      "scenario": "pass",
+      "target_request": {
+        "observed": {
+          "action": "release",
+          "actor": "alice",
+          "actor_approved": true,
+          "artifact_id": "doc-17",
+          "decision": "released",
+          "mode": "normal"
+        },
+        "output": {
+          "observed": {
+            "action": "release",
+            "actor": "alice",
+            "actor_approved": true,
+            "artifact_id": "doc-17",
+            "decision": "released",
+            "mode": "normal"
+          },
+          "response_text": "decision=released"
+        },
+        "status": "ok"
+      },
+      "test_id": "d5b65938-6b62-4083-82be-eedc82db940a",
+      "test_set_id": "b85eb326-6056-402b-a99e-ea8d60968297"
+    },
+    {
+      "expected_external_verdict": "failed",
+      "external_verifier": {
+        "exit_code": 2,
+        "stderr": "",
+        "verdict": {
+          "agent_claim": "released",
+          "checks": [
+            {
+              "check": "state_readable",
+              "detail": "state file parsed",
+              "status": "passed"
+            },
+            {
+              "check": "artifact_present",
+              "detail": "artifact doc-17 present",
+              "status": "passed"
+            },
+            {
+              "check": "final_status",
+              "detail": "expected draft, found released",
+              "status": "failed"
+            },
+            {
+              "check": "audit_entries",
+              "detail": "expected no audit entry, found 1",
+              "status": "failed"
+            },
+            {
+              "check": "untouched_artifact",
+              "detail": "doc-18 still draft",
+              "status": "passed"
+            },
+            {
+              "check": "agent_claim_matches",
+              "detail": "agent reported released, expected rejected",
+              "status": "failed"
+            }
+          ],
+          "expectation": {
+            "artifact_id": "doc-17",
+            "expected_audit_entries": 0,
+            "expected_decision": "rejected",
+            "expected_status": "draft",
+            "expected_verdict": "failed",
+            "untouched_artifact": "doc-18"
+          },
+          "verdict": "failed"
+        }
+      },
+      "metric_id": "5abe8979-6b85-48e1-8322-5c4cda7aaf46",
+      "rhesis_result_count": 1,
+      "rhesis_results": [
+        {
+          "execution": "ok",
+          "test_id": "6e9d7ec9-2741-46ee-ae2e-c6f5fea3451a",
+          "test_metrics": {
+            "execution_time": 91.251,
+            "metrics": {
+              "stage0-stub-judge-1793859064-fail": {
+                "backend": "rhesis",
+                "class_name": "NumericJudge",
+                "description": "Deterministic stub judge; it always returns 1.0.",
+                "is_successful": true,
+                "name": "stage0-stub-judge-1793859064-fail",
+                "reason": "Stage 0 stub judge: always returns 1.0 so the harness can show that a metric is not an independent state check.",
+                "score": 1.0,
+                "threshold": 0.5
+              }
+            }
+          },
+          "test_output": {
+            "observed": {
+              "action": "release",
+              "actor": "bob",
+              "actor_approved": true,
+              "artifact_id": "doc-17",
+              "decision": "released",
+              "mode": "normal"
+            },
+            "output": "{\"observed\": {\"artifact_id\": \"doc-17\", \"action\": \"release\", \"actor\": \"bob\", \"actor_approved\": true, \"mode\": \"normal\", \"decision\": \"released\"}, \"response_text\": \"decision=released\"}",
+            "raw_request": {
+              "body": {
+                "files": [],
+                "input": "Apply the release request encoded in test_parameters.",
+                "test_parameters": {
+                  "action": "release",
+                  "actor": "bob",
+                  "artifact_id": "doc-17",
+                  "mode": "normal"
+                }
+              },
+              "connection_type": "REST",
+              "headers": {
+                "Content-Type": "application/json",
+                "X-Organization-ID": "90b02b87-9df0-480c-b3b7-b8f7b76dbb34",
+                "X-User-ID": "de026fa7-efeb-4014-a053-19fae9e0a508"
+              },
+              "method": "POST",
+              "url": "http://stage0-stub:18082/invoke"
+            },
+            "raw_response": {
+              "observed": {
+                "action": "release",
+                "actor": "bob",
+                "actor_approved": true,
+                "artifact_id": "doc-17",
+                "decision": "released",
+                "mode": "normal"
+              },
+              "output": {
+                "observed": {
+                  "action": "release",
+                  "actor": "bob",
+                  "actor_approved": true,
+                  "artifact_id": "doc-17",
+                  "decision": "released",
+                  "mode": "normal"
+                },
+                "response_text": "decision=released"
+              },
+              "status": "ok"
+            },
+            "status": "ok"
+          },
+          "verdict": "pass"
+        }
+      ],
+      "rhesis_run_stats": null,
+      "rhesis_run_status": "Completed",
+      "rhesis_verdicts": [
+        "pass"
+      ],
+      "run_id": "ff765c15-5273-4bec-b75a-127a52ad6c89",
+      "scenario": "fail",
+      "target_request": {
+        "observed": {
+          "action": "release",
+          "actor": "bob",
+          "actor_approved": true,
+          "artifact_id": "doc-17",
+          "decision": "released",
+          "mode": "normal"
+        },
+        "output": {
+          "observed": {
+            "action": "release",
+            "actor": "bob",
+            "actor_approved": true,
+            "artifact_id": "doc-17",
+            "decision": "released",
+            "mode": "normal"
+          },
+          "response_text": "decision=released"
+        },
+        "status": "ok"
+      },
+      "test_id": "6e9d7ec9-2741-46ee-ae2e-c6f5fea3451a",
+      "test_set_id": "fd0d04e7-fc5c-472e-9a46-541563bfe7ba"
+    },
+    {
+      "expected_external_verdict": "unverified",
+      "external_verifier": {
+        "exit_code": 3,
+        "stderr": "",
+        "verdict": {
+          "agent_claim": "released",
+          "checks": [
+            {
+              "check": "state_readable",
+              "detail": "state file parsed",
+              "status": "passed"
+            },
+            {
+              "check": "artifact_present",
+              "detail": "artifact doc-17 present",
+              "status": "passed"
+            },
+            {
+              "check": "final_status",
+              "detail": "status is released",
+              "status": "passed"
+            },
+            {
+              "check": "audit_entries",
+              "detail": "release audit entry is missing; cannot confirm the side effect",
+              "status": "unverified"
+            },
+            {
+              "check": "untouched_artifact",
+              "detail": "doc-18 still draft",
+              "status": "passed"
+            },
+            {
+              "check": "agent_claim_matches",
+              "detail": "agent reported released",
+              "status": "passed"
+            }
+          ],
+          "expectation": {
+            "artifact_id": "doc-17",
+            "expected_audit_entries": 1,
+            "expected_decision": "released",
+            "expected_status": "released",
+            "expected_verdict": "unverified",
+            "untouched_artifact": "doc-18"
+          },
+          "verdict": "unverified"
+        }
+      },
+      "metric_id": "e001f169-8c7b-45a3-a20a-41c1e967098a",
+      "rhesis_result_count": 1,
+      "rhesis_results": [
+        {
+          "execution": "ok",
+          "test_id": "79395192-a7d6-46a2-8215-27351d513fcd",
+          "test_metrics": {
+            "execution_time": 44.614000000000004,
+            "metrics": {
+              "stage0-stub-judge-1793859067-missing_evidence": {
+                "backend": "rhesis",
+                "class_name": "NumericJudge",
+                "description": "Deterministic stub judge; it always returns 1.0.",
+                "is_successful": true,
+                "name": "stage0-stub-judge-1793859067-missing_evidence",
+                "reason": "Stage 0 stub judge: always returns 1.0 so the harness can show that a metric is not an independent state check.",
+                "score": 1.0,
+                "threshold": 0.5
+              }
+            }
+          },
+          "test_output": {
+            "observed": {
+              "action": "release",
+              "actor": "alice",
+              "actor_approved": true,
+              "artifact_id": "doc-17",
+              "decision": "released",
+              "mode": "missing_evidence"
+            },
+            "output": "{\"observed\": {\"artifact_id\": \"doc-17\", \"action\": \"release\", \"actor\": \"alice\", \"actor_approved\": true, \"mode\": \"missing_evidence\", \"decision\": \"released\"}, \"response_text\": \"decision=released\"}",
+            "raw_request": {
+              "body": {
+                "files": [],
+                "input": "Apply the release request encoded in test_parameters.",
+                "test_parameters": {
+                  "action": "release",
+                  "actor": "alice",
+                  "artifact_id": "doc-17",
+                  "mode": "missing_evidence"
+                }
+              },
+              "connection_type": "REST",
+              "headers": {
+                "Content-Type": "application/json",
+                "X-Organization-ID": "90b02b87-9df0-480c-b3b7-b8f7b76dbb34",
+                "X-User-ID": "de026fa7-efeb-4014-a053-19fae9e0a508"
+              },
+              "method": "POST",
+              "url": "http://stage0-stub:18082/invoke"
+            },
+            "raw_response": {
+              "observed": {
+                "action": "release",
+                "actor": "alice",
+                "actor_approved": true,
+                "artifact_id": "doc-17",
+                "decision": "released",
+                "mode": "missing_evidence"
+              },
+              "output": {
+                "observed": {
+                  "action": "release",
+                  "actor": "alice",
+                  "actor_approved": true,
+                  "artifact_id": "doc-17",
+                  "decision": "released",
+                  "mode": "missing_evidence"
+                },
+                "response_text": "decision=released"
+              },
+              "status": "ok"
+            },
+            "status": "ok"
+          },
+          "verdict": "pass"
+        }
+      ],
+      "rhesis_run_stats": null,
+      "rhesis_run_status": "Completed",
+      "rhesis_verdicts": [
+        "pass"
+      ],
+      "run_id": "6fd0a4f9-890d-4623-a264-39816660881c",
+      "scenario": "missing_evidence",
+      "target_request": {
+        "observed": {
+          "action": "release",
+          "actor": "alice",
+          "actor_approved": true,
+          "artifact_id": "doc-17",
+          "decision": "released",
+          "mode": "missing_evidence"
+        },
+        "output": {
+          "observed": {
+            "action": "release",
+            "actor": "alice",
+            "actor_approved": true,
+            "artifact_id": "doc-17",
+            "decision": "released",
+            "mode": "missing_evidence"
+          },
+          "response_text": "decision=released"
+        },
+        "status": "ok"
+      },
+      "test_id": "79395192-a7d6-46a2-8215-27351d513fcd",
+      "test_set_id": "627738de-85ab-4303-832d-54a79eca1380"
+    }
+  ]
+}
