@@ -26,8 +26,8 @@ deterministic stubs; this is interface evidence, not model-capability evidence.
 
 ## Exact startup configuration
 
-The sanitized override is `stage0/rhesis-flow/compose.stage0.yaml`. It overrides the
-backend port to `127.0.0.1:8080`, disables the Rhesis platform key and telemetry, skips
+The sanitized override is `stage0/rhesis-flow/compose.stage0.yaml`. It pins the
+backend/worker/beat/frontend image digests, overrides the backend port to `127.0.0.1:8080`, disables the Rhesis platform key and telemetry, skips
 the Garak warm cache, and mounts the two frozen files at their container paths:
 
 ```text
@@ -96,7 +96,7 @@ This run uses the current shared verifier without `--require-hidden-access` (the
 Rhesis flow has no agent container to probe), and supplies the initial doc-18 snapshot
 for the complete untouched-artifact comparison. The pass case therefore returns
 `passed`; the fail and missing-evidence cases still return `failed` / `unverified`. The
-harness evidence (`stage0/evidence/runs/20261105T074119Z-summary.json`) is the
+harness evidence (`stage0/evidence/runs/20261105T075053Z-summary.json`) is the
 isolation-flagged counterpart.
 
 ## IDs from the run

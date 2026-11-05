@@ -65,9 +65,10 @@ change the test execution path.
 
 ### 2.1 Recorded runtime: published images + frozen-file mounts
 
-The override is [compose.stage0.yaml](compose.stage0.yaml). It binds the two Python
-files that differ between the published 0.20.1 image and the frozen commit, keeps the
-backend on localhost, and sets the local runtime flags. Image digests are recorded in
+The override is [compose.stage0.yaml](compose.stage0.yaml). It pins the backend,
+worker, beat and frontend images to the recorded digests, binds the two Python files that
+differ between the published 0.20.1 image and the frozen commit, keeps the backend on
+localhost, and sets the local runtime flags. Image digests are recorded in
 [`stage0/evidence/rhesis-runtime/README.md`](../evidence/rhesis-runtime/README.md).
 
 From the Evalith repository root:

@@ -20,6 +20,7 @@
 
 services:
   backend:
+    image: ghcr.io/rhesis-ai/backend@sha256:9fb3fa0c3d9a24232de3686062f4fbb38ba94b2db3aa6fc1abb09e1b1620cd08
     ports: !override
       - "127.0.0.1:8080:8080"
     environment:
@@ -31,6 +32,7 @@ services:
       - ${RHESIS_SRC:?set RHESIS_SRC to the Rhesis checkout}/apps/backend/src/rhesis/backend/app/services/invokers/rest_invoker.py:/app/apps/backend/src/rhesis/backend/app/services/invokers/rest_invoker.py:ro
 
   worker:
+    image: ghcr.io/rhesis-ai/worker@sha256:cafe6e840d16bf251788b8fefd73c5bb70e4c359511e9cf7e182768572367272
     environment:
       RHESIS_SKIP_GARAK_WARM_CACHE: "true"
       ENABLE_RHESIS_KEY: "false"
@@ -39,6 +41,10 @@ services:
       - ${RHESIS_SRC:?set RHESIS_SRC to the Rhesis checkout}/apps/backend/src/rhesis/backend/app/services/invokers/common/connection_errors.py:/app/apps/backend/src/rhesis/backend/app/services/invokers/common/connection_errors.py:ro
       - ${RHESIS_SRC:?set RHESIS_SRC to the Rhesis checkout}/apps/backend/src/rhesis/backend/app/services/invokers/rest_invoker.py:/app/apps/backend/src/rhesis/backend/app/services/invokers/rest_invoker.py:ro
 
+  beat:
+    image: ghcr.io/rhesis-ai/worker@sha256:cafe6e840d16bf251788b8fefd73c5bb70e4c359511e9cf7e182768572367272
+
   frontend:
+    image: ghcr.io/rhesis-ai/frontend@sha256:aa234e66a5335ea966d13eab81883cb1f9ba916408adb3df66a110b26a203b92
     ports: !override
       - "127.0.0.1:3000:3000"

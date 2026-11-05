@@ -364,6 +364,7 @@ def run_access(root: Path, run_id: str, negative: bool = False) -> dict:
         "checks": {},
         "passed": False,
         "manifest": None,
+        "negative_ok": False,
     }
     try:
         project = make_project_copy(root)
@@ -445,7 +446,25 @@ def run_access(root: Path, run_id: str, negative: bool = False) -> dict:
                 "reader_stderr": reader_result.stderr.strip(),
             }
         )
-        result["negative_ok"] = (not result["passed"]) if negative else None
+        if negative:
+            expected_unreadable = ["src/release_gate.py"]
+            other_checks = {
+                name: value
+                for name, value in checks.items()
+                if name != "required_files_hashed"
+            }
+            result["negative_expected_unreadable"] = expected_unreadable
+            # The negative fixture is valid only when the reader actually ran, the
+            # manifest is readable, the intended source file failed to read, and every
+            # other boundary check passed. Infrastructure failures are not calibration.
+            result["negative_ok"] = (
+                reader_result.returncode == 0
+                and manifest is not None
+                and unreadable == expected_unreadable
+                and read_errors == expected_unreadable
+                and checks["required_files_hashed"] is False
+                and all(other_checks.values())
+            )
     except Exception as error:  # keep the failure in evidence, then still clean up
         result["error"] = f"{type(error).__name__}: {error}"
     finally:
