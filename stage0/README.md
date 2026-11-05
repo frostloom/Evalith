@@ -39,6 +39,12 @@ only into the verifier. Each case records an access probe for `/app/verify.py`,
 the agent image/mount contents, so the claimed hidden-verifier boundary is evidence, not
 just prose.
 
+A case is accepted only when the verifier-absence probe returns the expected shell exit
+code (0), the `docker inspect` data confirms the agent/verifier network, read-only root,
+cap-drop, non-root and resource limits, and the agent's network/project-write probes show
+`blocked`/`read-only`. Docker or probe errors are recorded separately and fail the case
+instead of being treated as evidence of absence.
+
 Evidence is written to `stage0/evidence/runs/<UTC timestamp>-summary.json`. The run
 exits `0` only when every expected verdict and every cleanup check succeeds.
 

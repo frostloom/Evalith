@@ -428,6 +428,50 @@ def run_access(root: Path, run_id: str) -> dict:
     return result
 
 
+def isolation_assessment(
+    agent_inspect: dict, verifier_inspect: dict, observed: dict
+) -> dict:
+    def container_checks(inspect: dict) -> dict:
+        security = [str(item) for item in (inspect.get("security_opt") or [])]
+        binds = [str(item) for item in (inspect.get("binds") or [])]
+        return {
+            "inspection_present": bool(inspect),
+            "network_mode_none": inspect.get("network_mode") == "none",
+            "readonly_rootfs": inspect.get("readonly_rootfs") is True,
+            "cap_drop_all": "ALL" in (inspect.get("cap_drop") or []),
+            "non_root_user": inspect.get("user") == "65534:65534",
+            "no_new_privileges": any("no-new-privileges" in item for item in security),
+            "memory_limit": inspect.get("memory") == 134217728,
+            "pids_limit": inspect.get("pids_limit") == 64,
+            "has_binds": bool(binds),
+        }
+
+    agent_binds = [str(item) for item in (agent_inspect.get("binds") or [])]
+    hidden = observed.get("hidden_access")
+    probes = {
+        "network_blocked": str(observed.get("network", "")).startswith("blocked"),
+        "project_read_only": str(observed.get("project_write", "")).startswith("read-only"),
+        "hidden_paths_absent": isinstance(hidden, dict)
+        and bool(hidden)
+        and all(value == "absent" for value in hidden.values()),
+        "expectation_not_agent_mounted": not any("expectation" in item for item in agent_binds),
+        "secrets_not_agent_mounted": not any(
+            "secrets" in item or ".env" in item for item in agent_binds
+        ),
+    }
+    assessment = {
+        "agent": container_checks(agent_inspect),
+        "verifier": container_checks(verifier_inspect),
+        "probes": probes,
+    }
+    assessment["ok"] = (
+        all(assessment["agent"].values())
+        and all(assessment["verifier"].values())
+        and all(probes.values())
+    )
+    return assessment
+
+
 def run_case(case: str, root: Path, run_id: str) -> dict:
     state_volume = f"{RUN_PREFIX}state-{run_id}"
     out_volume = f"{RUN_PREFIX}out-{run_id}"
@@ -542,9 +586,19 @@ def run_case(case: str, root: Path, run_id: str) -> dict:
             "sh",
             AGENT_IMAGE,
             "-c",
-            "test -e /app/verify.py",
+            "test ! -e /app/verify.py",
             check=False,
         )
+        # Exit 0 means the image is verifier-free; exit 1 means the file is present.
+        # Anything else is a Docker/probe failure, not evidence of absence.
+        image_probe_ok = image_probe.returncode == 0
+        image_probe_error = (
+            None
+            if image_probe.returncode in (0, 1)
+            else (image_probe.stderr.strip() or f"probe exited {image_probe.returncode}")
+        )
+        agent_image_has_verifier = image_probe.returncode == 1
+        isolation = isolation_assessment(agent_inspect, verifier_inspect, agent_observations)
         project_files = relative_files(agent_project)
         input_files = relative_files(agent_input)
         project_filtered = not any(
@@ -559,7 +613,9 @@ def run_case(case: str, root: Path, run_id: str) -> dict:
             observed_verdict == expected_verdict
             and verifier_result.returncode
             == {"passed": 0, "failed": 2, "unverified": 3}[expected_verdict]
-            and image_probe.returncode != 0
+            and image_probe_ok
+            and not agent_image_has_verifier
+            and isolation["ok"]
             and project_filtered
             and only_event
         )
@@ -571,9 +627,14 @@ def run_case(case: str, root: Path, run_id: str) -> dict:
                 "verifier_exit": verifier_result.returncode,
                 "agent_observed": agent_observations,
                 "hidden_material": agent_observations.get("hidden_access"),
-                "agent_image_has_verifier": image_probe.returncode == 0,
+                "agent_image_has_verifier": agent_image_has_verifier,
+                "agent_image_probe_ok": image_probe_ok,
+                "agent_image_probe_exit": image_probe.returncode,
+                "agent_image_probe_error": image_probe_error,
                 "agent_project_filtered": project_filtered,
                 "agent_input_only_event": only_event,
+                "isolation_checks": isolation,
+                "isolation_ok": isolation["ok"],
                 "verdict": verdict,
                 "isolation": {
                     "network_mode": agent_inspect.get("network_mode"),
