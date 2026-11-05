@@ -181,6 +181,7 @@ The result JSON is written to `stage0/evidence/rhesis-runtime/rhesis-flow-<epoch
 result, the verifier's exit code to match its verdict, and the independent expectation
 to be met. A polling timeout is recorded explicitly; the flow requests cancellation,
 waits for a terminal status, and aborts later scenarios before any shared-state reset.
+The committed run did not trigger a timeout, so this branch remains runtime-unverified.
 It still does not mean Rhesis' own verdict was correct for the fail case.
 
 ## 5. Stop and clean up

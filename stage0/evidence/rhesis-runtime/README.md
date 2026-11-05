@@ -98,8 +98,10 @@ for the complete untouched-artifact comparison. Each invocation writes a fresh v
 file and requires the verifier exit code to match its verdict (0/2/3); a crashed
 verifier cannot be mistaken for a previous result. A run polling timeout is explicit:
 the flow requests cancellation, waits for a terminal status, and aborts later scenarios
-before any shared-state reset. `all_external_ok` requires `Completed` execution and
-one `ok` result per scenario, not just an external verdict. The pass case therefore returns
+before any shared-state reset. This branch is implemented but not exercised by the
+committed three scenarios (all have `timed_out=false` and `cancellation=null`), so
+timeout/cancellation remains runtime-unverified. `all_external_ok` requires `Completed`
+execution and one `ok` result per scenario, not just an external verdict. The pass case therefore returns
 `passed`; the fail and missing-evidence cases still return `failed` / `unverified`. The
 harness evidence (`stage0/evidence/runs/20261105T081350Z-summary.json`) is the
 isolation-flagged counterpart.
