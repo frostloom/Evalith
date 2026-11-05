@@ -24,6 +24,34 @@ deterministic stubs; this is interface evidence, not model-capability evidence.
   CPU-bound Garak probe cache enumeration that blocked API latency.
 - `QUICK_START=true`; telemetry disabled; ports bound to 127.0.0.1.
 
+## Exact startup configuration
+
+The sanitized override is `stage0/rhesis-flow/compose.stage0.yaml`. It overrides the
+backend port to `127.0.0.1:8080`, disables the Rhesis platform key and telemetry, skips
+the Garak warm cache, and mounts the two frozen files at their container paths:
+
+```text
+${RHESIS_SRC}/apps/backend/src/rhesis/backend/app/services/invokers/common/connection_errors.py
+  -> /app/apps/backend/src/rhesis/backend/app/services/invokers/common/connection_errors.py:ro
+${RHESIS_SRC}/apps/backend/src/rhesis/backend/app/services/invokers/rest_invoker.py
+  -> /app/apps/backend/src/rhesis/backend/app/services/invokers/rest_invoker.py:ro
+```
+
+Recorded service selection and command (run from the Evalith repository root):
+
+```bash
+export RHESIS_SRC=/absolute/path/to/rhesis
+docker compose \
+  -f "$RHESIS_SRC/docker-compose.yml" \
+  -f "$RHESIS_SRC/docker-compose.ghcr.yml" \
+  -f "$PWD/stage0/rhesis-flow/compose.stage0.yaml" \
+  --env-file "$RHESIS_SRC/.env.docker.local" \
+  -p rhesis-stage0 up -d postgres redis backend worker beat
+```
+
+The frontend is not part of the recorded run. `RHESIS_SRC` is the only path variable;
+the override contains no personal absolute paths.
+
 ## Image digests
 
 ```text
@@ -68,7 +96,7 @@ This run uses the current shared verifier without `--require-hidden-access` (the
 Rhesis flow has no agent container to probe), and supplies the initial doc-18 snapshot
 for the complete untouched-artifact comparison. The pass case therefore returns
 `passed`; the fail and missing-evidence cases still return `failed` / `unverified`. The
-harness evidence (`stage0/evidence/runs/20261105T073153Z-summary.json`) is the
+harness evidence (`stage0/evidence/runs/20261105T074119Z-summary.json`) is the
 isolation-flagged counterpart.
 
 ## IDs from the run

@@ -1,0 +1,44 @@
+# Sanitized compose override for the recorded stage-0 Rhesis runtime.
+#
+# It is used with the published 0.20.1 images (docker-compose.ghcr.yml), because the
+# full source build stalled at the backend/worker runtime layer on this machine. The
+# two files that differ from the frozen checkout are bind-mounted read-only, so the
+# executed invoker code matches the baseline commit.
+#
+# Required environment:
+#   RHESIS_SRC=/absolute/path/to/rhesis
+#
+# Example (from the Evalith repository root):
+#   docker compose \
+#     -f "$RHESIS_SRC/docker-compose.yml" \
+#     -f "$RHESIS_SRC/docker-compose.ghcr.yml" \
+#     -f "$PWD/stage0/rhesis-flow/compose.stage0.yaml" \
+#     --env-file "$RHESIS_SRC/.env.docker.local" \
+#     -p rhesis-stage0 up -d postgres redis backend worker beat
+#
+# The frontend is intentionally not started for the API-level flow.
+
+services:
+  backend:
+    ports: !override
+      - "127.0.0.1:8080:8080"
+    environment:
+      RHESIS_SKIP_GARAK_WARM_CACHE: "true"
+      ENABLE_RHESIS_KEY: "false"
+      OTEL_RHESIS_TELEMETRY_ENABLED: "false"
+    volumes:
+      - ${RHESIS_SRC:?set RHESIS_SRC to the Rhesis checkout}/apps/backend/src/rhesis/backend/app/services/invokers/common/connection_errors.py:/app/apps/backend/src/rhesis/backend/app/services/invokers/common/connection_errors.py:ro
+      - ${RHESIS_SRC:?set RHESIS_SRC to the Rhesis checkout}/apps/backend/src/rhesis/backend/app/services/invokers/rest_invoker.py:/app/apps/backend/src/rhesis/backend/app/services/invokers/rest_invoker.py:ro
+
+  worker:
+    environment:
+      RHESIS_SKIP_GARAK_WARM_CACHE: "true"
+      ENABLE_RHESIS_KEY: "false"
+      OTEL_RHESIS_TELEMETRY_ENABLED: "false"
+    volumes:
+      - ${RHESIS_SRC:?set RHESIS_SRC to the Rhesis checkout}/apps/backend/src/rhesis/backend/app/services/invokers/common/connection_errors.py:/app/apps/backend/src/rhesis/backend/app/services/invokers/common/connection_errors.py:ro
+      - ${RHESIS_SRC:?set RHESIS_SRC to the Rhesis checkout}/apps/backend/src/rhesis/backend/app/services/invokers/rest_invoker.py:/app/apps/backend/src/rhesis/backend/app/services/invokers/rest_invoker.py:ro
+
+  frontend:
+    ports: !override
+      - "127.0.0.1:3000:3000"

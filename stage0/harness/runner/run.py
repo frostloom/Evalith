@@ -355,11 +355,11 @@ def cleanup(run_id: str, names: list[str], volumes: list[str]) -> dict:
     }
 
 
-def run_access(root: Path, run_id: str) -> dict:
+def run_access(root: Path, run_id: str, negative: bool = False) -> dict:
     out_volume = f"{RUN_PREFIX}access-{run_id}"
     reader_name = f"{RUN_PREFIX}reader-{run_id}"
     result: dict = {
-        "scenario": "local_project_access",
+        "scenario": "local_project_access_negative" if negative else "local_project_access",
         "run_id": run_id,
         "checks": {},
         "passed": False,
@@ -367,6 +367,8 @@ def run_access(root: Path, run_id: str) -> dict:
     }
     try:
         project = make_project_copy(root)
+        if negative:
+            (project / "src" / "release_gate.py").chmod(0o000)
         docker("volume", "create", out_volume, check=True)
         docker(
             "run",
@@ -401,7 +403,27 @@ def run_access(root: Path, run_id: str) -> dict:
         skipped = {
             entry["path"]: entry["reason"] for entry in (manifest or {}).get("skipped", [])
         }
+        entries = {entry["path"]: entry for entry in (manifest or {}).get("files", [])}
+        required = [
+            "README.md",
+            "docs/RELEASE_POLICY.md",
+            "src/release_gate.py",
+            "data/sample_state.json",
+        ]
+        unreadable = [
+            path
+            for path in required
+            if not entries.get(path, {}).get("sha256")
+            or entries.get(path, {}).get("read_error")
+        ]
+        read_errors = [
+            entry["path"]
+            for entry in (manifest or {}).get("files", [])
+            if entry.get("read_error")
+        ]
         checks = {
+            "reader_exit_ok": reader_result.returncode == 0,
+            "required_files_hashed": not unreadable and not read_errors,
             "readme_included": "README.md" in paths,
             "policy_included": "docs/RELEASE_POLICY.md" in paths,
             "source_included": "src/release_gate.py" in paths,
@@ -416,11 +438,14 @@ def run_access(root: Path, run_id: str) -> dict:
             {
                 "checks": checks,
                 "passed": all(checks.values()),
+                "unreadable_required_files": unreadable,
+                "read_errors": read_errors,
                 "manifest": manifest,
                 "reader_exit": reader_result.returncode,
                 "reader_stderr": reader_result.stderr.strip(),
             }
         )
+        result["negative_ok"] = (not result["passed"]) if negative else None
     except Exception as error:  # keep the failure in evidence, then still clean up
         result["error"] = f"{type(error).__name__}: {error}"
     finally:
@@ -693,6 +718,15 @@ def main() -> int:
         summary["access"] = access
         print(f"local_project_access: {'PASS' if access['passed'] else 'FAIL'}")
 
+        access_negative = run_access(root / "access-negative", f"{stamp}-access-negative", negative=True)
+        summary["access_negative"] = access_negative
+        print(
+            "local_project_access_negative: "
+            f"{'PASS' if access_negative['negative_ok'] else 'FAIL'} "
+            f"(passed={access_negative['passed']}, "
+            f"unreadable={access_negative.get('unreadable_required_files')})"
+        )
+
         for index, case in enumerate(cases):
             case_root = root / f"case-{index}"
             case_root.mkdir()
@@ -712,6 +746,8 @@ def main() -> int:
         summary["access"]
         and summary["access"]["passed"]
         and summary["access"]["cleanup"]["clean"]
+        and summary["access_negative"]["negative_ok"]
+        and summary["access_negative"]["cleanup"]["clean"]
         and all(case["case_ok"] for case in summary["cases"])
         and all(not case.get("error") for case in summary["cases"])
         and all(case["cleanup"]["clean"] for case in summary["cases"])

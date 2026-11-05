@@ -5,7 +5,9 @@
       "no_secret_markers": true,
       "policy_included": true,
       "project_mount_read_only": true,
+      "reader_exit_ok": true,
       "readme_included": true,
+      "required_files_hashed": true,
       "secrets_dir_excluded": true,
       "source_included": true,
       "symlink_escape_rejected": true
@@ -14,29 +16,29 @@
       "actions": [
         {
           "kind": "container",
-          "resource": "stage0-reader-20261105T073153Z-access",
+          "resource": "stage0-reader-20261105T074119Z-access",
           "rm_exit": 0,
           "stderr": ""
         },
         {
           "kind": "volume",
-          "resource": "stage0-access-20261105T073153Z-access",
+          "resource": "stage0-access-20261105T074119Z-access",
           "rm_exit": 0,
           "stderr": ""
         }
       ],
       "checked_containers": [
-        "stage0-reader-20261105T073153Z-access"
+        "stage0-reader-20261105T074119Z-access"
       ],
       "checked_volumes": [
-        "stage0-access-20261105T073153Z-access"
+        "stage0-access-20261105T074119Z-access"
       ],
       "clean": true,
       "command_failures": [],
       "inspection_errors": [],
       "leftover_containers": [],
       "leftover_volumes": [],
-      "run_id": "20261105T073153Z-access"
+      "run_id": "20261105T074119Z-access"
     },
     "manifest": {
       "files": [
@@ -79,11 +81,109 @@
         }
       ]
     },
+    "negative_ok": null,
     "passed": true,
+    "read_errors": [],
     "reader_exit": 0,
     "reader_stderr": "",
-    "run_id": "20261105T073153Z-access",
-    "scenario": "local_project_access"
+    "run_id": "20261105T074119Z-access",
+    "scenario": "local_project_access",
+    "unreadable_required_files": []
+  },
+  "access_negative": {
+    "checks": {
+      "env_excluded": true,
+      "no_secret_markers": true,
+      "policy_included": true,
+      "project_mount_read_only": true,
+      "reader_exit_ok": true,
+      "readme_included": true,
+      "required_files_hashed": false,
+      "secrets_dir_excluded": true,
+      "source_included": true,
+      "symlink_escape_rejected": true
+    },
+    "cleanup": {
+      "actions": [
+        {
+          "kind": "container",
+          "resource": "stage0-reader-20261105T074119Z-access-negative",
+          "rm_exit": 0,
+          "stderr": ""
+        },
+        {
+          "kind": "volume",
+          "resource": "stage0-access-20261105T074119Z-access-negative",
+          "rm_exit": 0,
+          "stderr": ""
+        }
+      ],
+      "checked_containers": [
+        "stage0-reader-20261105T074119Z-access-negative"
+      ],
+      "checked_volumes": [
+        "stage0-access-20261105T074119Z-access-negative"
+      ],
+      "clean": true,
+      "command_failures": [],
+      "inspection_errors": [],
+      "leftover_containers": [],
+      "leftover_volumes": [],
+      "run_id": "20261105T074119Z-access-negative"
+    },
+    "manifest": {
+      "files": [
+        {
+          "path": "README.md",
+          "sha256": "68dd0a4174de173a57ef95208df77b21098fbdd94b12fc833dbb231d085c89ce",
+          "size": 575
+        },
+        {
+          "path": "data/sample_state.json",
+          "sha256": "d1fc1cc52e3004332058f4f5d76bde95474d8fe5c295ea2ae0260861a2b90c76",
+          "size": 369
+        },
+        {
+          "path": "docs/RELEASE_POLICY.md",
+          "sha256": "1b778c37b6a5827218c758d8a238f30c01f43548dfd00592a17e1ed22dacce12",
+          "size": 753
+        },
+        {
+          "path": "src/release_gate.py",
+          "read_error": "FileNotFoundError",
+          "size": 1384
+        }
+      ],
+      "project_mount_writable": false,
+      "root": "/project",
+      "secret_markers_found": [],
+      "skipped": [
+        {
+          "path": ".env",
+          "reason": "excluded_name"
+        },
+        {
+          "path": "leak-outside",
+          "reason": "symlink_escape"
+        },
+        {
+          "path": "secrets",
+          "reason": "excluded_dir"
+        }
+      ]
+    },
+    "negative_ok": true,
+    "passed": false,
+    "read_errors": [
+      "src/release_gate.py"
+    ],
+    "reader_exit": 0,
+    "reader_stderr": "",
+    "run_id": "20261105T074119Z-access-negative",
+    "scenario": "local_project_access_negative",
+    "unreadable_required_files": [
+      "src/release_gate.py"
+    ]
   },
   "all_ok": true,
   "cases": [
@@ -99,18 +199,18 @@
       "agent_input_only_event": true,
       "agent_isolation": {
         "binds": [
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-0/agent-project:/project:ro",
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-0/agent-input:/input:ro",
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-0/seed.json:/seed/initial.json:ro",
-          "stage0-state-20261105T073153Z-pass:/state",
-          "stage0-out-20261105T073153Z-pass:/out"
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-0/agent-input:/input:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-0/seed.json:/seed/initial.json:ro",
+          "stage0-state-20261105T074119Z-pass:/state",
+          "stage0-out-20261105T074119Z-pass:/out",
+          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-0/agent-project:/project:ro"
         ],
         "cap_drop": [
           "ALL"
         ],
         "image": "stage0-agent:local",
         "memory": 134217728,
-        "name": "stage0-agent-20261105T073153Z-pass",
+        "name": "stage0-agent-20261105T074119Z-pass",
         "network_mode": "none",
         "pids_limit": 64,
         "readonly_rootfs": true,
@@ -151,43 +251,43 @@
         "actions": [
           {
             "kind": "container",
-            "resource": "stage0-agent-20261105T073153Z-pass",
+            "resource": "stage0-agent-20261105T074119Z-pass",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "container",
-            "resource": "stage0-verify-20261105T073153Z-pass",
+            "resource": "stage0-verify-20261105T074119Z-pass",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "volume",
-            "resource": "stage0-state-20261105T073153Z-pass",
+            "resource": "stage0-state-20261105T074119Z-pass",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "volume",
-            "resource": "stage0-out-20261105T073153Z-pass",
+            "resource": "stage0-out-20261105T074119Z-pass",
             "rm_exit": 0,
             "stderr": ""
           }
         ],
         "checked_containers": [
-          "stage0-agent-20261105T073153Z-pass",
-          "stage0-verify-20261105T073153Z-pass"
+          "stage0-agent-20261105T074119Z-pass",
+          "stage0-verify-20261105T074119Z-pass"
         ],
         "checked_volumes": [
-          "stage0-state-20261105T073153Z-pass",
-          "stage0-out-20261105T073153Z-pass"
+          "stage0-state-20261105T074119Z-pass",
+          "stage0-out-20261105T074119Z-pass"
         ],
         "clean": true,
         "command_failures": [],
         "inspection_errors": [],
         "leftover_containers": [],
         "leftover_volumes": [],
-        "run_id": "20261105T073153Z-pass"
+        "run_id": "20261105T074119Z-pass"
       },
       "expected_verdict": "passed",
       "hidden_material": {
@@ -198,11 +298,11 @@
       },
       "isolation": {
         "binds": [
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-0/agent-project:/project:ro",
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-0/agent-input:/input:ro",
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-0/seed.json:/seed/initial.json:ro",
-          "stage0-state-20261105T073153Z-pass:/state",
-          "stage0-out-20261105T073153Z-pass:/out"
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-0/agent-input:/input:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-0/seed.json:/seed/initial.json:ro",
+          "stage0-state-20261105T074119Z-pass:/state",
+          "stage0-out-20261105T074119Z-pass:/out",
+          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-0/agent-project:/project:ro"
         ],
         "cap_drop": [
           "ALL"
@@ -245,7 +345,7 @@
       },
       "isolation_ok": true,
       "observed_verdict": "passed",
-      "run_id": "20261105T073153Z-pass",
+      "run_id": "20261105T074119Z-pass",
       "scenario": "synthetic_release_gate",
       "verdict": {
         "checks": [
@@ -307,16 +407,16 @@
       "verifier_exit": 0,
       "verifier_isolation": {
         "binds": [
-          "stage0-state-20261105T073153Z-pass:/state:ro",
-          "stage0-out-20261105T073153Z-pass:/out",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-0/verifier-input:/input:ro"
+          "stage0-state-20261105T074119Z-pass:/state:ro",
+          "stage0-out-20261105T074119Z-pass:/out",
+          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-0/verifier-input:/input:ro"
         ],
         "cap_drop": [
           "ALL"
         ],
         "image": "stage0-verifier:local",
         "memory": 134217728,
-        "name": "stage0-verify-20261105T073153Z-pass",
+        "name": "stage0-verify-20261105T074119Z-pass",
         "network_mode": "none",
         "pids_limit": 64,
         "readonly_rootfs": true,
@@ -339,18 +439,18 @@
       "agent_input_only_event": true,
       "agent_isolation": {
         "binds": [
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-1/agent-input:/input:ro",
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-1/seed.json:/seed/initial.json:ro",
-          "stage0-state-20261105T073153Z-fail:/state",
-          "stage0-out-20261105T073153Z-fail:/out",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-1/agent-project:/project:ro"
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-1/agent-project:/project:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-1/agent-input:/input:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-1/seed.json:/seed/initial.json:ro",
+          "stage0-state-20261105T074119Z-fail:/state",
+          "stage0-out-20261105T074119Z-fail:/out"
         ],
         "cap_drop": [
           "ALL"
         ],
         "image": "stage0-agent:local",
         "memory": 134217728,
-        "name": "stage0-agent-20261105T073153Z-fail",
+        "name": "stage0-agent-20261105T074119Z-fail",
         "network_mode": "none",
         "pids_limit": 64,
         "readonly_rootfs": true,
@@ -391,43 +491,43 @@
         "actions": [
           {
             "kind": "container",
-            "resource": "stage0-agent-20261105T073153Z-fail",
+            "resource": "stage0-agent-20261105T074119Z-fail",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "container",
-            "resource": "stage0-verify-20261105T073153Z-fail",
+            "resource": "stage0-verify-20261105T074119Z-fail",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "volume",
-            "resource": "stage0-state-20261105T073153Z-fail",
+            "resource": "stage0-state-20261105T074119Z-fail",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "volume",
-            "resource": "stage0-out-20261105T073153Z-fail",
+            "resource": "stage0-out-20261105T074119Z-fail",
             "rm_exit": 0,
             "stderr": ""
           }
         ],
         "checked_containers": [
-          "stage0-agent-20261105T073153Z-fail",
-          "stage0-verify-20261105T073153Z-fail"
+          "stage0-agent-20261105T074119Z-fail",
+          "stage0-verify-20261105T074119Z-fail"
         ],
         "checked_volumes": [
-          "stage0-state-20261105T073153Z-fail",
-          "stage0-out-20261105T073153Z-fail"
+          "stage0-state-20261105T074119Z-fail",
+          "stage0-out-20261105T074119Z-fail"
         ],
         "clean": true,
         "command_failures": [],
         "inspection_errors": [],
         "leftover_containers": [],
         "leftover_volumes": [],
-        "run_id": "20261105T073153Z-fail"
+        "run_id": "20261105T074119Z-fail"
       },
       "expected_verdict": "failed",
       "hidden_material": {
@@ -438,11 +538,11 @@
       },
       "isolation": {
         "binds": [
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-1/agent-input:/input:ro",
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-1/seed.json:/seed/initial.json:ro",
-          "stage0-state-20261105T073153Z-fail:/state",
-          "stage0-out-20261105T073153Z-fail:/out",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-1/agent-project:/project:ro"
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-1/agent-project:/project:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-1/agent-input:/input:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-1/seed.json:/seed/initial.json:ro",
+          "stage0-state-20261105T074119Z-fail:/state",
+          "stage0-out-20261105T074119Z-fail:/out"
         ],
         "cap_drop": [
           "ALL"
@@ -485,7 +585,7 @@
       },
       "isolation_ok": true,
       "observed_verdict": "failed",
-      "run_id": "20261105T073153Z-fail",
+      "run_id": "20261105T074119Z-fail",
       "scenario": "synthetic_release_gate",
       "verdict": {
         "checks": [
@@ -547,16 +647,16 @@
       "verifier_exit": 2,
       "verifier_isolation": {
         "binds": [
-          "stage0-state-20261105T073153Z-fail:/state:ro",
-          "stage0-out-20261105T073153Z-fail:/out",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-1/verifier-input:/input:ro"
+          "stage0-state-20261105T074119Z-fail:/state:ro",
+          "stage0-out-20261105T074119Z-fail:/out",
+          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-1/verifier-input:/input:ro"
         ],
         "cap_drop": [
           "ALL"
         ],
         "image": "stage0-verifier:local",
         "memory": 134217728,
-        "name": "stage0-verify-20261105T073153Z-fail",
+        "name": "stage0-verify-20261105T074119Z-fail",
         "network_mode": "none",
         "pids_limit": 64,
         "readonly_rootfs": true,
@@ -579,18 +679,18 @@
       "agent_input_only_event": true,
       "agent_isolation": {
         "binds": [
-          "stage0-state-20261105T073153Z-missing_evidence:/state",
-          "stage0-out-20261105T073153Z-missing_evidence:/out",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-2/agent-project:/project:ro",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-2/agent-input:/input:ro",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-2/seed.json:/seed/initial.json:ro"
+          "stage0-out-20261105T074119Z-missing_evidence:/out",
+          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-2/agent-project:/project:ro",
+          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-2/agent-input:/input:ro",
+          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-2/seed.json:/seed/initial.json:ro",
+          "stage0-state-20261105T074119Z-missing_evidence:/state"
         ],
         "cap_drop": [
           "ALL"
         ],
         "image": "stage0-agent:local",
         "memory": 134217728,
-        "name": "stage0-agent-20261105T073153Z-missing_evidence",
+        "name": "stage0-agent-20261105T074119Z-missing_evidence",
         "network_mode": "none",
         "pids_limit": 64,
         "readonly_rootfs": true,
@@ -631,43 +731,43 @@
         "actions": [
           {
             "kind": "container",
-            "resource": "stage0-agent-20261105T073153Z-missing_evidence",
+            "resource": "stage0-agent-20261105T074119Z-missing_evidence",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "container",
-            "resource": "stage0-verify-20261105T073153Z-missing_evidence",
+            "resource": "stage0-verify-20261105T074119Z-missing_evidence",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "volume",
-            "resource": "stage0-state-20261105T073153Z-missing_evidence",
+            "resource": "stage0-state-20261105T074119Z-missing_evidence",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "volume",
-            "resource": "stage0-out-20261105T073153Z-missing_evidence",
+            "resource": "stage0-out-20261105T074119Z-missing_evidence",
             "rm_exit": 0,
             "stderr": ""
           }
         ],
         "checked_containers": [
-          "stage0-agent-20261105T073153Z-missing_evidence",
-          "stage0-verify-20261105T073153Z-missing_evidence"
+          "stage0-agent-20261105T074119Z-missing_evidence",
+          "stage0-verify-20261105T074119Z-missing_evidence"
         ],
         "checked_volumes": [
-          "stage0-state-20261105T073153Z-missing_evidence",
-          "stage0-out-20261105T073153Z-missing_evidence"
+          "stage0-state-20261105T074119Z-missing_evidence",
+          "stage0-out-20261105T074119Z-missing_evidence"
         ],
         "clean": true,
         "command_failures": [],
         "inspection_errors": [],
         "leftover_containers": [],
         "leftover_volumes": [],
-        "run_id": "20261105T073153Z-missing_evidence"
+        "run_id": "20261105T074119Z-missing_evidence"
       },
       "expected_verdict": "unverified",
       "hidden_material": {
@@ -678,11 +778,11 @@
       },
       "isolation": {
         "binds": [
-          "stage0-state-20261105T073153Z-missing_evidence:/state",
-          "stage0-out-20261105T073153Z-missing_evidence:/out",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-2/agent-project:/project:ro",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-2/agent-input:/input:ro",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-2/seed.json:/seed/initial.json:ro"
+          "stage0-out-20261105T074119Z-missing_evidence:/out",
+          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-2/agent-project:/project:ro",
+          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-2/agent-input:/input:ro",
+          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-2/seed.json:/seed/initial.json:ro",
+          "stage0-state-20261105T074119Z-missing_evidence:/state"
         ],
         "cap_drop": [
           "ALL"
@@ -725,7 +825,7 @@
       },
       "isolation_ok": true,
       "observed_verdict": "unverified",
-      "run_id": "20261105T073153Z-missing_evidence",
+      "run_id": "20261105T074119Z-missing_evidence",
       "scenario": "synthetic_release_gate",
       "verdict": {
         "checks": [
@@ -787,16 +887,16 @@
       "verifier_exit": 3,
       "verifier_isolation": {
         "binds": [
-          "stage0-state-20261105T073153Z-missing_evidence:/state:ro",
-          "stage0-out-20261105T073153Z-missing_evidence:/out",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-2/verifier-input:/input:ro"
+          "stage0-state-20261105T074119Z-missing_evidence:/state:ro",
+          "stage0-out-20261105T074119Z-missing_evidence:/out",
+          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-2/verifier-input:/input:ro"
         ],
         "cap_drop": [
           "ALL"
         ],
         "image": "stage0-verifier:local",
         "memory": 134217728,
-        "name": "stage0-verify-20261105T073153Z-missing_evidence",
+        "name": "stage0-verify-20261105T074119Z-missing_evidence",
         "network_mode": "none",
         "pids_limit": 64,
         "readonly_rootfs": true,
@@ -819,18 +919,18 @@
       "agent_input_only_event": true,
       "agent_isolation": {
         "binds": [
-          "stage0-out-20261105T073153Z-claim_mismatch:/out",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-3/agent-project:/project:ro",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-3/agent-input:/input:ro",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-3/seed.json:/seed/initial.json:ro",
-          "stage0-state-20261105T073153Z-claim_mismatch:/state"
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-3/agent-project:/project:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-3/agent-input:/input:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-3/seed.json:/seed/initial.json:ro",
+          "stage0-state-20261105T074119Z-claim_mismatch:/state",
+          "stage0-out-20261105T074119Z-claim_mismatch:/out"
         ],
         "cap_drop": [
           "ALL"
         ],
         "image": "stage0-agent:local",
         "memory": 134217728,
-        "name": "stage0-agent-20261105T073153Z-claim_mismatch",
+        "name": "stage0-agent-20261105T074119Z-claim_mismatch",
         "network_mode": "none",
         "pids_limit": 64,
         "readonly_rootfs": true,
@@ -871,43 +971,43 @@
         "actions": [
           {
             "kind": "container",
-            "resource": "stage0-agent-20261105T073153Z-claim_mismatch",
+            "resource": "stage0-agent-20261105T074119Z-claim_mismatch",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "container",
-            "resource": "stage0-verify-20261105T073153Z-claim_mismatch",
+            "resource": "stage0-verify-20261105T074119Z-claim_mismatch",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "volume",
-            "resource": "stage0-state-20261105T073153Z-claim_mismatch",
+            "resource": "stage0-state-20261105T074119Z-claim_mismatch",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "volume",
-            "resource": "stage0-out-20261105T073153Z-claim_mismatch",
+            "resource": "stage0-out-20261105T074119Z-claim_mismatch",
             "rm_exit": 0,
             "stderr": ""
           }
         ],
         "checked_containers": [
-          "stage0-agent-20261105T073153Z-claim_mismatch",
-          "stage0-verify-20261105T073153Z-claim_mismatch"
+          "stage0-agent-20261105T074119Z-claim_mismatch",
+          "stage0-verify-20261105T074119Z-claim_mismatch"
         ],
         "checked_volumes": [
-          "stage0-state-20261105T073153Z-claim_mismatch",
-          "stage0-out-20261105T073153Z-claim_mismatch"
+          "stage0-state-20261105T074119Z-claim_mismatch",
+          "stage0-out-20261105T074119Z-claim_mismatch"
         ],
         "clean": true,
         "command_failures": [],
         "inspection_errors": [],
         "leftover_containers": [],
         "leftover_volumes": [],
-        "run_id": "20261105T073153Z-claim_mismatch"
+        "run_id": "20261105T074119Z-claim_mismatch"
       },
       "expected_verdict": "passed",
       "hidden_material": {
@@ -918,11 +1018,11 @@
       },
       "isolation": {
         "binds": [
-          "stage0-out-20261105T073153Z-claim_mismatch:/out",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-3/agent-project:/project:ro",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-3/agent-input:/input:ro",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-3/seed.json:/seed/initial.json:ro",
-          "stage0-state-20261105T073153Z-claim_mismatch:/state"
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-3/agent-project:/project:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-3/agent-input:/input:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-3/seed.json:/seed/initial.json:ro",
+          "stage0-state-20261105T074119Z-claim_mismatch:/state",
+          "stage0-out-20261105T074119Z-claim_mismatch:/out"
         ],
         "cap_drop": [
           "ALL"
@@ -965,7 +1065,7 @@
       },
       "isolation_ok": true,
       "observed_verdict": "passed",
-      "run_id": "20261105T073153Z-claim_mismatch",
+      "run_id": "20261105T074119Z-claim_mismatch",
       "scenario": "synthetic_release_gate",
       "verdict": {
         "checks": [
@@ -1027,16 +1127,16 @@
       "verifier_exit": 0,
       "verifier_isolation": {
         "binds": [
-          "stage0-state-20261105T073153Z-claim_mismatch:/state:ro",
-          "stage0-out-20261105T073153Z-claim_mismatch:/out",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-3/verifier-input:/input:ro"
+          "stage0-state-20261105T074119Z-claim_mismatch:/state:ro",
+          "stage0-out-20261105T074119Z-claim_mismatch:/out",
+          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-3/verifier-input:/input:ro"
         ],
         "cap_drop": [
           "ALL"
         ],
         "image": "stage0-verifier:local",
         "memory": 134217728,
-        "name": "stage0-verify-20261105T073153Z-claim_mismatch",
+        "name": "stage0-verify-20261105T074119Z-claim_mismatch",
         "network_mode": "none",
         "pids_limit": 64,
         "readonly_rootfs": true,
@@ -1059,18 +1159,18 @@
       "agent_input_only_event": true,
       "agent_isolation": {
         "binds": [
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-4/agent-input:/input:ro",
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-4/seed.json:/seed/initial.json:ro",
-          "stage0-state-20261105T073153Z-unrelated_mutation:/state",
-          "stage0-out-20261105T073153Z-unrelated_mutation:/out",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-4/agent-project:/project:ro"
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-4/agent-project:/project:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-4/agent-input:/input:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-4/seed.json:/seed/initial.json:ro",
+          "stage0-state-20261105T074119Z-unrelated_mutation:/state",
+          "stage0-out-20261105T074119Z-unrelated_mutation:/out"
         ],
         "cap_drop": [
           "ALL"
         ],
         "image": "stage0-agent:local",
         "memory": 134217728,
-        "name": "stage0-agent-20261105T073153Z-unrelated_mutation",
+        "name": "stage0-agent-20261105T074119Z-unrelated_mutation",
         "network_mode": "none",
         "pids_limit": 64,
         "readonly_rootfs": true,
@@ -1111,43 +1211,43 @@
         "actions": [
           {
             "kind": "container",
-            "resource": "stage0-agent-20261105T073153Z-unrelated_mutation",
+            "resource": "stage0-agent-20261105T074119Z-unrelated_mutation",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "container",
-            "resource": "stage0-verify-20261105T073153Z-unrelated_mutation",
+            "resource": "stage0-verify-20261105T074119Z-unrelated_mutation",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "volume",
-            "resource": "stage0-state-20261105T073153Z-unrelated_mutation",
+            "resource": "stage0-state-20261105T074119Z-unrelated_mutation",
             "rm_exit": 0,
             "stderr": ""
           },
           {
             "kind": "volume",
-            "resource": "stage0-out-20261105T073153Z-unrelated_mutation",
+            "resource": "stage0-out-20261105T074119Z-unrelated_mutation",
             "rm_exit": 0,
             "stderr": ""
           }
         ],
         "checked_containers": [
-          "stage0-agent-20261105T073153Z-unrelated_mutation",
-          "stage0-verify-20261105T073153Z-unrelated_mutation"
+          "stage0-agent-20261105T074119Z-unrelated_mutation",
+          "stage0-verify-20261105T074119Z-unrelated_mutation"
         ],
         "checked_volumes": [
-          "stage0-state-20261105T073153Z-unrelated_mutation",
-          "stage0-out-20261105T073153Z-unrelated_mutation"
+          "stage0-state-20261105T074119Z-unrelated_mutation",
+          "stage0-out-20261105T074119Z-unrelated_mutation"
         ],
         "clean": true,
         "command_failures": [],
         "inspection_errors": [],
         "leftover_containers": [],
         "leftover_volumes": [],
-        "run_id": "20261105T073153Z-unrelated_mutation"
+        "run_id": "20261105T074119Z-unrelated_mutation"
       },
       "expected_verdict": "failed",
       "hidden_material": {
@@ -1158,11 +1258,11 @@
       },
       "isolation": {
         "binds": [
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-4/agent-input:/input:ro",
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-4/seed.json:/seed/initial.json:ro",
-          "stage0-state-20261105T073153Z-unrelated_mutation:/state",
-          "stage0-out-20261105T073153Z-unrelated_mutation:/out",
-          "/host_mnt/private/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-4/agent-project:/project:ro"
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-4/agent-project:/project:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-4/agent-input:/input:ro",
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-4/seed.json:/seed/initial.json:ro",
+          "stage0-state-20261105T074119Z-unrelated_mutation:/state",
+          "stage0-out-20261105T074119Z-unrelated_mutation:/out"
         ],
         "cap_drop": [
           "ALL"
@@ -1205,7 +1305,7 @@
       },
       "isolation_ok": true,
       "observed_verdict": "failed",
-      "run_id": "20261105T073153Z-unrelated_mutation",
+      "run_id": "20261105T074119Z-unrelated_mutation",
       "scenario": "synthetic_release_gate",
       "verdict": {
         "checks": [
@@ -1267,16 +1367,16 @@
       "verifier_exit": 2,
       "verifier_isolation": {
         "binds": [
-          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-c8kkd9sn/case-4/verifier-input:/input:ro",
-          "stage0-state-20261105T073153Z-unrelated_mutation:/state:ro",
-          "stage0-out-20261105T073153Z-unrelated_mutation:/out"
+          "/var/folders/sw/_x387kld25bgsp22s4n5rfjm0000gn/T/stage0-run-qbv1dwov/case-4/verifier-input:/input:ro",
+          "stage0-state-20261105T074119Z-unrelated_mutation:/state:ro",
+          "stage0-out-20261105T074119Z-unrelated_mutation:/out"
         ],
         "cap_drop": [
           "ALL"
         ],
         "image": "stage0-verifier:local",
         "memory": 134217728,
-        "name": "stage0-verify-20261105T073153Z-unrelated_mutation",
+        "name": "stage0-verify-20261105T074119Z-unrelated_mutation",
         "network_mode": "none",
         "pids_limit": 64,
         "readonly_rootfs": true,
@@ -1288,11 +1388,11 @@
       "verifier_stderr": ""
     }
   ],
-  "finished_at": "20261105T073215Z",
+  "finished_at": "20261105T074138Z",
   "images": {
     "agent": "stage0-agent:local",
     "reader": "stage0-reader:local",
     "verifier": "stage0-verifier:local"
   },
-  "started_at": "20261105T073153Z"
+  "started_at": "20261105T074119Z"
 }

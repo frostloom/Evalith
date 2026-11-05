@@ -58,11 +58,16 @@ must not be published.
 ## Reproduce
 
 ```bash
-cd <rhesis checkout>
+export RHESIS_SRC=/absolute/path/to/rhesis
+cd "$RHESIS_SRC"
 BUILDX_NO_DEFAULT_ATTESTATIONS=1 docker compose \
-  -f docker-compose.yml -f <local override> --env-file <local env> \
+  -f docker-compose.yml --env-file .env.docker.local \
   -p rhesis-stage0 build backend worker beat
 ```
+
+The recorded runtime, which uses the published images and the frozen-file mounts, uses
+`stage0/rhesis-flow/compose.stage0.yaml`; see
+[`stage0/rhesis-flow/README.md`](../../../stage0/rhesis-flow/README.md) §2.1.
 
 If the runtime `.venv` copy stalls on Docker Desktop, prefer a Linux builder or a
 pre-built runtime image; do not use the published image as the final Evalith artifact.

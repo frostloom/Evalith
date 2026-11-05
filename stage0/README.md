@@ -21,11 +21,12 @@ python3 stage0/harness/runner/run.py
 ```
 
 It builds three role-scoped images (`stage0-agent`, `stage0-verifier`,
-`stage0-reader`) and runs six scenarios:
+`stage0-reader`) and runs two access checks plus five cases:
 
 | Scenario | Expected | What it proves |
 | --- | --- | --- |
-| `local_project_access` | pass | allowlisted files read, `.env`/`secrets` excluded, escaping symlink rejected, mount read-only |
+| `local_project_access` | pass | allowlisted files actually read and hashed, `.env`/`secrets` excluded, escaping symlink rejected, mount read-only |
+| `local_project_access_negative` | fail | an unreadable required source file is rejected by the access checks |
 | `pass` | passed | correct final state + audit evidence |
 | `fail` | failed | verifier catches a wrong release even though the agent reported success |
 | `missing_evidence` | unverified | missing audit evidence is not treated as pass |
