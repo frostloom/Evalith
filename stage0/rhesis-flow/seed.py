@@ -413,7 +413,6 @@ def main() -> int:
     global BASE_URL, TOKEN, PROJECT_ID
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default=BASE_URL)
-    parser.add_argument("--skip-common", action="store_true")
     args = parser.parse_args()
     BASE_URL = args.base_url
 

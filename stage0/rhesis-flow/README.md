@@ -132,7 +132,7 @@ database or storage you need.
 - The Rhesis execution path does not create/reset environments. Both the endpoint and
   its state are shared across tests; the flow resets the stub's state between cases
   from the host. This is a recorded limitation, not a feature.
-- The frontend is started but not exercised by `seed.py`; the run is API-level.
+- The frontend is optional for this flow and was not started in the recorded run; the verification is API-level. The source-build frontend layer stalled under Docker Desktop.
 - The Rhesis image built here includes `ee/` because the upstream Dockerfile copies it.
   That build is local-only and must not be published. Stage 1 needs an EE-free build.
 - No real credentials, business data, or external side effects are used.
