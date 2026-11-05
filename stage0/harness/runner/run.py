@@ -32,6 +32,12 @@ REPO = HARNESS.parent.parent
 FIXTURES = HARNESS / "fixtures" / "project"
 SAMPLE_STATE = json.loads((FIXTURES / "data" / "sample_state.json").read_text(encoding="utf-8"))
 UNTOUCHED_SNAPSHOT = SAMPLE_STATE["artifacts"]["doc-18"]
+AUTHORIZED_RELEASE_ACTORS = [
+    approval["actor"]
+    for approval in SAMPLE_STATE["artifacts"]["doc-17"].get("approvals", [])
+    if approval.get("role") == "release_manager"
+]
+EXPECTED_RELEASE_ACTOR = "alice"
 EVIDENCE = REPO / "stage0" / "evidence" / "runs"
 AGENT_IMAGE = "stage0-agent:local"
 VERIFIER_IMAGE = "stage0-verifier:local"
@@ -126,6 +132,7 @@ def event_for(case: str) -> dict:
         "malformed_audit",
         "null_audit",
         "missing_audit",
+        "wrong_actor_audit",
     }:
         actor = "alice"
     else:
@@ -145,6 +152,8 @@ def event_for(case: str) -> dict:
         mode = "null_audit"
     elif case == "missing_audit":
         mode = "missing_audit"
+    elif case == "wrong_actor_audit":
+        mode = "wrong_actor_audit"
     return {
         "artifact_id": "doc-17",
         "action": "release",
@@ -168,12 +177,15 @@ def expectation_for(case: str) -> dict:
         "malformed_audit",
         "null_audit",
         "missing_audit",
+        "wrong_actor_audit",
     }:
         return {
             **base,
             "expected_status": "released",
             "expected_audit_entries": 1,
             "expected_decision": "released",
+            "expected_audit_actor": EXPECTED_RELEASE_ACTOR,
+            "authorized_release_actors": AUTHORIZED_RELEASE_ACTORS,
         }
     if case == "fail":
         return {
@@ -181,6 +193,7 @@ def expectation_for(case: str) -> dict:
             "expected_status": "draft",
             "expected_audit_entries": 0,
             "expected_decision": "rejected",
+            "authorized_release_actors": AUTHORIZED_RELEASE_ACTORS,
         }
     raise ValueError(f"unknown case {case}")
 
@@ -194,6 +207,7 @@ EXPECTED_VERDICT = {
     "malformed_audit": "failed",
     "null_audit": "failed",
     "missing_audit": "unverified",
+    "wrong_actor_audit": "failed",
 }
 
 EXPECTED_CASE_OK = {
@@ -206,6 +220,7 @@ EXPECTED_CASE_OK = {
     "malformed_audit": True,
     "null_audit": True,
     "missing_audit": True,
+    "wrong_actor_audit": True,
 }
 
 
@@ -773,7 +788,7 @@ def main() -> int:
         "--cases",
         default=(
             "pass,fail,missing_evidence,claim_mismatch,unrelated_mutation,agent_crash,"
-            "malformed_audit,null_audit,missing_audit"
+            "malformed_audit,null_audit,missing_audit,wrong_actor_audit"
         ),
         help="comma-separated cases to run",
     )

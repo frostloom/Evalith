@@ -131,13 +131,21 @@ def main(argv: list[str]) -> int:
 
     # Calibration: valid release transition, malformed audit evidence. The verifier
     # must reject a non-list audit or an entry without action/actor.
-    if mode in {"malformed_audit", "null_audit", "missing_audit"} and artifact is not None:
+    if mode in {
+        "malformed_audit",
+        "null_audit",
+        "missing_audit",
+        "wrong_actor_audit",
+    } and artifact is not None:
         if mode == "malformed_audit":
             artifact["audit"] = "not-a-list"
         elif mode == "null_audit":
             artifact["audit"] = [None]
-        else:
+        elif mode == "missing_audit":
             artifact.pop("audit", None)
+        else:
+            # Valid shape but an unauthorized (contributor) actor.
+            artifact["audit"] = [{"action": "release", "actor": "bob"}]
 
     # A deliberately unrelated mutation: keep doc-18's status as draft but change
     # another field. The verifier must compare the complete initial snapshot.

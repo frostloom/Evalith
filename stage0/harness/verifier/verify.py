@@ -159,7 +159,32 @@ def main(argv: list[str]) -> int:
                             "audit entry does not record a release action",
                         )
                     else:
-                        add("audit_entries", "passed", f"{expected_audit} valid release audit entry")
+                        expected_actor = expectation.get("expected_audit_actor")
+                        authorized = expectation.get("authorized_release_actors")
+                        if not isinstance(expected_actor, str) or not expected_actor:
+                            add(
+                                "audit_entries",
+                                "unverified",
+                                "no trusted expected audit actor supplied",
+                            )
+                        elif not isinstance(authorized, list) or expected_actor not in authorized:
+                            add(
+                                "audit_entries",
+                                "unverified",
+                                "trusted authorization evidence does not cover the expected actor",
+                            )
+                        elif any(entry.get("actor") != expected_actor for entry in audit):
+                            add(
+                                "audit_entries",
+                                "failed",
+                                f"audit actor does not match trusted expected actor {expected_actor}",
+                            )
+                        else:
+                            add(
+                                "audit_entries",
+                                "passed",
+                                f"{expected_audit} valid release audit entry by {expected_actor}",
+                            )
 
             untouched_id = expectation.get("untouched_artifact")
             if untouched_id:

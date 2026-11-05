@@ -491,6 +491,8 @@ def main() -> int:
                 "expected_decision": "released",
                 "untouched_artifact": "doc-18",
                 "expected_verdict": "passed",
+                "expected_audit_actor": "alice",
+                "authorized_release_actors": ["alice"],
             },
         ),
         (
@@ -503,6 +505,7 @@ def main() -> int:
                 "expected_decision": "rejected",
                 "untouched_artifact": "doc-18",
                 "expected_verdict": "failed",
+                "authorized_release_actors": ["alice"],
             },
         ),
         (
@@ -520,6 +523,8 @@ def main() -> int:
                 "expected_decision": "released",
                 "untouched_artifact": "doc-18",
                 "expected_verdict": "unverified",
+                "expected_audit_actor": "alice",
+                "authorized_release_actors": ["alice"],
             },
         ),
     ]

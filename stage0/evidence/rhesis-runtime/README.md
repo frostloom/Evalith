@@ -76,7 +76,7 @@ No real model, credential, external service, or business data was used.
 
 ## Observed results
 
-`rhesis-flow-1793868537.json` contains the full output. The per-request `llm-requests.jsonl` / `target-requests.jsonl` files are local runtime artifacts (gitignored); the target request and raw response are also embedded in the JSON result. Key points:
+`rhesis-flow-1793869085.json` contains the full output. The per-request `llm-requests.jsonl` / `target-requests.jsonl` files are local runtime artifacts (gitignored); the target request and raw response are also embedded in the JSON result. Key points:
 
 | Check | Result |
 | --- | --- |
@@ -94,8 +94,9 @@ a state check.
 
 This run uses the current shared verifier without `--require-hidden-access` (the
 Rhesis flow has no agent container to probe). The verifier also requires `audit` to be
-a list whose entries are objects with non-empty `action` and `actor`; malformed entries
-fail and a missing audit field is unverified. It supplies the initial doc-18 snapshot
+a list whose entries are objects with non-empty `action` and `actor`; release audit
+actors must match the trusted expected actor and its trusted authorization list.
+Malformed entries fail, a missing audit field is unverified, and a wrong actor fails. It supplies the initial doc-18 snapshot
 for the complete untouched-artifact comparison. Each invocation writes a fresh verdict
 file and requires the verifier exit code to match its verdict (0/2/3); a crashed
 verifier cannot be mistaken for a previous result. A run polling timeout is explicit:
@@ -105,19 +106,19 @@ committed three scenarios (all have `timed_out=false` and `cancellation=null`), 
 timeout/cancellation remains runtime-unverified. `all_external_ok` requires `Completed`
 execution and one `ok` result per scenario, not just an external verdict. The pass case therefore returns
 `passed`; the fail and missing-evidence cases still return `failed` / `unverified`. The
-harness evidence (`stage0/evidence/runs/20261105T084635Z-summary.json`) is the
+harness evidence (`stage0/evidence/runs/20261105T085557Z-summary.json`) is the
 isolation-flagged counterpart.
 
 ## IDs from the run
 
 ```text
-project_id    ce100312-1357-43f5-a39c-53f533bd7c47
-model_id      7369115a-8704-40b5-8645-b73ea422ae01
-endpoint_id   c4af47a4-1e95-47cd-94a0-c370018ddd44
-architect     0a818dec-d4b8-49e6-91f8-45789e31afbb
-run pass      96cb6031-69eb-47b0-9aa5-452113813756
-run fail      a21c1407-73f3-4ae4-bd63-7b9076d1d379
-run missing   f231e49b-d1f6-43b8-bc6e-99b1c1c880fc
+project_id    9c85c3cd-53ce-4955-a77c-316c81c0a79f
+model_id      81d6bcc9-dcbf-47ae-a153-b914c26e1896
+endpoint_id   1c7a00de-f05d-4bc1-bc82-5b5528058563
+architect     382dff4d-58d8-4c49-b471-6eb7ac71b4eb
+run pass      c2e5391a-f8fd-4d0c-94c0-9b4e5f00c42a
+run fail      55f40dc0-d684-42c7-8e55-18d7df463a81
+run missing   60bf2fe2-b40c-4c2c-93c2-0cf8d5825d6c
 ```
 
 ## Reproduction and limits

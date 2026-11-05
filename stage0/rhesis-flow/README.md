@@ -14,7 +14,7 @@ There are two startup paths:
 1. **Recorded runtime (recommended for reproducing the committed evidence).** Published
    Rhesis 0.20.1 images plus a sanitized override that mounts the two files differing
    from the frozen checkout. This is what produced
-   `stage0/evidence/rhesis-runtime/rhesis-flow-1793868537.json`.
+   `stage0/evidence/rhesis-runtime/rhesis-flow-1793869085.json`.
 2. **Full source build (preferred for a final product build, if the host can finish it).**
    Build backend/worker/beat/frontend from the frozen checkout. On this machine the
    backend/worker runtime `.venv` copy stalled under Docker Desktop, so it was not the
