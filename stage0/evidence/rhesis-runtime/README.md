@@ -76,7 +76,7 @@ No real model, credential, external service, or business data was used.
 
 ## Observed results
 
-`rhesis-flow-1793866589.json` contains the full output. The per-request `llm-requests.jsonl` / `target-requests.jsonl` files are local runtime artifacts (gitignored); the target request and raw response are also embedded in the JSON result. Key points:
+`rhesis-flow-1793867196.json` contains the full output. The per-request `llm-requests.jsonl` / `target-requests.jsonl` files are local runtime artifacts (gitignored); the target request and raw response are also embedded in the JSON result. Key points:
 
 | Check | Result |
 | --- | --- |
@@ -96,7 +96,10 @@ This run uses the current shared verifier without `--require-hidden-access` (the
 Rhesis flow has no agent container to probe), and supplies the initial doc-18 snapshot
 for the complete untouched-artifact comparison. Each invocation writes a fresh verdict
 file and requires the verifier exit code to match its verdict (0/2/3); a crashed
-verifier cannot be mistaken for a previous result. The pass case therefore returns
+verifier cannot be mistaken for a previous result. A run polling timeout is explicit:
+the flow requests cancellation, waits for a terminal status, and aborts later scenarios
+before any shared-state reset. `all_external_ok` requires `Completed` execution and
+one `ok` result per scenario, not just an external verdict. The pass case therefore returns
 `passed`; the fail and missing-evidence cases still return `failed` / `unverified`. The
 harness evidence (`stage0/evidence/runs/20261105T081350Z-summary.json`) is the
 isolation-flagged counterpart.
@@ -104,13 +107,13 @@ isolation-flagged counterpart.
 ## IDs from the run
 
 ```text
-project_id    2b7fa38d-1bca-4dda-8c33-d9402062c2f9
-model_id      4abb7493-de45-4507-bcea-78aa4a7cd2df
-endpoint_id   ba36b1f5-586b-4df9-a467-3bc5a9f31a1a
-architect     01d9b724-1d28-48ae-a760-93446cb21446
-run pass      8ef906b1-2058-4cf2-9624-4ea6e6bb8cf7
-run fail      2052e0df-a3a8-458a-8a3f-a55df51cdccd
-run missing   749039e4-95ff-4953-82ab-abf7f4cb38c4
+project_id    54bdd70d-9510-429a-ac4b-6536f5627a19
+model_id      74625e49-8364-4068-ade4-423b927966a1
+endpoint_id   fca17842-31c3-4327-9c65-e0869a876c90
+architect     7eb4f726-5fda-49fa-8bae-aebaff10aaec
+run pass      14fa0ebd-2b68-4255-ae4c-682e0e52bede
+run fail      3ff09a43-15f9-4ea0-86a1-540cc620c930
+run missing   a0ba80ec-0c6f-421a-8e1f-0e8c246f7345
 ```
 
 ## Reproduction and limits

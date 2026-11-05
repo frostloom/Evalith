@@ -163,19 +163,33 @@ def run_verifier(expectation: dict) -> dict:
         verdict_path.unlink(missing_ok=True)
 
 
-def poll_run(run_id: str, timeout_seconds: int = 120) -> dict:
-    terminal = {"Completed", "Partial", "Failed", "Cancelled"}
+TERMINAL_RUN_STATUSES = {"Completed", "Partial", "Failed", "Cancelled"}
+
+
+def run_status(detail: dict) -> str | None:
+    return (detail.get("status") or {}).get("name") or (detail.get("attributes") or {}).get(
+        "task_state"
+    )
+
+
+def poll_run(run_id: str, timeout_seconds: int = 120) -> tuple[dict, bool]:
+    """Return (latest run detail, terminal). A timeout is explicitly non-terminal."""
     deadline = time.time() + timeout_seconds
     last = {}
     while time.time() < deadline:
         last = api("GET", f"/test_runs/{run_id}", project_id=PROJECT_ID)
-        status = (last.get("status") or {}).get("name") or (last.get("attributes") or {}).get(
-            "task_state"
-        )
-        if status in terminal:
-            return last
+        if run_status(last) in TERMINAL_RUN_STATUSES:
+            return last, True
         time.sleep(2)
-    return last
+    return last, False
+
+
+def cancel_run(run_id: str) -> dict:
+    try:
+        detail = api("POST", f"/test_runs/{run_id}/cancel", project_id=PROJECT_ID)
+        return {"requested": True, "status": run_status(detail)}
+    except ApiError as error:
+        return {"requested": False, "error": str(error)}
 
 
 def get_results(run_id: str) -> list[dict]:
@@ -394,14 +408,29 @@ def create_scenario(common: dict, name: str, parameters: dict, expected: dict) -
     if not run_id:
         raise RuntimeError(f"execute did not return test_run_id: {execution}")
 
-    run_detail = poll_run(run_id)
+    run_detail, terminal = poll_run(run_id)
+    timed_out = not terminal
+    cancellation = None
+    if timed_out:
+        # Do not reset shared state or start the next scenario while this run may
+        # still be writing. Request cancellation and wait for a terminal status.
+        cancellation = cancel_run(run_id)
+        run_detail, terminal = poll_run(run_id, timeout_seconds=30)
+        if not terminal:
+            raise RuntimeError(
+                f"test run {run_id} did not terminate after timeout/cancel; "
+                "aborting subsequent scenarios"
+            )
+
     results = get_results(run_id)
     external = run_verifier(expected)
 
-    status = (run_detail.get("status") or {}).get("name") or (run_detail.get("attributes") or {}).get(
-        "task_state"
-    )
+    status = run_status(run_detail)
     rhesis_verdicts = [row.get("verdict") for row in results]
+    rhesis_results_ok = len(results) == 1 and all(
+        row.get("execution") == "ok" for row in results
+    )
+    rhesis_execution_ok = status == "Completed" and rhesis_results_ok and not timed_out
     return {
         "scenario": name,
         "test_set_id": test_set_id,
@@ -409,6 +438,11 @@ def create_scenario(common: dict, name: str, parameters: dict, expected: dict) -
         "metric_id": metric_id,
         "run_id": run_id,
         "rhesis_run_status": status,
+        "rhesis_execution_ok": rhesis_execution_ok,
+        "rhesis_results_ok": rhesis_results_ok,
+        "timed_out": timed_out,
+        "cancellation": cancellation,
+        "abort_remaining": timed_out,
         "rhesis_run_stats": run_detail.get("stats"),
         "rhesis_verdicts": rhesis_verdicts,
         "rhesis_result_count": len(results),
@@ -490,12 +524,13 @@ def main() -> int:
         ),
     ]
 
+    aborted = False
     for name, parameters, expected in scenarios:
         try:
             expected = {**expected, "untouched_artifact_snapshot": UNTOUCHED_SNAPSHOT}
             result = create_scenario(common, name, parameters, expected)
-        except Exception as error:  # keep going, record the failure
-            result = {"scenario": name, "error": str(error)}
+        except Exception as error:  # do not touch shared state or run the next scenario
+            result = {"scenario": name, "error": str(error), "abort_remaining": True}
         summary["scenarios"].append(result)
         status = (
             (result.get("external_verifier") or {}).get("verdict", {}).get("verdict")
@@ -504,9 +539,15 @@ def main() -> int:
         )
         print(
             f"{name}: rhesis_run={result.get('rhesis_run_status')} "
+            f"rhesis_execution_ok={result.get('rhesis_execution_ok')} "
             f"rhesis_verdicts={result.get('rhesis_verdicts')} "
             f"external={status}"
         )
+        if result.get("abort_remaining"):
+            aborted = True
+            break
+
+    summary["aborted"] = aborted
 
     def external_ok(scenario: dict) -> bool:
         external = scenario.get("external_verifier") or {}
@@ -515,11 +556,16 @@ def main() -> int:
             == scenario.get("expected_external_verdict")
         )
 
+    expected_scenarios = ["pass", "fail", "missing_evidence"]
+    by_name = {scenario.get("scenario"): scenario for scenario in summary["scenarios"]}
     summary["all_external_ok"] = (
-        all(
-            external_ok(scenario)
-            for scenario in summary["scenarios"]
-            if "error" not in scenario
+        not aborted
+        and len(summary["scenarios"]) == len(expected_scenarios)
+        and all(
+            name in by_name
+            and by_name[name].get("rhesis_execution_ok") is True
+            and external_ok(by_name[name])
+            for name in expected_scenarios
         )
         and all("error" not in scenario for scenario in summary["scenarios"])
     )

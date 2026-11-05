@@ -14,7 +14,7 @@ There are two startup paths:
 1. **Recorded runtime (recommended for reproducing the committed evidence).** Published
    Rhesis 0.20.1 images plus a sanitized override that mounts the two files differing
    from the frozen checkout. This is what produced
-   `stage0/evidence/rhesis-runtime/rhesis-flow-1793866589.json`.
+   `stage0/evidence/rhesis-runtime/rhesis-flow-1793867196.json`.
 2. **Full source build (preferred for a final product build, if the host can finish it).**
    Build backend/worker/beat/frontend from the frozen checkout. On this machine the
    backend/worker runtime `.venv` copy stalled under Docker Desktop, so it was not the
@@ -177,8 +177,11 @@ test. It repeats for three synthetic cases:
 | missing_evidence | pass | unverified | release happened but audit evidence is missing |
 
 The result JSON is written to `stage0/evidence/rhesis-runtime/rhesis-flow-<epoch>.json`.
-`all_external_ok: true` means the independent verifier's expectation was met for every
-case; it does not mean Rhesis' own verdict was correct for the fail case.
+`all_external_ok: true` requires each scenario to reach `Completed` with one `ok`
+result, the verifier's exit code to match its verdict, and the independent expectation
+to be met. A polling timeout is recorded explicitly; the flow requests cancellation,
+waits for a terminal status, and aborts later scenarios before any shared-state reset.
+It still does not mean Rhesis' own verdict was correct for the fail case.
 
 ## 5. Stop and clean up
 
