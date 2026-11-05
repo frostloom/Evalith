@@ -76,7 +76,7 @@ No real model, credential, external service, or business data was used.
 
 ## Observed results
 
-`rhesis-flow-1793862445.json` contains the full output. The per-request `llm-requests.jsonl` / `target-requests.jsonl` files are local runtime artifacts (gitignored); the target request and raw response are also embedded in the JSON result. Key points:
+`rhesis-flow-1793866589.json` contains the full output. The per-request `llm-requests.jsonl` / `target-requests.jsonl` files are local runtime artifacts (gitignored); the target request and raw response are also embedded in the JSON result. Key points:
 
 | Check | Result |
 | --- | --- |
@@ -94,21 +94,23 @@ a state check.
 
 This run uses the current shared verifier without `--require-hidden-access` (the
 Rhesis flow has no agent container to probe), and supplies the initial doc-18 snapshot
-for the complete untouched-artifact comparison. The pass case therefore returns
+for the complete untouched-artifact comparison. Each invocation writes a fresh verdict
+file and requires the verifier exit code to match its verdict (0/2/3); a crashed
+verifier cannot be mistaken for a previous result. The pass case therefore returns
 `passed`; the fail and missing-evidence cases still return `failed` / `unverified`. The
-harness evidence (`stage0/evidence/runs/20261105T075950Z-summary.json`) is the
+harness evidence (`stage0/evidence/runs/20261105T081350Z-summary.json`) is the
 isolation-flagged counterpart.
 
 ## IDs from the run
 
 ```text
-project_id    3521b1b4-e6bf-42bd-a67e-1f291dc58645
-model_id      45db1458-ae05-4b2f-81d4-0a5f6a346d89
-endpoint_id   e9a52cdc-e4d3-4a1e-9859-76ef6ec748c8
-architect     ca2249b1-2c6d-45bd-8d6e-2c8b81542c81
-run pass      b6835024-280e-4336-8cf8-1275fdb437bd
-run fail      cf266ad9-1fc6-48d6-837f-b29591bc1aee
-run missing   471fd033-a74c-47fb-af14-32c4f4297b11
+project_id    2b7fa38d-1bca-4dda-8c33-d9402062c2f9
+model_id      4abb7493-de45-4507-bcea-78aa4a7cd2df
+endpoint_id   ba36b1f5-586b-4df9-a467-3bc5a9f31a1a
+architect     01d9b724-1d28-48ae-a760-93446cb21446
+run pass      8ef906b1-2058-4cf2-9624-4ea6e6bb8cf7
+run fail      2052e0df-a3a8-458a-8a3f-a55df51cdccd
+run missing   749039e4-95ff-4953-82ab-abf7f4cb38c4
 ```
 
 ## Reproduction and limits

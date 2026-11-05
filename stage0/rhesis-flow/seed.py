@@ -26,6 +26,7 @@ import shutil
 import subprocess
 import sys
 import time
+import uuid
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -119,28 +120,47 @@ def run_verifier(expectation: dict) -> dict:
     response_path.write_text(json.dumps(response, indent=2) + "\n", encoding="utf-8")
     expectation_path = STUB_DATA / "last-expectation.json"
     expectation_path.write_text(json.dumps(expectation, indent=2) + "\n", encoding="utf-8")
-    verdict_path = STUB_DATA / "last-external-verdict.json"
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(VERIFIER),
-            str(STUB_DATA / "target-state.json"),
-            str(response_path),
-            str(expectation_path),
-            str(verdict_path),
-        ],
-        check=False,
-        text=True,
-        capture_output=True,
-    )
-    verdict = {}
-    if verdict_path.exists():
-        verdict = json.loads(verdict_path.read_text(encoding="utf-8"))
-    return {
-        "exit_code": result.returncode,
-        "stderr": result.stderr.strip(),
-        "verdict": verdict,
-    }
+    # A fresh path per invocation prevents a crashed verifier from leaving an older
+    # verdict for this run to reuse.
+    verdict_path = STUB_DATA / f"external-verdict-{uuid.uuid4().hex}.json"
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(VERIFIER),
+                str(STUB_DATA / "target-state.json"),
+                str(response_path),
+                str(expectation_path),
+                str(verdict_path),
+            ],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        verdict = {}
+        if verdict_path.exists():
+            try:
+                verdict = json.loads(verdict_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                verdict = {}
+        verdict_text = verdict.get("verdict")
+        expected_exit = {"passed": 0, "failed": 2, "unverified": 3}.get(verdict_text)
+        execution_ok = bool(verdict_text) and result.returncode == expected_exit
+        execution_error = None
+        if not execution_ok:
+            execution_error = (
+                f"verifier exit={result.returncode}, verdict={verdict_text!r}"
+                + (f"; stderr={result.stderr.strip()}" if result.stderr.strip() else "")
+            )
+        return {
+            "exit_code": result.returncode,
+            "stderr": result.stderr.strip(),
+            "verdict": verdict,
+            "execution_ok": execution_ok,
+            "execution_error": execution_error,
+        }
+    finally:
+        verdict_path.unlink(missing_ok=True)
 
 
 def poll_run(run_id: str, timeout_seconds: int = 120) -> dict:
@@ -403,6 +423,7 @@ def create_scenario(common: dict, name: str, parameters: dict, expected: dict) -
             for row in results
         ],
         "external_verifier": external,
+        "external_execution_ok": external.get("execution_ok", False),
         "target_request": last_target_response(),
         "expected_external_verdict": expected["expected_verdict"],
     }
@@ -487,12 +508,21 @@ def main() -> int:
             f"external={status}"
         )
 
-    summary["all_external_ok"] = all(
-        (scenario.get("external_verifier") or {}).get("verdict", {}).get("verdict")
-        == scenario.get("expected_external_verdict")
-        for scenario in summary["scenarios"]
-        if "error" not in scenario
-    ) and all("error" not in scenario for scenario in summary["scenarios"])
+    def external_ok(scenario: dict) -> bool:
+        external = scenario.get("external_verifier") or {}
+        return bool(external.get("execution_ok")) and (
+            (external.get("verdict") or {}).get("verdict")
+            == scenario.get("expected_external_verdict")
+        )
+
+    summary["all_external_ok"] = (
+        all(
+            external_ok(scenario)
+            for scenario in summary["scenarios"]
+            if "error" not in scenario
+        )
+        and all("error" not in scenario for scenario in summary["scenarios"])
+    )
 
     output = EVIDENCE / f"rhesis-flow-{int(time.time())}.json"
     output.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")

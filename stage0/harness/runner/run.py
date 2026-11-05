@@ -680,31 +680,36 @@ def run_case(case: str, root: Path, run_id: str) -> dict:
             for path in project_files
         )
         only_event = input_files == ["event.json"]
-        case_ok = (
-            agent_result.returncode == 0
-            and observed_verdict == expected_verdict
-            and verifier_result.returncode
-            == {"passed": 0, "failed": 2, "unverified": 3}[expected_verdict]
-            and image_probe_ok
+        verifier_exit_ok = verifier_result.returncode == {
+            "passed": 0,
+            "failed": 2,
+            "unverified": 3,
+        }[expected_verdict]
+        shared_ok = (
+            image_probe_ok
             and not agent_image_has_verifier
             and isolation["ok"]
             and project_filtered
             and only_event
         )
+        case_ok = (
+            agent_result.returncode == 0
+            and observed_verdict == expected_verdict
+            and verifier_exit_ok
+            and shared_ok
+        )
         if expected_case_ok:
             case_matches = case_ok
         else:
             # Calibration for execution failure: valid state/verifier result and
-            # isolation, but the agent exited with its own nonzero code.
+            # isolation, but the agent exited with its own nonzero code. The verifier
+            # itself must still exit with the code matching its verdict.
             case_matches = (
                 not case_ok
                 and agent_result.returncode == 1
                 and observed_verdict == expected_verdict
-                and image_probe_ok
-                and not agent_image_has_verifier
-                and isolation["ok"]
-                and project_filtered
-                and only_event
+                and verifier_exit_ok
+                and shared_ok
             )
         result.update(
             {
@@ -713,6 +718,7 @@ def run_case(case: str, root: Path, run_id: str) -> dict:
                 "case_matches": case_matches,
                 "agent_exit": agent_result.returncode,
                 "verifier_exit": verifier_result.returncode,
+                "verifier_exit_ok": verifier_exit_ok,
                 "agent_observed": agent_observations,
                 "hidden_material": agent_observations.get("hidden_access"),
                 "agent_image_has_verifier": agent_image_has_verifier,
