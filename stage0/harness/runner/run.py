@@ -117,7 +117,13 @@ def seed_state(root: Path) -> Path:
 
 
 def event_for(case: str) -> dict:
-    if case in {"pass", "missing_evidence", "claim_mismatch", "unrelated_mutation"}:
+    if case in {
+        "pass",
+        "missing_evidence",
+        "claim_mismatch",
+        "unrelated_mutation",
+        "agent_crash",
+    }:
         actor = "alice"
     else:
         actor = "bob"  # contributor; the naive agent will still release
@@ -128,6 +134,8 @@ def event_for(case: str) -> dict:
         mode = "wrong_claim"
     elif case == "unrelated_mutation":
         mode = "unrelated_mutation"
+    elif case == "agent_crash":
+        mode = "crash_after_write"
     return {
         "artifact_id": "doc-17",
         "action": "release",
@@ -142,7 +150,13 @@ def expectation_for(case: str) -> dict:
         "untouched_artifact": "doc-18",
         "untouched_artifact_snapshot": UNTOUCHED_SNAPSHOT,
     }
-    if case in {"pass", "missing_evidence", "claim_mismatch", "unrelated_mutation"}:
+    if case in {
+        "pass",
+        "missing_evidence",
+        "claim_mismatch",
+        "unrelated_mutation",
+        "agent_crash",
+    }:
         return {
             **base,
             "expected_status": "released",
@@ -164,6 +178,16 @@ EXPECTED_VERDICT = {
     "missing_evidence": "unverified",
     "claim_mismatch": "passed",
     "unrelated_mutation": "failed",
+    "agent_crash": "passed",
+}
+
+EXPECTED_CASE_OK = {
+    "pass": True,
+    "fail": True,
+    "missing_evidence": True,
+    "claim_mismatch": True,
+    "unrelated_mutation": True,
+    "agent_crash": False,
 }
 
 
@@ -522,13 +546,16 @@ def run_case(case: str, root: Path, run_id: str) -> dict:
     agent_name = f"{RUN_PREFIX}agent-{run_id}"
     verify_name = f"{RUN_PREFIX}verify-{run_id}"
     expected_verdict = EXPECTED_VERDICT[case]
+    expected_case_ok = EXPECTED_CASE_OK[case]
     result: dict = {
         "scenario": "synthetic_release_gate",
         "case": case,
         "run_id": run_id,
         "expected_verdict": expected_verdict,
+        "expected_case_ok": expected_case_ok,
         "observed_verdict": None,
         "case_ok": False,
+        "case_matches": False,
         "agent_input_files": [],
         "agent_project_files": [],
     }
@@ -654,7 +681,8 @@ def run_case(case: str, root: Path, run_id: str) -> dict:
         )
         only_event = input_files == ["event.json"]
         case_ok = (
-            observed_verdict == expected_verdict
+            agent_result.returncode == 0
+            and observed_verdict == expected_verdict
             and verifier_result.returncode
             == {"passed": 0, "failed": 2, "unverified": 3}[expected_verdict]
             and image_probe_ok
@@ -663,10 +691,26 @@ def run_case(case: str, root: Path, run_id: str) -> dict:
             and project_filtered
             and only_event
         )
+        if expected_case_ok:
+            case_matches = case_ok
+        else:
+            # Calibration for execution failure: valid state/verifier result and
+            # isolation, but the agent exited with its own nonzero code.
+            case_matches = (
+                not case_ok
+                and agent_result.returncode == 1
+                and observed_verdict == expected_verdict
+                and image_probe_ok
+                and not agent_image_has_verifier
+                and isolation["ok"]
+                and project_filtered
+                and only_event
+            )
         result.update(
             {
                 "observed_verdict": observed_verdict,
                 "case_ok": case_ok,
+                "case_matches": case_matches,
                 "agent_exit": agent_result.returncode,
                 "verifier_exit": verifier_result.returncode,
                 "agent_observed": agent_observations,
@@ -703,7 +747,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--cases",
-        default="pass,fail,missing_evidence,claim_mismatch,unrelated_mutation",
+        default="pass,fail,missing_evidence,claim_mismatch,unrelated_mutation,agent_crash",
         help="comma-separated cases to run",
     )
     parser.add_argument("--skip-build", action="store_true")
@@ -752,11 +796,11 @@ def main() -> int:
             run_id = f"{stamp}-{case}"
             result = run_case(case, case_root, run_id)
             summary["cases"].append(result)
-            status = "PASS" if result["case_ok"] else "FAIL"
+            status = "PASS" if result["case_matches"] else "FAIL"
             print(
-                f"case {case}: expected={result['expected_verdict']} "
-                f"observed={result['observed_verdict']} ({status}), "
-                f"cleanup={'clean' if result['cleanup']['clean'] else 'LEFTOVER'}"
+                f"case {case}: verdict={result['observed_verdict']} "
+                f"case_ok={result['case_ok']} expected_case_ok={result['expected_case_ok']} "
+                f"({status}), cleanup={'clean' if result['cleanup']['clean'] else 'LEFTOVER'}"
                 + (f", error={result['error']}" if result.get("error") else "")
             )
 
@@ -767,7 +811,7 @@ def main() -> int:
         and summary["access"]["cleanup"]["clean"]
         and summary["access_negative"]["negative_ok"]
         and summary["access_negative"]["cleanup"]["clean"]
-        and all(case["case_ok"] for case in summary["cases"])
+        and all(case["case_matches"] for case in summary["cases"])
         and all(not case.get("error") for case in summary["cases"])
         and all(case["cleanup"]["clean"] for case in summary["cases"])
     )

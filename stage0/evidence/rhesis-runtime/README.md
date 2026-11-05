@@ -96,7 +96,7 @@ This run uses the current shared verifier without `--require-hidden-access` (the
 Rhesis flow has no agent container to probe), and supplies the initial doc-18 snapshot
 for the complete untouched-artifact comparison. The pass case therefore returns
 `passed`; the fail and missing-evidence cases still return `failed` / `unverified`. The
-harness evidence (`stage0/evidence/runs/20261105T075053Z-summary.json`) is the
+harness evidence (`stage0/evidence/runs/20261105T075950Z-summary.json`) is the
 isolation-flagged counterpart.
 
 ## IDs from the run

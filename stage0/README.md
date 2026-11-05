@@ -21,7 +21,7 @@ python3 stage0/harness/runner/run.py
 ```
 
 It builds three role-scoped images (`stage0-agent`, `stage0-verifier`,
-`stage0-reader`) and runs two access checks plus five cases:
+`stage0-reader`) and runs two access checks plus six cases:
 
 | Scenario | Expected | What it proves |
 | --- | --- | --- |
@@ -32,6 +32,7 @@ It builds three role-scoped images (`stage0-agent`, `stage0-verifier`,
 | `missing_evidence` | unverified | missing audit evidence is not treated as pass |
 | `claim_mismatch` | passed | a wrong agent self-report does not change the state verdict |
 | `unrelated_mutation` | failed | changing an unrelated artifact's approvals while keeping its status is caught by a full-snapshot comparison |
+| `agent_crash` | rejected | agent writes valid state/response but exits 1; the runner rejects it as an execution failure even though the verifier passes |
 
 The agent gets a filtered project snapshot (no `.env`, no `secrets/`), an event-only
 input directory, and an image that contains no verifier. The expectation file is mounted
@@ -40,10 +41,10 @@ only into the verifier. Each case records an access probe for `/app/verify.py`,
 the agent image/mount contents, so the claimed hidden-verifier boundary is evidence, not
 just prose.
 
-A case is accepted only when the verifier-absence probe returns the expected shell exit
-code (0), the `docker inspect` data confirms the agent/verifier network, read-only root,
-cap-drop, non-root and resource limits, and the agent's network/project-write probes show
-`blocked`/`read-only`. Docker or probe errors are recorded separately and fail the case
+A case is accepted only when the agent exited 0, the verifier-absence probe returns the
+expected shell exit code (0), the `docker inspect` data confirms the agent/verifier
+network, read-only root, cap-drop, non-root and resource limits, and the agent's
+network/project-write probes show `blocked`/`read-only`. Docker or probe errors are recorded separately and fail the case
 instead of being treated as evidence of absence.
 
 Evidence is written to `stage0/evidence/runs/<UTC timestamp>-summary.json`. The run

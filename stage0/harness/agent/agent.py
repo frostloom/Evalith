@@ -161,6 +161,10 @@ def main(argv: list[str]) -> int:
             "response_text": f"decision={reported_decision}",
         },
     )
+    # Calibration: write valid artifacts, then terminate unsuccessfully. The runner
+    # must reject this as an execution failure even though the state verifier passes.
+    if mode == "crash_after_write":
+        return 1
     return 0
 
 
