@@ -201,7 +201,14 @@ export function App() {
           <ModelSettings
             models={models}
             onRefresh={load}
-            onBack={() => setView(detail ? "project" : "home")}
+            onBack={() => {
+              if (detail) {
+                selectedProjectRef.current = detail.project.id;
+                setView("project");
+              } else {
+                setView("home");
+              }
+            }}
             onError={setError}
             onNotice={setNotice}
           />

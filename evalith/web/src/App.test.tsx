@@ -237,6 +237,36 @@ describe("project switching", () => {
     await screen.findByText("recovered after failure");
   });
 
+  it("keeps workspace updates after returning from model settings", async () => {
+    const updatedA = detail("a", "Project A");
+    updatedA.messages = [
+      {
+        id: "msg_back",
+        role: "assistant",
+        content: "message after settings",
+        payload: { kind: "chat" },
+        model: null,
+        sent_scope: null,
+        created_at: "2026-11-06T00:00:00Z",
+      },
+    ] as never;
+    apiMock.sendMessage.mockResolvedValue(updatedA);
+    const user = userEvent.setup();
+    render(<App />);
+    const main = screen.getByRole("main");
+    await user.click(
+      await within(main).findByRole("button", { name: /Project A.*文件/ }),
+    );
+    await screen.findByRole("heading", { name: "Project A" });
+    await user.click(screen.getByRole("button", { name: "模型与凭据" }));
+    await screen.findByRole("heading", { name: "配置会话使用的模型服务。" });
+    await user.click(screen.getByRole("button", { name: "返回" }));
+    await screen.findByRole("heading", { name: "Project A" });
+    await user.type(screen.getByLabelText("给主会话发送消息"), "after back");
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await screen.findByText("message after settings");
+  });
+
   it("keeps model settings when project entry resolves late", async () => {
     let resolveA: ((value: unknown) => void) | undefined;
     apiMock.enterProject.mockImplementation((id: string) => {
