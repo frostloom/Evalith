@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -102,6 +103,36 @@ beforeEach(() => {
   apiMock.enterProject.mockImplementation((id: string) =>
     Promise.resolve(detail(id, id === "a" ? "Project A" : "Project B")),
   );
+});
+
+it("keeps workspace updates under StrictMode", async () => {
+  const updatedA = detail("a", "Project A");
+  updatedA.messages = [
+    {
+      id: "msg_strict",
+      role: "assistant",
+      content: "strict mode update",
+      payload: { kind: "chat" },
+      model: null,
+      sent_scope: null,
+      created_at: "2026-11-06T00:00:00Z",
+    },
+  ] as never;
+  apiMock.sendMessage.mockResolvedValue(updatedA);
+  const user = userEvent.setup();
+  render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+  const main = screen.getByRole("main");
+  await user.click(
+    await within(main).findByRole("button", { name: /Project A.*文件/ }),
+  );
+  await screen.findByRole("heading", { name: "Project A" });
+  await user.type(screen.getByLabelText("给主会话发送消息"), "hello");
+  await user.click(screen.getByRole("button", { name: "发送" }));
+  await screen.findByText("strict mode update");
 });
 
 describe("import navigation", () => {

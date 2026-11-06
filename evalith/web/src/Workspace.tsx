@@ -51,12 +51,12 @@ export function Workspace({
   onNotice: (message: string) => void;
 }) {
   const mountedRef = useRef(true);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
       mountedRef.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
   const applyDetail = (next: ProjectDetail) => {
     if (mountedRef.current) onDetail(next);
   };
