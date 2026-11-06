@@ -424,16 +424,28 @@ def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
     try:
         fd = os.open(
             ".gitignore",
-            os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+            os.O_RDONLY
+            | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_NONBLOCK", 0),
             dir_fd=root_fd,
         )
     except OSError:
         return []
     try:
-        with os.fdopen(fd, "rb") as handle:
-            raw = handle.read(64_000)
+        info = os.fstat(fd)
     except OSError:
+        os.close(fd)
         return []
+    if not stat.S_ISREG(info.st_mode):
+        os.close(fd)
+        raise AccessError(
+            "项目 .gitignore 不是普通文件，不能读取",
+            code="gitignore_not_regular",
+        )
+    try:
+        raw = os.read(fd, 64_000)
+    finally:
+        os.close(fd)
     rules: list[tuple[str, bool]] = []
     for line in raw.decode("utf-8", "replace").splitlines():
         line = line.strip()

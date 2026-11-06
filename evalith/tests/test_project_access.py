@@ -234,6 +234,16 @@ def test_gitignore_excludes_default_and_explicit_selection(tmp_path: Path) -> No
     )
 
 
+def test_fifo_gitignore_is_not_read_blocking(tmp_path: Path) -> None:
+    root = tmp_path / "fifo-gitignore"
+    root.mkdir()
+    (root / "README.md").write_text("hello\n", encoding="utf-8")
+    os.mkfifo(root / ".gitignore")
+    with pytest.raises(AccessError) as excinfo:
+        scan_project(root, [], [])
+    assert excinfo.value.code == "gitignore_not_regular"
+
+
 def test_symlinked_project_root_is_rejected(
     client: TestClient, tmp_path: Path
 ) -> None:

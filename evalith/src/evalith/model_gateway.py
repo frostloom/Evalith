@@ -258,6 +258,10 @@ def _stub_understanding(
             previous = current.get(key) or []
             if isinstance(previous, list):
                 for item in previous:
+                    source = item.get("source") if isinstance(item, dict) else None
+                    text = str(item.get("text", "")) if isinstance(item, dict) else ""
+                    if source != "会话" and not text.startswith("用户纠正"):
+                        continue
                     if item not in result[key]:
                         result[key].append(item)
         result["summary"] = current.get("summary") or result["summary"]

@@ -543,13 +543,7 @@ class WorkspaceService:
                     text = item.get("text") if isinstance(item, dict) else str(item)
                     source = item.get("source") if isinstance(item, dict) else None
                     if source in allowed_sources and (
-                        source == "会话"
-                        or str(text).startswith("用户纠正")
-                        or source in {
-                            str(entry.get("path"))
-                            for entry in sources
-                            if entry.get("path")
-                        }
+                        source == "会话" or str(text).startswith("用户纠正")
                     ):
                         candidate = item if isinstance(item, dict) else {"text": str(item)}
                         if candidate not in merged:

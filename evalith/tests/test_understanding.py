@@ -860,6 +860,53 @@ def test_supplemental_update_is_in_scope(client: TestClient, project_root: Path)
     assert "supplement:评审补充" in {item["path"] for item in scope["sources"]}
 
 
+def test_reanalysis_retires_facts_from_changed_files(
+    client: TestClient, tmp_path: Path, recording_server
+) -> None:
+    root = tmp_path / "changing-policy"
+    root.mkdir()
+    (root / "README.md").write_text("# Project\n", encoding="utf-8")
+    (root / "policy.md").write_text("Approval optional.\n", encoding="utf-8")
+    _RecordingHandler.body_override = {
+        "summary": "old policy",
+        "agent_or_flow": "",
+        "known": [{"text": "approval optional", "source": "policy.md"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "changing-policy",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, root, model_config_id=model["id"]).json()
+    assert {item["text"] for item in detail["understanding"]["known"]} == {
+        "approval optional"
+    }
+
+    (root / "policy.md").write_text("Approval required.\n", encoding="utf-8")
+    _RecordingHandler.body_override = {
+        "summary": "new policy",
+        "agent_or_flow": "",
+        "known": [{"text": "approval required", "source": "policy.md"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    updated = client.post(f"/api/projects/{detail['project']['id']}/reanalyse")
+    assert updated.status_code == 200, updated.text
+    texts = {item["text"] for item in updated.json()["understanding"]["known"]}
+    assert "approval required" in texts
+    assert "approval optional" not in texts
+
+
 def test_narrowed_scope_keeps_discussion_and_reanalysis_working(
     client: TestClient, project_root: Path
 ) -> None:
