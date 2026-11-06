@@ -610,6 +610,12 @@ class WorkspaceService:
         current = self.parse_understanding(current_row)
         if current is None:
             raise WorkspaceError("尚未形成项目理解，不能进入下一步", status_code=409)
+        if current.get("error"):
+            raise WorkspaceError(
+                "项目理解失败，请先修复模型或资料并重新分析",
+                status_code=409,
+                code="understanding_failed",
+            )
         result = dict(current)
         result["user_continued"] = True
         self._store_understanding(project, result, error=current.get("error"))

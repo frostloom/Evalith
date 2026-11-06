@@ -145,7 +145,7 @@ export function Workspace({
               </div>
             </div>
             <div className="readiness-actions">
-              {!readiness.generation_allowed && (
+              {!readiness.generation_allowed && !understanding?.error && (
                 <button
                   className="btn btn-primary"
                   onClick={() =>

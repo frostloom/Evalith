@@ -113,6 +113,10 @@ def test_model_failure_is_visible_not_silent(
     assert errors and "模型服务返回 500" in errors[-1]["content"]
     assert "sk-model-secret" not in str(detail)
 
+    continue_attempt = client.post(f"/api/projects/{detail['project']['id']}/continue")
+    assert continue_attempt.status_code == 409
+    assert continue_attempt.json()["code"] == "understanding_failed"
+
     chat = client.post(
         f"/api/projects/{detail['project']['id']}/messages", json={"content": "继续"}
     )
