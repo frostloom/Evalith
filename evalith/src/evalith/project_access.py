@@ -833,24 +833,48 @@ def build_model_context(
         title = redact_text(raw_title)
         content = redact_text(raw_content)
         redaction_count += _count_redactions(raw_title + raw_content, title + content)
-        chunk = f"### SUPPLEMENT {title}\n```text\n{content}\n```\n"
-        if len(chunk) > remaining:
-            content = content[: max(0, remaining - 80)]
-            chunk = f"### SUPPLEMENT {title}\n```text\n{content}…[truncated]\n```\n"
-        if remaining > 0:
-            blocks.append(chunk)
-            remaining -= len(chunk)
-            sent_bytes += len(content.encode("utf-8"))
+        prefix = "### SUPPLEMENT "
+        footer = "\n```text\n\n```\n"
+        # Title, framing and content all share the same remaining budget.
+        title_budget = remaining - len(prefix) - len(footer)
+        if title_budget <= 1:
             sources.append(
                 {
                     "path": f"supplement:{title}",
                     "sha256": hashlib.sha256(raw_content.encode("utf-8")).hexdigest(),
                     "size": len(raw_content.encode("utf-8")),
-                    "sent": True,
+                    "sent": False,
                     "supplemental": True,
-                    "redactions": _count_redactions(raw_content, content),
+                    "reason": "model context budget reached",
+                    "redactions": 0,
                 }
             )
+            continue
+        title_budget = min(len(title), title_budget, 200)
+        if title_budget < len(title):
+            title = title[: max(0, title_budget - 1)] + "…"
+        content_budget = max(0, remaining - len(prefix) - len(title) - len(footer))
+        if len(content) > content_budget:
+            marker = "…[truncated]"
+            content = content[: max(0, content_budget - len(marker))] + marker
+        chunk = f"{prefix}{title}\n```text\n{content}\n```\n"
+        if len(chunk) > remaining:
+            # Defensive final clamp: keep the serialized chunk bounded even if
+            # a future change adds framing without updating the calculation.
+            chunk = chunk[:remaining]
+        blocks.append(chunk)
+        remaining -= len(chunk)
+        sent_bytes += len(content.encode("utf-8"))
+        sources.append(
+            {
+                "path": f"supplement:{title}",
+                "sha256": hashlib.sha256(raw_content.encode("utf-8")).hexdigest(),
+                "size": len(raw_content.encode("utf-8")),
+                "sent": True,
+                "supplemental": True,
+                "redactions": _count_redactions(raw_content, content),
+            }
+        )
 
     scope = {
         "root": scan.root,

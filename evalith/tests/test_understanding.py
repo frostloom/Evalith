@@ -385,6 +385,17 @@ def test_valid_provider_sufficiency_survives_ordinary_discussion(
 def test_provider_accepts_explicit_continuation_phrases(
     client: TestClient, project_root: Path, recording_server
 ) -> None:
+    _RecordingHandler.body_override = {
+        "summary": "initial",
+        "agent_or_flow": "",
+        "known": [{"text": "policy", "source": "README.md"}],
+        "inferred": [],
+        "unknowns": [
+            {"text": "unresolved business rule", "why": "needs user"}
+        ],
+        "sufficient": False,
+        "sufficient_reason": "still unknown",
+    }
     model = client.post(
         "/api/model-configs",
         json={
@@ -416,6 +427,9 @@ def test_provider_accepts_explicit_continuation_phrases(
         assert response.status_code == 200, response.text
         assert response.json()["readiness"]["generation_allowed"] is True
         assert response.json()["understanding"]["user_continued"] is True
+        assert "unresolved business rule" in {
+            item["text"] for item in response.json()["understanding"]["unknowns"]
+        }
 
 
 def test_continue_consent_can_be_withdrawn(

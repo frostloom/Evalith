@@ -237,6 +237,35 @@ describe("project switching", () => {
     await screen.findByText("recovered after failure");
   });
 
+  it("keeps model settings when project entry resolves late", async () => {
+    let resolveA: ((value: unknown) => void) | undefined;
+    apiMock.enterProject.mockImplementation((id: string) => {
+      if (id === "a") {
+        return new Promise((resolve) => {
+          resolveA = resolve;
+        });
+      }
+      return Promise.resolve(detail("b", "Project B"));
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    const main = screen.getByRole("main");
+    await user.click(
+      await within(main).findByRole("button", { name: /Project A.*文件/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "模型与凭据" }));
+    await screen.findByRole("heading", { name: "配置会话使用的模型服务。" });
+    await act(async () => {
+      resolveA?.(detail("a", "Project A"));
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Project A" })).toBeNull(),
+    );
+    expect(
+      screen.getByRole("heading", { name: "配置会话使用的模型服务。" }),
+    ).toBeInTheDocument();
+  });
+
   it("ignores a late response from the project the user left", async () => {
     let resolveA: ((value: unknown) => void) | undefined;
     apiMock.enterProject.mockImplementation((id: string) => {

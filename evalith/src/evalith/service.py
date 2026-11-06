@@ -1129,6 +1129,18 @@ class WorkspaceService:
                 }
                 if direction_item not in understanding["known"]:
                     understanding["known"].append(direction_item)
+            if result.get("continue_requested") and current.get("unknowns"):
+                unresolved = {
+                    str(item.get("text", ""))
+                    for item in understanding.get("unknowns", [])
+                    if isinstance(item, dict)
+                }
+                for item in current.get("unknowns", []):
+                    if (
+                        isinstance(item, dict)
+                        and str(item.get("text", "")) not in unresolved
+                    ):
+                        understanding.setdefault("unknowns", []).append(item)
             understanding["model"] = result.get("model")
             understanding["sources"] = sources
             result["reply"] = redact_text(result["reply"])

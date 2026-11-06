@@ -14,6 +14,7 @@ from evalith.project_access import (
     MAX_EXCERPT_CHARS,
     MAX_HASH_BYTES,
     _record_from_fd,
+    build_model_context,
     resolve_root,
     resolve_root_with_identity,
     scan_project,
@@ -227,6 +228,16 @@ def test_oversized_gitignore_is_rejected(tmp_path: Path) -> None:
     with pytest.raises(AccessError) as excinfo:
         scan_project(root, [], [])
     assert excinfo.value.code == "gitignore_too_large"
+
+
+def test_supplement_title_respects_context_budget(project_root: Path) -> None:
+    scan = scan_project(project_root, ["README.md"], [])
+    _, context_text, _ = build_model_context(
+        scan,
+        [{"title": "x" * 30_000, "content": "body"}],
+        budget_chars=1_000,
+    )
+    assert len(context_text) <= 1_000
 
 
 def test_resolve_root_preserves_identity_for_initial_scan(tmp_path: Path) -> None:
