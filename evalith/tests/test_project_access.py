@@ -13,6 +13,7 @@ from evalith.project_access import (
     AccessError,
     MAX_EXCERPT_CHARS,
     MAX_HASH_BYTES,
+    _record_from_fd,
     resolve_root,
     scan_project,
 )
@@ -294,6 +295,33 @@ def test_explicit_nested_file_respects_ancestor_exclusion(
     assert any(
         item["path"] == "docs/internal/plan.md" for item in snapshot["excluded"]
     )
+
+
+def test_record_from_fd_closes_once_on_read_error(
+    project_root: Path, monkeypatch
+) -> None:
+    target = project_root / "README.md"
+    fd = os.open(target, os.O_RDONLY)
+    closed: list[int] = []
+    real_close = os.close
+
+    class BadHandle:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            closed.append(fd)
+            real_close(fd)
+
+        def read(self, _size):
+            raise OSError("forced read failure")
+
+    monkeypatch.setattr(os, "fdopen", lambda _fd, _mode: BadHandle())
+    monkeypatch.setattr(os, "close", lambda value: (closed.append(value), real_close(value)))
+    with pytest.raises(AccessError) as excinfo:
+        _record_from_fd(fd, "README.md", max_file_bytes=512_000)
+    assert excinfo.value.code == "read_error"
+    assert closed == [fd]
 
 
 def test_special_file_selection_is_rejected_without_blocking(

@@ -141,13 +141,7 @@ class WorkspaceService:
         exclude_patterns = self._string_list(payload.get("exclude_patterns"))
         supplemental = self._supplemental(payload.get("supplemental"))
         gateway = self.gateway_for(model_config_id)
-        supplemental = [
-            {
-                "title": gateway.scrub(item["title"]),
-                "content": gateway.scrub(item["content"]),
-            }
-            for item in supplemental
-        ]
+        supplemental = self._scrub_supplemental(supplemental, gateway)
         try:
             scan = scan_project(
                 root,
@@ -241,6 +235,43 @@ class WorkspaceService:
                     }
                 )
         return docs
+
+    def _scrub_supplemental(
+        self, docs: list[dict[str, str]], gateway: ModelGateway
+    ) -> list[dict[str, str]]:
+        return [
+            {
+                "title": gateway.scrub(item["title"]),
+                "content": gateway.scrub(item["content"]),
+            }
+            for item in docs
+        ]
+
+    def _validate_known_sources(
+        self,
+        understanding: dict[str, Any],
+        sources: list[dict[str, Any]],
+        previous_sources: list[dict[str, Any]] | None = None,
+    ) -> None:
+        allowed = {
+            str(item.get("path")) for item in sources if item.get("path")
+        }
+        # Facts carried over from the current understanding were resolvable in
+        # the snapshot they came from (for example after narrowing the source
+        # scope); they remain valid provenance, not anonymous claims.
+        for item in previous_sources or []:
+            if item.get("path"):
+                allowed.add(str(item["path"]))
+        allowed.update({"会话", "snapshot"})
+        for item in understanding.get("known", []):
+            if not isinstance(item, dict):
+                continue
+            source = item.get("source")
+            if source not in allowed:
+                raise ModelError(
+                    "模型返回的 known 来源无法核对："
+                    f"{source or '（空）'}；请重新分析或补充资料"
+                )
 
     def _store_snapshot(self, project_id: str, scan: ScanResult) -> str:
         snapshot_id = _id("snp")
@@ -473,6 +504,11 @@ class WorkspaceService:
                 current=usable_current,
                 history=history,
             )
+            self._validate_known_sources(
+                result,
+                sources,
+                current.get("sources", []) if current else [],
+            )
             # A reanalysis must not silently drop corrections the user already
             # made in this main session, even when the provider returns a fresh
             # understanding based on the new source set.
@@ -685,6 +721,9 @@ class WorkspaceService:
                         "模型未返回可验证的替代理解；项目理解失败状态保留，请重新分析"
                     )
             understanding = _redact_value(result["understanding"])
+            self._validate_known_sources(
+                understanding, sources, current.get("sources", [])
+            )
             understanding["model"] = result.get("model")
             understanding["sources"] = sources
             result["reply"] = redact_text(result["reply"])
@@ -848,13 +887,7 @@ class WorkspaceService:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
         supplemental = self._supplemental(payload.get("supplemental"))
         gateway = self.gateway_for(project["model_config_id"])
-        supplemental = [
-            {
-                "title": gateway.scrub(item["title"]),
-                "content": gateway.scrub(item["content"]),
-            }
-            for item in supplemental
-        ]
+        supplemental = self._scrub_supplemental(supplemental, gateway)
         include_paths = self._string_list(payload.get("include_paths"))
         exclude_patterns = self._string_list(payload.get("exclude_patterns"))
         if project["root_dev"] is None or project["root_ino"] is None:

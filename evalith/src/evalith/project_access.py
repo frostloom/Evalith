@@ -308,21 +308,38 @@ def _record_from_fd(
     max_file_bytes: int,
     scrub: Callable[[str], str] | None = None,
 ) -> FileRecord:
-    stat_result = os.fstat(fd)
-    if not stat.S_ISREG(stat_result.st_mode):
-        raise AccessError(f"不是普通文件：{relative}", code="not_regular_file")
-    if stat_result.st_size > MAX_HASH_BYTES:
-        raise AccessError(
-            f"文件超过指纹上限（{MAX_HASH_BYTES} 字节）：{relative}",
-            code="file_too_large",
-        )
+    # This function owns *fd* unconditionally: it closes it on every error
+    # before ownership moves to the file object, and the file object closes it
+    # thereafter.  Callers must never close the descriptor after calling.
+    owned = fd
     try:
-        with os.fdopen(fd, "rb") as handle:
-            data = handle.read(MAX_HASH_BYTES + 1)
-    except OSError as exc:
-        raise AccessError(f"无法读取文件：{relative}（{exc.strerror}）", code="read_error") from exc
-    if len(data) > MAX_HASH_BYTES:
-        raise AccessError(f"文件超过指纹上限：{relative}", code="file_too_large")
+        stat_result = os.fstat(owned)
+        if not stat.S_ISREG(stat_result.st_mode):
+            raise AccessError(f"不是普通文件：{relative}", code="not_regular_file")
+        if stat_result.st_size > MAX_HASH_BYTES:
+            raise AccessError(
+                f"文件超过指纹上限（{MAX_HASH_BYTES} 字节）：{relative}",
+                code="file_too_large",
+            )
+        try:
+            handle = os.fdopen(owned, "rb")
+        except OSError as exc:
+            raise AccessError(
+                f"无法读取文件：{relative}（{exc.strerror}）", code="read_error"
+            ) from exc
+        owned = -1
+        try:
+            with handle:
+                data = handle.read(MAX_HASH_BYTES + 1)
+        except OSError as exc:
+            raise AccessError(
+                f"无法读取文件：{relative}（{exc.strerror}）", code="read_error"
+            ) from exc
+        if len(data) > MAX_HASH_BYTES:
+            raise AccessError(f"文件超过指纹上限：{relative}", code="file_too_large")
+    finally:
+        if owned >= 0:
+            _safe_close(owned)
 
     digest = hashlib.sha256(data).hexdigest()
     binary = _is_binary(data)
@@ -445,12 +462,10 @@ def scan_project(
                 )
             )
         except AccessError as exc:
-            _safe_close(fd)
             if required:
                 raise
             result.read_errors.append({"path": relative, "error": str(exc), "code": exc.code})
         except OSError as exc:
-            _safe_close(fd)
             if required:
                 raise AccessError(f"无法读取文件：{relative}", code="read_error") from exc
             result.read_errors.append(

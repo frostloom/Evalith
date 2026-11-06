@@ -292,6 +292,72 @@ def test_file_secret_crossing_excerpt_boundary(
     assert all(SECRET_KEY[:8] not in item["body"] for item in _RecordingHandler.requests)
 
 
+def test_known_requires_resolvable_source(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.body_override = {
+        "summary": "unsourced",
+        "agent_or_flow": "",
+        "known": [{"text": "unsupported fact", "source": ""}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "no source",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "unsourced",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    assert detail["project"]["analysis_error"]
+    assert "known" in detail["project"]["analysis_error"]
+
+    _RecordingHandler.body_override = {
+        "summary": "bad path",
+        "agent_or_flow": "",
+        "known": [{"text": "unsupported fact", "source": "not-in-snapshot.md"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "no source",
+    }
+    second = client.post(
+        "/api/projects",
+        json={
+            "name": "bad-path",
+            "root_path": str(project_root),
+            "model_config_id": model["id"],
+        },
+    ).json()
+    assert second["project"]["analysis_error"]
+    assert "来源无法核对" in second["project"]["analysis_error"]
+
+
+def test_questions_and_quoted_instructions_do_not_open_gate(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+
+    for text in (
+        "继续前需要补充哪些资料？",
+        "为什么认为依据足够？",
+        "用户说“依据足够”，但我不确定。",
+    ):
+        response = client.post(
+            f"/api/projects/{project_id}/messages", json={"content": text}
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["readiness"]["generation_allowed"] is False
+        assert response.json()["understanding"]["sufficient"] is False
+
+
 def test_child_loggers_redact_credentials(client: TestClient, caplog) -> None:
     logger = logging.getLogger("evalith.model")
     with caplog.at_level(logging.DEBUG, logger="evalith.model"):

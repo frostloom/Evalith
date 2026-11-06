@@ -115,7 +115,9 @@ def _boolean_field(value: dict[str, Any], name: str, *, default: bool = False) -
     return actual
 
 
-def _normalise_items(key: str, raw: Any) -> list[dict[str, str]]:
+def _normalise_items(
+    key: str, raw: Any, *, require_source: bool = False
+) -> list[dict[str, str]]:
     """Validate model-generated array elements before they reach the UI or DB.
 
     Each item must have a non-empty string ``text``.  Allowed metadata fields
@@ -132,6 +134,8 @@ def _normalise_items(key: str, raw: Any) -> list[dict[str, str]]:
             text = item.strip()
             if not text:
                 raise ModelError(f"模型返回的 {key}[{index}] 缺少 text")
+            if require_source:
+                raise ModelError(f"模型返回的 {key}[{index}] 缺少来源")
             normalised.append({"text": text})
             continue
         if not isinstance(item, dict):
@@ -145,6 +149,8 @@ def _normalise_items(key: str, raw: Any) -> list[dict[str, str]]:
             if not isinstance(value, str):
                 raise ModelError(f"模型返回的 {key}[{index}].{metadata} 必须是字符串")
             entry[metadata] = value.strip()
+        if require_source and not entry.get("source"):
+            raise ModelError(f"模型返回的 {key}[{index}] 缺少非空来源")
         normalised.append(entry)
     return normalised
 
@@ -166,7 +172,9 @@ def _normalise_understanding(value: dict[str, Any], *, model_name: str) -> dict[
     return {
         "summary": summary.strip(),
         "agent_or_flow": agent_or_flow.strip(),
-        "known": _normalise_items("known", value.get("known", [])),
+        "known": _normalise_items(
+            "known", value.get("known", []), require_source=True
+        ),
         "inferred": _normalise_items("inferred", value.get("inferred", [])),
         "unknowns": _normalise_items("unknowns", value.get("unknowns", [])),
         "sufficient": _boolean_field(value, "sufficient"),
@@ -411,9 +419,13 @@ class ModelGateway:
             else _normalise_understanding(current, model_name=self.name)
         )
         continue_requested = _boolean_field(value, "continue_requested")
-        if continue_requested and _has_negation(user_message):
+        if continue_requested and (
+            _has_negation(user_message) or _is_non_affirmative(user_message)
+        ):
             continue_requested = False
-        if understanding["sufficient"] and _negates_sufficiency(user_message):
+        if understanding["sufficient"] and (
+            _negates_sufficiency(user_message) or _is_non_affirmative(user_message)
+        ):
             understanding["sufficient"] = False
             understanding["sufficient_reason"] = (
                 "用户明确表示依据仍不足；未知项保留，推进门保持关闭。"
@@ -476,6 +488,43 @@ def _has_negation(text: str) -> bool:
     return any(marker in text for marker in NEGATION_MARKERS)
 
 
+NON_AFFIRMATIVE_MARKERS = (
+    "?",
+    "？",
+    "如何",
+    "什么",
+    "哪些",
+    "为什么",
+    "是否",
+    "能否",
+    "可不可以",
+    "吗",
+    "多少",
+    "何时",
+    "怎么",
+    "解释",
+    "说明",
+    "讨论",
+    "继续前",
+    "继续之前",
+    "如果继续",
+    "若要继续",
+)
+
+
+def _is_non_affirmative(text: str) -> bool:
+    return any(marker in text for marker in NON_AFFIRMATIVE_MARKERS)
+
+
+def _is_affirmative_mention(text: str, keyword: str) -> bool:
+    if keyword not in text or _is_non_affirmative(text):
+        return False
+    for left, right in (("“", "”"), ("\"", "\""), ("「", "」")):
+        if f"{left}{keyword}{right}" in text:
+            return False
+    return True
+
+
 def _negates_sufficiency(text: str) -> bool:
     if any(
         marker in text
@@ -497,12 +546,12 @@ def _stub_discuss(current: dict[str, Any], user_message: str) -> dict[str, Any]:
     text = user_message.strip()
     understanding = json.loads(json.dumps(current, ensure_ascii=False))
     negative = _has_negation(text)
-    continue_requested = (
-        any(keyword in text for keyword in ("继续", "开始出题", "进入下一步", "可以设计"))
-        and not negative
-    )
+    continue_requested = any(
+        _is_affirmative_mention(text, keyword)
+        for keyword in ("继续", "开始出题", "进入下一步", "可以设计")
+    ) and not negative
     sufficient = bool(understanding.get("sufficient", False))
-    if "依据足够" in text and not negative:
+    if _is_affirmative_mention(text, "依据足够") and not negative:
         sufficient = True
         understanding["sufficient_reason"] = "用户声明依据足够；未知项仍保留，等待后续阶段核对。"
     if _negates_sufficiency(text):
