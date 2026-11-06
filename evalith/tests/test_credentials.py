@@ -420,6 +420,10 @@ def test_questions_and_quoted_instructions_do_not_open_gate(
         "切勿继续。",
         "我会考虑继续。",
         "请检查继续读取文件的逻辑。",
+        "我会不会继续。",
+        "请在材料齐全后继续。",
+        "请翻译成英文：继续。",
+        "请将依据足够翻译成英文。",
     ):
         response = client.post(
             f"/api/projects/{project_id}/messages", json={"content": text}

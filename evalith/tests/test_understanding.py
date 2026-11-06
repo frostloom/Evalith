@@ -437,6 +437,50 @@ def test_continue_consent_can_be_withdrawn(
     assert withdrawn.json()["readiness"]["generation_allowed"] is False
 
 
+def test_withdrawal_survives_provider_failure(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "withdrawal-failure",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    _RecordingHandler.body_override = {
+        "reply": "continue",
+        "continue_requested": True,
+        "understanding": {
+            "summary": "continue",
+            "agent_or_flow": "",
+            "known": [{"text": "policy", "source": "README.md"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": False,
+            "sufficient_reason": "still unknown",
+        },
+    }
+    continued = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "继续"},
+    )
+    assert continued.status_code == 200, continued.text
+    assert continued.json()["understanding"]["user_continued"] is True
+
+    _RecordingHandler.fail = True
+    refused = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "我拒绝继续。"},
+    )
+    assert refused.status_code == 502, refused.text
+    refreshed = client.get(f"/api/projects/{detail['project']['id']}").json()
+    assert refreshed["understanding"]["user_continued"] is False
+    assert refreshed["readiness"]["generation_allowed"] is False
+
+
 def test_provider_rejects_conditional_intent(
     client: TestClient, project_root: Path, recording_server
 ) -> None:
@@ -471,6 +515,10 @@ def test_provider_rejects_conditional_intent(
         "切勿继续。",
         "我会考虑继续。",
         "请检查继续读取文件的逻辑。",
+        "我会不会继续。",
+        "请在材料齐全后继续。",
+        "请翻译成英文：继续。",
+        "请将依据足够翻译成英文。",
     ):
         response = client.post(
             f"/api/projects/{detail['project']['id']}/messages",

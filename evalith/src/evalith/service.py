@@ -657,6 +657,22 @@ class WorkspaceService:
             raise WorkspaceError("消息过长")
         gateway = self.gateway_for(project["model_config_id"])
         text = gateway.scrub(text)
+        # Persist withdrawal before any fallible rescan/provider call. A
+        # recorded refusal must close consent-only readiness even if the
+        # provider or filesystem subsequently fails.
+        current_before = self.parse_understanding(
+            self.db.get_understanding(project_id)
+        )
+        if (
+            gateway.withdraws_continuation(text)
+            and current_before is not None
+            and current_before.get("user_continued")
+        ):
+            withdrawn = dict(current_before)
+            withdrawn["user_continued"] = False
+            self._store_understanding(
+                project, withdrawn, error=current_before.get("error")
+            )
         self._append_message(project, role="user", content=text, payload={"kind": "chat"})
         try:
             try:
