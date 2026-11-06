@@ -447,6 +447,8 @@ def test_provider_rejects_conditional_intent(
         "请先等我确认再继续。",
         "现在不应该继续。",
         "等补充材料到齐后才算依据足够。",
+        "请勿继续。",
+        "切勿继续。",
     ):
         response = client.post(
             f"/api/projects/{detail['project']['id']}/messages",

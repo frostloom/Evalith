@@ -545,7 +545,7 @@ function ModelPicker({
   );
 }
 
-function SourceEditor({
+export function SourceEditor({
   detail,
   onClose,
   onSaved,
@@ -560,8 +560,13 @@ function SourceEditor({
   const [excludePatterns, setExcludePatterns] = useState(
     detail.project.exclude_patterns.join("\n"),
   );
-  const [supplemental, setSupplemental] = useState(
-    detail.project.supplemental.map((item) => `${item.title}\n${item.content}`).join("\n\n"),
+  const [supplemental, setSupplemental] = useState<
+    Array<{ title: string; content: string }>
+  >(
+    detail.project.supplemental.map((item) => ({
+      title: item.title,
+      content: item.content,
+    })),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -571,16 +576,11 @@ function SourceEditor({
     setError(null);
     try {
       const docs = supplemental
-        .split("\n\n")
-        .map((block) => block.trim())
-        .filter(Boolean)
-        .map((block, index) => {
-          const [first, ...rest] = block.split("\n");
-          if (rest.length === 0) {
-            return { title: `补充资料 ${index + 1}`, content: first };
-          }
-          return { title: first, content: rest.join("\n").trim() };
-        });
+        .filter((item) => item.title.trim() || item.content.trim())
+        .map((item, index) => ({
+          title: item.title.trim() || `补充资料 ${index + 1}`,
+          content: item.content,
+        }));
       const next = await api.updateSources(detail.project.id, {
         include_paths: includePaths.split("\n").map((item) => item.trim()).filter(Boolean),
         exclude_patterns: excludePatterns.split("\n").map((item) => item.trim()).filter(Boolean),
@@ -631,14 +631,72 @@ function SourceEditor({
             />
             <small>敏感凭据规则始终生效，不能被这里的排除或选择覆盖。</small>
           </label>
-          <label className="field">
-            <span>补充资料（标题后换行写内容，空行分隔多条）</span>
-            <textarea
-              value={supplemental}
-              onChange={(event) => setSupplemental(event.target.value)}
-              rows={6}
-            />
-          </label>
+          <fieldset className="supplement-field">
+            <legend>补充资料</legend>
+            {supplemental.length === 0 && (
+              <p className="inline-note">还没有补充资料。补充文档会作为独立来源参与分析。</p>
+            )}
+            {supplemental.map((doc, index) => (
+              <div className="supplement-editor" key={index}>
+                <label className="field">
+                  <span>标题</span>
+                  <input
+                    value={doc.title}
+                    onChange={(event) =>
+                      setSupplemental((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? { ...item, title: event.target.value }
+                            : item,
+                        ),
+                      )
+                    }
+                    placeholder={`补充资料 ${index + 1}`}
+                  />
+                </label>
+                <label className="field">
+                  <span>内容</span>
+                  <textarea
+                    value={doc.content}
+                    onChange={(event) =>
+                      setSupplemental((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? { ...item, content: event.target.value }
+                            : item,
+                        ),
+                      )
+                    }
+                    rows={4}
+                    placeholder="保留段落与空行；每个文档单独保存。"
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="link-button danger supplement-remove"
+                  onClick={() =>
+                    setSupplemental((current) =>
+                      current.filter((_, itemIndex) => itemIndex !== index),
+                    )
+                  }
+                >
+                  移除
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="btn btn-quiet"
+              onClick={() =>
+                setSupplemental((current) => [
+                  ...current,
+                  { title: `补充资料 ${current.length + 1}`, content: "" },
+                ])
+              }
+            >
+              添加补充资料
+            </button>
+          </fieldset>
           {error && (
             <p className="form-error" role="alert">
               {error}

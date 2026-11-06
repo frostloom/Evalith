@@ -624,6 +624,25 @@ ul {
   margin-top: 12px;
 }
 
+.supplement-editor {
+  display: grid;
+  grid-template-columns: minmax(120px, 160px) minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.supplement-editor .supplement-remove {
+  grid-column: 2;
+  justify-self: start;
+  font-size: 12px;
+}
+
+.supplement-field > .btn {
+  margin-top: 14px;
+}
+
 .supplement-list {
   margin-top: 10px;
   border-top: 1px solid var(--rule);
