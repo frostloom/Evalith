@@ -54,11 +54,11 @@ logs, model-failure visibility, and the question-generation gate.
 
 ## Project access
 
-The service is host-first. A container deployment must declare an explicit
-host-to-container read-only mount with `EVALITH_PROJECT_MOUNT_MAP` and run with
-`EVALITH_ACCESS_MODE=container`; an unmapped root fails closed. The same
-allowlist, secret denylist and symlink rules apply in both modes. See
-`docs/stage1/project-access.md` for the full boundary.
+The service is host-only in phase 1. Container path translation is not
+implemented: setting `EVALITH_ACCESS_MODE` to anything other than `host` fails
+closed. A container deployment needs a verified read-only mount and UID model
+first; the allowlist, secret denylist and symlink rules are already independent
+of the access mode. See `docs/stage1/project-access.md` for the full boundary.
 
 ## Scope of this phase
 

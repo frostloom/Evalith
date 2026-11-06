@@ -36,10 +36,9 @@ class Settings:
     max_files: int = 400
     #: Model request timeout in seconds.
     model_timeout_seconds: float = 60.0
-    #: ``host`` reads paths as-is.  ``container`` maps host roots through
-    #: ``project_mount_map`` and refuses paths outside a configured mount.
+    #: Phase 1 supports only ``host``. Any other value fails closed; container
+    #: mount translation is a later-phase deliverable, not a configured path.
     access_mode: str = "host"
-    project_mount_map: dict[str, str] = field(default_factory=dict)
     static_dir: Path | None = None
 
     def __post_init__(self) -> None:
@@ -58,17 +57,6 @@ class Settings:
 
 
 def settings_from_env() -> Settings:
-    raw_map: dict[str, str] = {}
-    for item in os.environ.get("EVALITH_PROJECT_MOUNT_MAP", "").split(";"):
-        item = item.strip()
-        if not item:
-            continue
-        if "=" not in item:
-            raise ValueError(
-                "EVALITH_PROJECT_MOUNT_MAP entries must be host_root=container_root"
-            )
-        host, container = item.split("=", 1)
-        raw_map[host.strip()] = container.strip()
     return Settings(
         data_dir=_default_data_dir(),
         database_path=os.environ.get("EVALITH_DB_PATH") or None,
@@ -80,5 +68,4 @@ def settings_from_env() -> Settings:
         max_files=int(os.environ.get("EVALITH_MAX_FILES", "400")),
         model_timeout_seconds=float(os.environ.get("EVALITH_MODEL_TIMEOUT", "60")),
         access_mode=os.environ.get("EVALITH_ACCESS_MODE", "host"),
-        project_mount_map=raw_map,
     )

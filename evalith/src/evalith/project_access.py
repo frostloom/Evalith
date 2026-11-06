@@ -163,10 +163,9 @@ def _always_excluded(name: str, relpath: str) -> str | None:
 def resolve_root(root_path: str, *, access_mode: str = "host") -> Path:
     """Resolve and validate the user-selected project root.
 
-    In ``container`` mode the caller must have declared a host-to-container
-    mount mapping; this function only accepts host roots that are inside a
-    declared mount, which makes an unmapped path fail closed instead of
-    silently reading an unrelated container directory.
+    Phase 1 is host-only. A non-``host`` access mode fails closed: mapping a
+    host path into a container without verified read-only mounts and UID
+    semantics would be a false security claim, so it is not offered yet.
     """
     if not root_path or not root_path.strip():
         raise AccessError("请选择本地项目目录", code="root_missing")
@@ -176,10 +175,10 @@ def resolve_root(root_path: str, *, access_mode: str = "host") -> Path:
     resolved = raw.resolve(strict=True)
     if not resolved.is_dir():
         raise AccessError("项目路径不是目录", code="root_not_directory")
-    if access_mode == "container":
+    if access_mode != "host":
         raise AccessError(
-            "容器模式需要在部署配置中声明宿主机到容器的只读映射；未声明时拒绝访问",
-            code="mount_not_mapped",
+            "阶段 1 仅支持宿主机本地只读访问；容器模式尚未实现，已拒绝",
+            code="container_mode_unavailable",
         )
     if str(resolved) == "/":
         raise AccessError("不能将文件系统根目录作为项目范围", code="root_too_broad")

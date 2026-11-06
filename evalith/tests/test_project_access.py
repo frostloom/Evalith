@@ -4,9 +4,11 @@ import hashlib
 import os
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from conftest import create_stub_model, import_project, sha256
+from evalith.project_access import AccessError, resolve_root
 
 
 def test_selected_scope_is_read_and_fingerprinted(
@@ -151,6 +153,12 @@ def test_selected_exclude_pattern_removes_subtree(
     assert response.status_code == 201, response.text
     files = {item["path"] for item in response.json()["snapshot"]["files"]}
     assert files == {"src/agent.py"}
+
+
+def test_container_mode_fails_closed(project_root: Path) -> None:
+    with pytest.raises(AccessError) as excinfo:
+        resolve_root(str(project_root), access_mode="container")
+    assert excinfo.value.code == "container_mode_unavailable"
 
 
 def test_snapshot_digest_is_deterministic_for_unchanged_files(

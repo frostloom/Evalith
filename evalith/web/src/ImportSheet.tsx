@@ -259,7 +259,7 @@ export function ImportSheet({
             </li>
           </ul>
           <p className="boundary-foot">
-            当前为宿主机本地模式。容器部署需声明只读挂载映射，未声明时拒绝访问。
+            阶段 1 为宿主机本地模式；容器访问尚未实现，配置为非 host 时一律拒绝。
           </p>
         </aside>
       </div>
