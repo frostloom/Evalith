@@ -735,10 +735,26 @@ class WorkspaceService:
             status = 409 if exc.code == "root_changed" else 422
             raise WorkspaceError(str(exc), status_code=status, code=exc.code) from exc
         if store_new_snapshot:
+            previous_snapshot = project["snapshot_id"]
             snapshot_id = self._store_snapshot(project["id"], scan)
             self.db.update_project_snapshot(project["id"], snapshot_id, None)
             project = self.db.get_project(project["id"])
             assert project is not None
+            if snapshot_id != previous_snapshot:
+                current = self.parse_understanding(
+                    self.db.get_understanding(project["id"])
+                )
+                if (
+                    current is not None
+                    and current.get("sufficient")
+                    and not current.get("error")
+                ):
+                    invalidated = dict(current)
+                    invalidated["sufficient"] = False
+                    invalidated["sufficient_reason"] = (
+                        "资料快照已变化，需重新确认依据；未知项保留，推进门保持关闭。"
+                    )
+                    self._store_understanding(project, invalidated, error=None)
         return scan
 
     def post_message(self, project_id: str, content: str) -> dict[str, Any]:
@@ -839,8 +855,15 @@ class WorkspaceService:
                 for item in current.get("sources", [])
                 if item.get("path")
             }
+            understanding_stale = (
+                str(current.get("snapshot_id") or "") != str(project["snapshot_id"])
+            )
             model_current = current
-            if snapshot_changed or current_paths != allowed_paths:
+            if (
+                snapshot_changed
+                or understanding_stale
+                or current_paths != allowed_paths
+            ):
                 retained = allowed_paths | {"会话", "snapshot"}
                 model_current = dict(current)
                 model_current["known"] = [
@@ -857,10 +880,10 @@ class WorkspaceService:
                 model_current["sufficient_reason"] = ""
                 model_current["sources"] = sources
                 model_current["snapshot_id"] = project["snapshot_id"]
-                if current_paths != allowed_paths:
+                if current_paths != allowed_paths or understanding_stale:
                     scope["scope_changed"] = True
             if (
-                snapshot_changed
+                (snapshot_changed or understanding_stale)
                 and current.get("sufficient")
                 and not current.get("error")
             ):
