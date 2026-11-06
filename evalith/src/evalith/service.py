@@ -797,7 +797,10 @@ class WorkspaceService:
                 )
                 raise
             current_snapshot = self.db.get_snapshot(project["snapshot_id"])
-            if current_snapshot is None or scan.digest != current_snapshot["digest"]:
+            snapshot_changed = (
+                current_snapshot is None or scan.digest != current_snapshot["digest"]
+            )
+            if snapshot_changed:
                 # Files changed while the session was open: record a new
                 # snapshot so the sources shown afterwards match what was sent.
                 snapshot_id = self._store_snapshot(project["id"], scan)
@@ -831,11 +834,36 @@ class WorkspaceService:
                 history[-8:], allowed_paths, project["snapshot_id"]
             )
             scope["history_messages"] = len(history)
+            current_paths = {
+                str(item.get("path"))
+                for item in current.get("sources", [])
+                if item.get("path")
+            }
+            model_current = current
+            if snapshot_changed or current_paths != allowed_paths:
+                retained = allowed_paths | {"会话", "snapshot"}
+                model_current = dict(current)
+                model_current["known"] = [
+                    item
+                    for item in current.get("known", [])
+                    if isinstance(item, dict)
+                    and str(item.get("source", "")) in retained
+                ]
+                model_current["summary"] = ""
+                model_current["agent_or_flow"] = ""
+                model_current["inferred"] = []
+                model_current["unknowns"] = []
+                model_current["sufficient"] = False
+                model_current["sufficient_reason"] = ""
+                model_current["sources"] = sources
+                model_current["snapshot_id"] = project["snapshot_id"]
+                if current_paths != allowed_paths:
+                    scope["scope_changed"] = True
             result = gateway.discuss(
                 project_name=project["name"],
                 context_text=context_text,
                 current={
-                    key: current[key]
+                    key: model_current[key]
                     for key in (
                         "summary",
                         "agent_or_flow",

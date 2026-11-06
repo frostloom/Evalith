@@ -217,6 +217,18 @@ def test_unreadable_gitignore_fails_closed(tmp_path: Path, monkeypatch) -> None:
     assert excinfo.value.code == "gitignore_unreadable"
 
 
+def test_oversized_gitignore_is_rejected(tmp_path: Path) -> None:
+    root = tmp_path / "oversized-gitignore"
+    root.mkdir()
+    (root / "README.md").write_text("hello\n", encoding="utf-8")
+    (root / ".gitignore").write_bytes(
+        b"# pad\n" * 100_000 + b"private/\n"
+    )
+    with pytest.raises(AccessError) as excinfo:
+        scan_project(root, [], [])
+    assert excinfo.value.code == "gitignore_too_large"
+
+
 def test_resolve_root_preserves_identity_for_initial_scan(tmp_path: Path) -> None:
     root = tmp_path / "identity-project"
     root.mkdir()

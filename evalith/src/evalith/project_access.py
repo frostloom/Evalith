@@ -83,6 +83,7 @@ NOISE_EXCLUDE_PATTERNS = [
 DEFAULT_EXCLUDE_PATTERNS = NOISE_EXCLUDE_PATTERNS + ALWAYS_EXCLUDED
 
 MAX_HASH_BYTES = 8_000_000
+MAX_GITIGNORE_BYTES = 512_000
 MAX_EXCERPT_CHARS = 6_000
 
 
@@ -462,7 +463,22 @@ def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
             code="gitignore_not_regular",
         )
     try:
-        raw = os.read(fd, 64_000)
+        chunks: list[bytes] = []
+        total = 0
+        while total <= MAX_GITIGNORE_BYTES:
+            chunk = os.read(
+                fd, min(64_000, MAX_GITIGNORE_BYTES + 1 - total)
+            )
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+        raw = b"".join(chunks)
+        if total > MAX_GITIGNORE_BYTES:
+            raise AccessError(
+                f".gitignore 超过支持上限（{MAX_GITIGNORE_BYTES} 字节）",
+                code="gitignore_too_large",
+            )
     except OSError as exc:
         raise AccessError(
             f"无法读取项目 .gitignore：{exc.strerror}", code="gitignore_unreadable"

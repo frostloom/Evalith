@@ -117,7 +117,7 @@ else
   echo "[workbench] starting frontend on 127.0.0.1:3000"
   (
     cd "$TREE/apps/frontend"
-    PORT=3000 nohup npm start -- --hostname 127.0.0.1 >"$LOG_DIR/frontend.log" 2>&1 &
+    NEXT_TELEMETRY_DISABLED=1 PORT=3000 nohup npm start -- --hostname 127.0.0.1 >"$LOG_DIR/frontend.log" 2>&1 &
     echo $! >"$PID_DIR/frontend.pid"
   )
 fi

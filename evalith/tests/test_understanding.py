@@ -1026,6 +1026,55 @@ def test_narrowed_reanalysis_does_not_send_removed_facts(
     assert "approval optional" not in _RecordingHandler.requests[-1]["body"]
 
 
+def test_chat_hides_newly_ignored_file(
+    client: TestClient, tmp_path: Path, recording_server
+) -> None:
+    root = tmp_path / "chat-new-ignore"
+    root.mkdir()
+    (root / "README.md").write_text("# Project\n", encoding="utf-8")
+    (root / "policy.md").write_text("policy secret\n", encoding="utf-8")
+    _RecordingHandler.body_override = {
+        "summary": "policy secret summary",
+        "agent_or_flow": "",
+        "known": [{"text": "policy secret", "source": "policy.md"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "chat-new-ignore",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, root, model_config_id=model["id"]).json()
+    (root / ".gitignore").write_text("policy.md\n", encoding="utf-8")
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "understanding": {
+            "summary": "readme only",
+            "agent_or_flow": "",
+            "known": [],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": False,
+            "sufficient_reason": "pending",
+        },
+    }
+    response = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "补充"},
+    )
+    assert response.status_code == 200, response.text
+    body = _RecordingHandler.requests[-1]["body"]
+    assert "policy secret" not in body
+
+
 def test_chat_retires_facts_from_changed_file(
     client: TestClient, tmp_path: Path, recording_server
 ) -> None:

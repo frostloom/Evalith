@@ -38,7 +38,7 @@ uv sync --extra all --extra cpu --no-install-package torch --no-dev
 
 cd ../frontend
 npm ci
-npm run build
+NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
 ## Run (host processes, Docker only for PostgreSQL/Redis)
