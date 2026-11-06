@@ -4,7 +4,7 @@ workbench/.workbench/*.env
 
 # Evalith local state
 .evalith/
-evalith/.demo-data/
+evalith/.demo-data*/
 evalith/.venv/
 evalith/web/node_modules/
 evalith/web/dist/
