@@ -564,6 +564,8 @@ _POSIX_CLASSES = {
 
 
 def _translate_posix_classes(pattern: str) -> str:
+    # fnmatch implements [!...] but not Git's equivalent [^...].
+    pattern = pattern.replace("[^", "[!")
     for name, replacement in _POSIX_CLASSES.items():
         pattern = pattern.replace(f"[:{name}:]", replacement)
     return pattern
@@ -579,6 +581,9 @@ def _git_glob_match(path: str, pattern: str) -> bool:
             return path_index == len(path_parts)
         part = pattern_parts[pattern_index]
         if part == "**":
+            if pattern_index == len(pattern_parts) - 1:
+                # A trailing /** matches descendants, not the parent itself.
+                return path_index < len(path_parts)
             return match(pattern_index + 1, path_index) or (
                 path_index < len(path_parts)
                 and match(pattern_index, path_index + 1)

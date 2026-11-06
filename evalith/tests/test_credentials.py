@@ -253,6 +253,39 @@ def test_malformed_direction_cannot_smuggle_configured_key(
     assert SECRET_KEY not in refreshed.text
 
 
+def test_other_saved_credentials_are_redacted(
+    client: TestClient, project_root: Path
+) -> None:
+    other = "sk-other-config-secret"
+    client.post(
+        "/api/model-configs",
+        json={
+            "name": "other-config",
+            "provider": "openai_compatible",
+            "base_url": "http://127.0.0.1:9/v1",
+            "model_name": "fake",
+            "api_key": other,
+        },
+    )
+    selected = create_stub_model(client)
+    detail = import_project(
+        client,
+        project_root,
+        model_config_id=selected["id"],
+        supplemental=[{"title": "凭据", "content": f"please use {other} here"}],
+    ).json()
+    assert other not in str(detail)
+    project_id = detail["project"]["id"]
+    chat = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": f"please use {other} here"},
+    )
+    assert chat.status_code == 200, chat.text
+    assert other not in chat.text
+    refreshed = client.get(f"/api/projects/{project_id}")
+    assert other not in refreshed.text
+
+
 def test_signing_secret_is_redacted() -> None:
     from evalith.security import redact_text
 

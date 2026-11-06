@@ -244,6 +244,19 @@ class WorkspaceService:
         )
         return ModelGateway(config, timeout=self.settings.model_timeout_seconds)
 
+    def _scrub_saved_secrets(self, text: str) -> str:
+        secrets: list[str] = []
+        for row in self.db.list_model_configs():
+            try:
+                value = self.cipher.decrypt(row["api_key_encrypted"])
+            except Exception:
+                continue
+            if value:
+                secrets.append(value)
+        for secret in sorted(set(secrets), key=len, reverse=True):
+            text = text.replace(secret, "[REDACTED]")
+        return text
+
     def test_model_config(self, model_config_id: str) -> dict[str, Any]:
         gateway = self.gateway_for(model_config_id)
         ok, message = gateway.test_connection()
@@ -374,8 +387,10 @@ class WorkspaceService:
     ) -> list[dict[str, str]]:
         return [
             {
-                "title": gateway.scrub(item["title"]),
-                "content": gateway.scrub(item["content"]),
+                "title": self._scrub_saved_secrets(gateway.scrub(item["title"])),
+                "content": self._scrub_saved_secrets(
+                    gateway.scrub(item["content"])
+                ),
             }
             for item in docs
         ]
@@ -606,11 +621,12 @@ class WorkspaceService:
         )
 
     def _context_for(self, project: Any, scan: ScanResult) -> tuple[list[dict[str, Any]], str, dict[str, Any]]:
-        return build_model_context(
+        sources, text, scope = build_model_context(
             scan,
             loads(project["supplemental"], []),
             budget_chars=self.settings.context_budget_chars,
         )
+        return sources, self._scrub_saved_secrets(text), scope
 
     def _analyse(self, project: Any, *, scan: ScanResult | None = None) -> None:
         current = None
@@ -930,7 +946,7 @@ class WorkspaceService:
         )
         scope = None
         attempted = False
-        text = gateway.scrub(text)
+        text = self._scrub_saved_secrets(gateway.scrub(text))
         # Persist withdrawal before any fallible rescan/provider call. A
         # recorded refusal must close consent-only readiness even if the
         # provider or filesystem subsequently fails.

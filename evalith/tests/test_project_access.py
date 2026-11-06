@@ -344,6 +344,34 @@ def test_oversized_gitignore_is_rejected(tmp_path: Path) -> None:
     assert excinfo.value.code == "gitignore_too_large"
 
 
+def test_gitignore_bracket_negation(tmp_path: Path) -> None:
+    root = tmp_path / "bracket-negation"
+    root.mkdir()
+    (root / ".gitignore").write_text("customer[^0-9].csv\n", encoding="utf-8")
+    (root / "customerA.csv").write_text("synthetic\n", encoding="utf-8")
+    (root / "customer1.csv").write_text("synthetic\n", encoding="utf-8")
+    scan = scan_project(root, [], [])
+    paths = {item.path for item in scan.files}
+    assert "customerA.csv" not in paths
+    assert "customer1.csv" in paths
+
+
+def test_trailing_double_star_does_not_prune_parent(tmp_path: Path) -> None:
+    root = tmp_path / "trailing-double-star"
+    root.mkdir()
+    (root / ".gitignore").write_text(
+        "data/**\n!data/public.csv\n", encoding="utf-8"
+    )
+    data = root / "data"
+    data.mkdir()
+    (data / "public.csv").write_text("public\n", encoding="utf-8")
+    (data / "private.csv").write_text("private\n", encoding="utf-8")
+    scan = scan_project(root, [], [])
+    paths = {item.path for item in scan.files}
+    assert "data/public.csv" in paths
+    assert "data/private.csv" not in paths
+
+
 def test_gitignore_posix_character_class(tmp_path: Path) -> None:
     root = tmp_path / "posix-class-ignore"
     root.mkdir()
