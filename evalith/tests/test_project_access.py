@@ -344,6 +344,29 @@ def test_oversized_gitignore_is_rejected(tmp_path: Path) -> None:
     assert excinfo.value.code == "gitignore_too_large"
 
 
+def test_gitignore_negation_does_not_cross_directories(tmp_path: Path) -> None:
+    root = tmp_path / "gitignore-nested-negation"
+    root.mkdir()
+    (root / ".gitignore").write_text(
+        "*.txt\n!docs/*.txt\n", encoding="utf-8"
+    )
+    docs = root / "docs"
+    docs.mkdir()
+    (docs / "public.txt").write_text("visible\n", encoding="utf-8")
+    internal = docs / "internal"
+    internal.mkdir()
+    (internal / "private.txt").write_text("hidden\n", encoding="utf-8")
+    scan = scan_project(root, [], [])
+    paths = {item.path for item in scan.files}
+    assert "docs/public.txt" in paths
+    assert "docs/internal/private.txt" not in paths
+    assert any(
+        item["path"] == "docs/internal/private.txt"
+        and "gitignore" in item["reason"]
+        for item in scan.excluded
+    )
+
+
 def test_leading_whitespace_in_gitignore_is_literal(tmp_path: Path) -> None:
     root = tmp_path / "leading-space-ignore"
     root.mkdir()

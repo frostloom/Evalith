@@ -547,6 +547,29 @@ def _unescape_gitignore_pattern(pattern: str) -> str:
     return "".join(out)
 
 
+def _git_glob_match(path: str, pattern: str) -> bool:
+    """Component-aware glob where a single * does not cross '/'."""
+    path_parts = path.split("/")
+    pattern_parts = pattern.split("/")
+
+    def match(pattern_index: int, path_index: int) -> bool:
+        if pattern_index == len(pattern_parts):
+            return path_index == len(path_parts)
+        part = pattern_parts[pattern_index]
+        if part == "**":
+            return match(pattern_index + 1, path_index) or (
+                path_index < len(path_parts)
+                and match(pattern_index, path_index + 1)
+            )
+        if path_index >= len(path_parts):
+            return False
+        if not fnmatch.fnmatchcase(path_parts[path_index], part):
+            return False
+        return match(pattern_index + 1, path_index + 1)
+
+    return match(0, 0)
+
+
 def _gitignore_decision(
     relative: str, is_dir: bool, rules: list[tuple[str, bool]]
 ) -> tuple[bool, bool, str | None]:
@@ -563,15 +586,11 @@ def _gitignore_decision(
         anchored = candidate.startswith("/")
         candidate = candidate.lstrip("/")
         if "/" in candidate or anchored:
-            matched = fnmatch.fnmatchcase(relative, candidate)
-            if not matched and "**" in candidate:
-                matched = fnmatch.fnmatchcase(
-                    relative, candidate.replace("**/", "")
-                )
+            matched = _git_glob_match(relative, candidate)
             if dir_only and not is_dir:
                 ancestors = relative.split("/")[:-1]
                 matched = any(
-                    fnmatch.fnmatchcase("/".join(ancestors[: index + 1]), candidate)
+                    _git_glob_match("/".join(ancestors[: index + 1]), candidate)
                     for index in range(len(ancestors))
                 )
         else:

@@ -1042,7 +1042,7 @@ class WorkspaceService:
                 str(item.get("path")) for item in sources if item.get("path")
             }
             history = _history_for_scope(
-                history[-8:], allowed_paths, project["snapshot_id"]
+                history[-6:], allowed_paths, project["snapshot_id"]
             )
             scope["history_messages"] = len(history)
             old_hashes = _old_source_hashes(

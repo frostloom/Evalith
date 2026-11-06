@@ -697,6 +697,7 @@ def patch_legal() -> list[str]:
     welcome = email_dir / "templates" / "welcome.html.jinja2"
     if welcome.exists():
         replace_optional(welcome, "https://docs.rhesis.ai", "https://github.com/frostloom/Evalith/tree/main/docs")
+        replace_optional(welcome, "hello@rhesis.ai", "noreply@localhost")
         changed.append("email welcome: Evalith documentation link")
     return changed
 

@@ -271,6 +271,53 @@ def test_provider_can_cite_canonical_supplement_source(
     assert source_id in _RecordingHandler.requests[-1]["body"]
 
 
+def test_chat_scope_history_matches_provider_window(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.body_override = {
+        "summary": "ok",
+        "agent_or_flow": "",
+        "known": [],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "history-window",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "understanding": {
+            "summary": "ok",
+            "agent_or_flow": "",
+            "known": [],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": False,
+            "sufficient_reason": "pending",
+        },
+    }
+    scope = None
+    for index in range(9):
+        response = client.post(
+            f"/api/projects/{project_id}/messages",
+            json={"content": f"message {index}"},
+        )
+        assert response.status_code == 200, response.text
+        scope = response.json()["messages"][-1]["sent_scope"]
+    assert scope["history_messages"] == 6
+
+
 def test_missing_model_records_zero_transmitted_scope(
     client: TestClient, project_root: Path
 ) -> None:
