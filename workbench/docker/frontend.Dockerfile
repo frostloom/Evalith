@@ -4,6 +4,7 @@ FROM mirror.gcr.io/library/node:24-alpine AS build
 
 WORKDIR /app
 
+COPY LICENSE NOTICE THIRD_PARTY_NOTICES.md /app/legal/
 COPY apps/frontend/package.json apps/frontend/package-lock.json ./
 RUN npm ci
 
@@ -30,7 +31,7 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/next.config.mjs ./next.config.mjs
-COPY --from=build /app/LICENSE /app/NOTICE /app/THIRD_PARTY_NOTICES.md /app/
+COPY --from=build /app/legal ./legal
 
 RUN addgroup -S evalith && adduser -S evalith -G evalith && \
     chown -R evalith:evalith /app

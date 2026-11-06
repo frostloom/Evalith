@@ -7,6 +7,11 @@ import { Workspace } from "./Workspace";
 
 type View = "home" | "project" | "import" | "models";
 
+function compactPath(value: string): string {
+  const parts = value.split("/").filter(Boolean);
+  return parts.length <= 3 ? value : `…/${parts.slice(-2).join("/")}`;
+}
+
 export function App() {
   const [models, setModels] = useState<ModelConfig[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -233,27 +238,29 @@ function Home({
               </p>
             </div>
           ) : (
-            <ul className="project-list">
+            <div className="project-grid">
               {projects.map((project) => (
-                <li key={project.id}>
-                  <button className="project-row" onClick={() => onOpen(project)}>
-                    <span className="project-row-main">
-                      <span className="project-row-name">{project.name}</span>
-                      <span className="project-row-path">{project.root_path}</span>
+                <button
+                  className="project-card"
+                  key={project.id}
+                  onClick={() => onOpen(project)}
+                >
+                  <span className="project-card-name">{project.name}</span>
+                  <span className="project-card-path mono" title={project.root_path}>
+                    {compactPath(project.root_path)}
+                  </span>
+                  <span className="project-card-foot">
+                    <span>{project.file_count} 个文件</span>
+                    <span className="mono">
+                      {project.snapshot_digest?.slice(0, 12) ?? "未扫描"}
                     </span>
-                    <span className="project-row-stats">
-                      <span>{project.file_count} 个文件</span>
-                      <span className="mono">
-                        {project.snapshot_digest?.slice(0, 12) ?? "未扫描"}
-                      </span>
-                      {project.analysis_error && (
-                        <span className="badge badge-error">分析失败</span>
-                      )}
-                    </span>
-                  </button>
-                </li>
+                    {project.analysis_error && (
+                      <span className="badge badge-error">分析失败</span>
+                    )}
+                  </span>
+                </button>
               ))}
-            </ul>
+            </div>
           )}
         </div>
 

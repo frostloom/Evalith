@@ -91,6 +91,14 @@ def test_credentials_do_not_reach_logs_or_errors(
     assert "sk-env-secret-123456" not in str(detail)
 
 
+def test_child_loggers_redact_credentials(client: TestClient, caplog) -> None:
+    logger = logging.getLogger("evalith.model")
+    with caplog.at_level(logging.DEBUG, logger="evalith.model"):
+        logger.error("upstream said api_key=%s", SECRET_KEY)
+    assert SECRET_KEY not in caplog.text
+    assert "[REDACTED]" in caplog.text
+
+
 def test_stub_connection_test_is_clearly_labelled(client: TestClient) -> None:
     model = create_stub_model(client)
     response = client.post(f"/api/model-configs/{model['id']}/test")

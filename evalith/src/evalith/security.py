@@ -99,7 +99,29 @@ class RedactionFilter(logging.Filter):
         return True
 
 
+_LOG_NAMES = (
+    "",
+    "evalith",
+    "uvicorn",
+    "uvicorn.error",
+    "uvicorn.access",
+    "httpx",
+    "httpcore",
+    "rhesis",
+)
+
+
 def install_log_redaction() -> None:
-    root = logging.getLogger()
-    if not any(isinstance(item, RedactionFilter) for item in root.filters):
-        root.addFilter(RedactionFilter())
+    """Install the filter on app, server and HTTP-client loggers and handlers.
+
+    A filter attached only to the root logger does not run for records emitted
+    by child loggers, so credential redaction is installed on the loggers that
+    can actually see request/response text as well as on root handlers.
+    """
+    for name in _LOG_NAMES:
+        logger = logging.getLogger(name)
+        if not any(isinstance(item, RedactionFilter) for item in logger.filters):
+            logger.addFilter(RedactionFilter())
+    for handler in logging.getLogger().handlers:
+        if not any(isinstance(item, RedactionFilter) for item in handler.filters):
+            handler.addFilter(RedactionFilter())
