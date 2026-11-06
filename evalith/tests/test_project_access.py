@@ -344,6 +344,32 @@ def test_oversized_gitignore_is_rejected(tmp_path: Path) -> None:
     assert excinfo.value.code == "gitignore_too_large"
 
 
+def test_gitignore_leading_literal_bracket(tmp_path: Path) -> None:
+    root = tmp_path / "leading-literal-bracket"
+    root.mkdir()
+    (root / ".gitignore").write_text(
+        "customer[][:digit:]].csv\nblocked[!][:digit:]].csv\n",
+        encoding="utf-8",
+    )
+    for name in (
+        "customer1.csv",
+        "customer].csv",
+        "customerA.csv",
+        "blockedA.csv",
+        "blocked1.csv",
+    ):
+        (root / name).write_text("synthetic\n", encoding="utf-8")
+    default = scan_project(root, [], [])
+    paths = {item.path for item in default.files}
+    assert "customer1.csv" not in paths
+    assert "customer].csv" not in paths
+    assert "customerA.csv" in paths
+    assert "blockedA.csv" not in paths
+    assert "blocked1.csv" in paths
+    selected = scan_project(root, ["customer1.csv"], [])
+    assert "customer1.csv" in {item.path for item in selected.files}
+
+
 def test_gitignore_mixed_posix_and_range(tmp_path: Path) -> None:
     root = tmp_path / "mixed-posix-range"
     root.mkdir()

@@ -582,6 +582,10 @@ def _git_segment_regex(segment: str) -> re.Pattern[str]:
                 negated = True
                 cursor += 1
             body: list[str] = []
+            if cursor < len(segment) and segment[cursor] == "]":
+                # A closing bracket is literal in the first class position.
+                body.append(re.escape("]"))
+                cursor += 1
             while cursor < len(segment) and segment[cursor] != "]":
                 if segment.startswith("[:", cursor):
                     close = segment.find(":]", cursor + 2)
