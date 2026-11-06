@@ -25,7 +25,7 @@ from .security import redact_text
 UNDERSTANDING_SCHEMA = {
     "summary": "一句话项目理解（简体中文）",
     "agent_or_flow": "识别到的 Agent、服务或业务流程；不确定时说明依据不足",
-    "known": [{"text": "有直接资料依据的已知事实", "source": "文件路径或 supplement:标题"}],
+    "known": [{"text": "有直接资料依据的已知事实", "source": "文件路径或上下文中的完整 supplement:标题 [内容指纹]"}],
     "inferred": [{"text": "推断（不是事实）", "basis": "推断依据"}],
     "unknowns": [{"text": "影响评测方向但资料中缺失的信息", "why": "为什么重要"}],
     "sufficient": False,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -231,6 +232,43 @@ def test_sufficiency_can_open_gate_without_confirming_unknowns(
     assert refreshed["readiness"]["generation_allowed"] is True
     assert refreshed["readiness"]["unknowns_confirmed"] is False
     assert refreshed["understanding"]["unknowns"]
+
+
+def test_provider_can_cite_canonical_supplement_source(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    content = "发布失败必须通知值班人。"
+    digest = hashlib.sha256(content.encode("utf-8")).hexdigest()[:12]
+    source_id = f"supplement:测试补充 [{digest}]"
+    _RecordingHandler.body_override = {
+        "summary": "supplement cited",
+        "agent_or_flow": "",
+        "known": [{"text": "发布失败通知值班人", "source": source_id}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "supplement-citation",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    response = import_project(
+        client,
+        project_root,
+        model_config_id=model["id"],
+        supplemental=[{"title": "测试补充", "content": content}],
+    )
+    assert response.status_code == 201, response.text
+    detail = response.json()
+    assert detail["understanding"]["error"] is None
+    assert source_id in {item["source"] for item in detail["understanding"]["known"]}
+    assert source_id in _RecordingHandler.requests[-1]["body"]
 
 
 def test_model_failure_is_visible_not_silent(

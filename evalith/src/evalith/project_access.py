@@ -919,14 +919,19 @@ def build_model_context(
                 }
             )
             continue
-        title_budget = min(len(title), title_budget, 200)
+        title_budget = min(
+            len(title), title_budget - len(f" [{content_digest}]"), 200
+        )
         if title_budget < len(title):
             title = title[: max(0, title_budget - 1)] + "…"
-        content_budget = max(0, remaining - len(prefix) - len(title) - len(footer))
+        source_id = f"supplement:{title} [{content_digest}]"
+        content_budget = max(
+            0, remaining - len(prefix) - len(source_id) - len(footer)
+        )
         if len(content) > content_budget:
             marker = "…[truncated]"
             content = content[: max(0, content_budget - len(marker))] + marker
-        chunk = f"{prefix}{title}\n```text\n{content}\n```\n"
+        chunk = f"{prefix}{source_id}\n```text\n{content}\n```\n"
         if len(chunk) > remaining:
             # Defensive final clamp: keep the serialized chunk bounded even if
             # a future change adds framing without updating the calculation.
