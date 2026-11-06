@@ -344,6 +344,23 @@ def test_oversized_gitignore_is_rejected(tmp_path: Path) -> None:
     assert excinfo.value.code == "gitignore_too_large"
 
 
+def test_gitignore_punct_and_graph_classes(tmp_path: Path) -> None:
+    root = tmp_path / "posix-punct-graph"
+    root.mkdir()
+    (root / ".gitignore").write_text(
+        "customer[[:punct:]].csv\nprivate[[:graph:]].csv\n",
+        encoding="utf-8",
+    )
+    (root / "customer_.csv").write_text("synthetic\n", encoding="utf-8")
+    (root / "private-.csv").write_text("synthetic\n", encoding="utf-8")
+    (root / "customerA.csv").write_text("visible\n", encoding="utf-8")
+    scan = scan_project(root, [], [])
+    paths = {item.path for item in scan.files}
+    assert "customer_.csv" not in paths
+    assert "private-.csv" not in paths
+    assert "customerA.csv" in paths
+
+
 def test_gitignore_bracket_negation(tmp_path: Path) -> None:
     root = tmp_path / "bracket-negation"
     root.mkdir()

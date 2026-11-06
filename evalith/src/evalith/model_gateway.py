@@ -277,6 +277,7 @@ class ModelGateway:
     def __init__(self, config: ModelConfig | None, *, timeout: float = 60.0) -> None:
         self.config = config
         self.timeout = timeout
+        self.extra_secrets: tuple[str, ...] = ()
 
     @property
     def name(self) -> str:
@@ -287,9 +288,12 @@ class ModelGateway:
         return f"{self.config.provider}:{self.config.model_name}"
 
     def _scrub(self, text: str) -> str:
-        return _scrub_known_secret(
+        cleaned = _scrub_known_secret(
             text, self.config.api_key if self.config is not None else None
         )
+        for secret in self.extra_secrets:
+            cleaned = cleaned.replace(secret, "[REDACTED]")
+        return cleaned
 
     def scrub(self, text: str) -> str:
         """Remove pattern-shaped and literally configured credentials."""

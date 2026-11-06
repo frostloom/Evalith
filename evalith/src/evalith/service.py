@@ -226,7 +226,11 @@ class WorkspaceService:
     ) -> ModelGateway:
         row = self.db.get_model_config(model_config_id)
         if row is None:
-            return ModelGateway(None, timeout=self.settings.model_timeout_seconds)
+            gateway = ModelGateway(
+                None, timeout=self.settings.model_timeout_seconds
+            )
+            gateway.extra_secrets = tuple(self._saved_secret_variants())
+            return gateway
         if (
             enforce_paid
             and row["provider"] != "stub"
@@ -243,7 +247,9 @@ class WorkspaceService:
             model_name=row["model_name"],
             api_key=self.cipher.decrypt(row["api_key_encrypted"]),
         )
-        return ModelGateway(config, timeout=self.settings.model_timeout_seconds)
+        gateway = ModelGateway(config, timeout=self.settings.model_timeout_seconds)
+        gateway.extra_secrets = tuple(self._saved_secret_variants())
+        return gateway
 
     def _saved_secret_variants(self) -> list[str]:
         variants: set[str] = set()

@@ -254,6 +254,58 @@ def test_malformed_direction_cannot_smuggle_configured_key(
     assert SECRET_KEY not in refreshed.text
 
 
+def test_late_saved_credential_is_scrubbed_from_history(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "summary": "ok",
+        "agent_or_flow": "",
+        "known": [],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    selected = client.post(
+        "/api/model-configs",
+        json={
+            "name": "selected-history",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(
+        client, project_root, model_config_id=selected["id"]
+    ).json()
+    project_id = detail["project"]["id"]
+    other = "other/key+value"
+    first = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": f"remember {other} temporarily"},
+    )
+    assert first.status_code == 200, first.text
+    client.post(
+        "/api/model-configs",
+        json={
+            "name": "late-other",
+            "provider": "openai_compatible",
+            "base_url": "http://127.0.0.1:9/v1",
+            "model_name": "fake",
+            "api_key": other,
+        },
+    )
+    second = client.post(
+        f"/api/projects/{project_id}/messages", json={"content": "继续"}
+    )
+    assert second.status_code == 200, second.text
+    body = _RecordingHandler.requests[-1]["body"]
+    assert other not in body
+    assert "other%2Fkey%2Bvalue" not in body
+
+
 def test_other_saved_credentials_are_redacted(
     client: TestClient, tmp_path: Path, recording_server
 ) -> None:

@@ -23,6 +23,7 @@ import errno
 import fnmatch
 import hashlib
 import os
+import re
 import stat
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
@@ -547,29 +548,69 @@ def _unescape_gitignore_pattern(pattern: str) -> str:
     return "".join(out)
 
 
-_POSIX_CLASSES = {
+_POSIX_REGEX = {
     "alnum": "A-Za-z0-9",
     "alpha": "A-Za-z",
     "blank": " \t",
-    "cntrl": "\x00-\x1f\x7f",
+    "cntrl": r"\x00-\x1f\x7f",
     "digit": "0-9",
-    "graph": "!-~",
+    "graph": r"\x21-\x7e",
     "lower": "a-z",
-    "print": " -~",
-    "punct": "!-/:-@[-`{-~",
-    "space": " \t\n\r\f\v",
+    "print": r"\x20-\x7e",
+    "punct": r"\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e",
+    "space": r"\x20\x09\x0a\x0d\x0c\x0b",
     "upper": "A-Z",
     "xdigit": "0-9A-Fa-f",
 }
 
 
-def _translate_posix_classes(pattern: str) -> str:
-    # fnmatch implements [!...] but not Git's equivalent [^...].
-    pattern = pattern.replace("[^", "[!")
-    for name, replacement in _POSIX_CLASSES.items():
-        pattern = pattern.replace(f"[:{name}:]", replacement)
-    return pattern
+def _git_segment_regex(segment: str) -> re.Pattern[str]:
+    out: list[str] = []
+    index = 0
+    while index < len(segment):
+        char = segment[index]
+        if char == "*":
+            out.append(".*")
+            index += 1
+        elif char == "?":
+            out.append(".")
+            index += 1
+        elif char == "[":
+            cursor = index + 1
+            negated = False
+            if cursor < len(segment) and segment[cursor] in "!^":
+                negated = True
+                cursor += 1
+            body: list[str] = []
+            while cursor < len(segment) and segment[cursor] != "]":
+                if segment.startswith("[:", cursor):
+                    close = segment.find(":]", cursor + 2)
+                    if close != -1:
+                        body.append(
+                            _POSIX_REGEX.get(
+                                segment[cursor + 2 : close], ""
+                            )
+                        )
+                        cursor = close + 2
+                        continue
+                body.append(re.escape(segment[cursor]))
+                cursor += 1
+            if cursor < len(segment) and segment[cursor] == "]":
+                out.append("[" + ("^" if negated else "") + "".join(body) + "]")
+                index = cursor + 1
+                continue
+            out.append(re.escape(char))
+            index += 1
+        else:
+            out.append(re.escape(char))
+            index += 1
+    return re.compile("^" + "".join(out) + "$")
 
+
+def _git_segment_match(path_part: str, pattern_part: str) -> bool:
+    if "[:" in pattern_part:
+        return bool(_git_segment_regex(pattern_part).match(path_part))
+    return fnmatch.fnmatchcase(path_part, pattern_part)
 
 def _git_glob_match(path: str, pattern: str) -> bool:
     """Component-aware glob where a single * does not cross '/'."""
@@ -590,7 +631,7 @@ def _git_glob_match(path: str, pattern: str) -> bool:
             )
         if path_index >= len(path_parts):
             return False
-        if not fnmatch.fnmatchcase(path_parts[path_index], part):
+        if not _git_segment_match(path_parts[path_index], part):
             return False
         return match(pattern_index + 1, path_index + 1)
 
@@ -605,9 +646,7 @@ def _gitignore_decision(
     ignored = False
     matched_pattern: str | None = None
     for pattern, negated in rules:
-        candidate = _translate_posix_classes(
-            _unescape_gitignore_pattern(pattern)
-        )
+        candidate = _unescape_gitignore_pattern(pattern).replace("[^", "[!")
         dir_only = candidate.endswith("/")
         candidate = candidate.rstrip("/")
         if not candidate:
@@ -624,10 +663,10 @@ def _gitignore_decision(
                 )
         else:
             parts = relative.split("/")
-            matched = any(fnmatch.fnmatchcase(part, candidate) for part in parts)
+            matched = any(_git_segment_match(part, candidate) for part in parts)
             if dir_only and not is_dir:
                 matched = any(
-                    fnmatch.fnmatchcase(part, candidate) for part in parts[:-1]
+                    _git_segment_match(part, candidate) for part in parts[:-1]
                 )
         if matched:
             matched_any = True
