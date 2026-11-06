@@ -30,7 +30,9 @@ cd ..
 EVALITH_DATA_DIR=$PWD/.evalith-data uv run uvicorn evalith.api:app --host 127.0.0.1 --port 8090
 ```
 
-Open <http://127.0.0.1:8090>. The first model configuration should be the
+Open <http://127.0.0.1:8090>. The service refuses to bind a non-loopback
+address unless `EVALITH_ALLOW_REMOTE=1` is set: it can read local project paths
+and has no user authentication. The first model configuration should be the
 `stub` provider if you want an offline walkthrough; it is a deterministic替身
 and its output is not a real model assessment.
 

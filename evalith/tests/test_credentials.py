@@ -59,6 +59,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "sk-env-secret-123456" not in request["body"]
     assert "sk-file-secret-abcdef" not in request["body"]
     assert "sk-inline-secret-value" not in request["body"]
+    assert "sk-json-secret-value" not in request["body"]
+    assert "eu-central" in request["body"]
     assert "RELEASE_POLICY" in request["body"]
     assert "[REDACTED]" in request["body"]
 

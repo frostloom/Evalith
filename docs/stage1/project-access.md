@@ -82,6 +82,7 @@
 路径规则之外，读入模型上下文的文本还会经过一次内容脱敏：
 
 - `api_key=...`、`token: ...`、`password=...`、`authorization: ...` 形式的赋值；
+- JSON/带引号的 `"api_key": "..."`、`"client_secret": "..."` 等键值；
 - `Bearer ...`；
 - PEM 私钥块。
 

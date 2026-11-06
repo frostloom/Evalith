@@ -46,6 +46,11 @@ def project_root(tmp_path: Path) -> Path:
         'API_KEY = "sk-inline-secret-value"\nThe agent approves releases.\n',
         encoding="utf-8",
     )
+    (root / "config").mkdir()
+    (root / "config" / "settings.json").write_text(
+        '{"api_key": "sk-json-secret-value", "region": "eu-central"}\n',
+        encoding="utf-8",
+    )
     (root / "binary.dat").write_bytes(b"\x00\x01secret-binary\x02")
     (root / ".git" / "config").write_text("url = https://example.invalid\n", encoding="utf-8")
 

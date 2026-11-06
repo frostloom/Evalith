@@ -18,7 +18,12 @@ from pathlib import Path
 from cryptography.fernet import Fernet, InvalidToken
 
 _SECRET_PATTERNS = [
-    re.compile(r"(?i)\b(api[_-]?key|token|secret|password|authorization)\b\s*[:=]\s*\S+"),
+    # key=value / "key": "value" forms, including JSON and quoted values
+    re.compile(
+        r"(?i)[\"']?\b(?:api[_-]?key|access[_-]?token|client[_-]?secret|token|secret|"
+        r"password|authorization)\b[\"']?\s*[:=]\s*"
+        r"(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|[^\s,}]+)"
+    ),
     re.compile(r"(?i)\bbearer\s+[a-z0-9._\-]+"),
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),
 ]
