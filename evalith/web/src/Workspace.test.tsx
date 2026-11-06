@@ -1,4 +1,9 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -82,5 +87,31 @@ describe("workspace failure reconciliation", () => {
     await user.click(screen.getByRole("button", { name: "发送" }));
     await waitFor(() => expect(apiMock.getProject).toHaveBeenCalledWith("prj_a"));
     await waitFor(() => expect(onDetail).toHaveBeenCalledWith(refreshed));
+  });
+
+  it("does not send Enter while the IME is composing", async () => {
+    apiMock.sendMessage.mockResolvedValue(makeDetail(false));
+    const onDetail = vi.fn();
+    render(
+      <Workspace
+        detail={makeDetail(true)}
+        models={[]}
+        busy={false}
+        onDetail={onDetail}
+        onHome={vi.fn()}
+        onError={vi.fn()}
+        onNotice={vi.fn()}
+      />,
+    );
+    const input = screen.getByPlaceholderText(/补充资料、纠正理解/);
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: "继续" } });
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+    expect(apiMock.sendMessage).not.toHaveBeenCalled();
+    expect((input as HTMLTextAreaElement).value).toBe("继续");
+
+    fireEvent.compositionEnd(input);
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+    await waitFor(() => expect(apiMock.sendMessage).toHaveBeenCalledTimes(1));
   });
 });

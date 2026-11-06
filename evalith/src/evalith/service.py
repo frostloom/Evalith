@@ -859,6 +859,19 @@ class WorkspaceService:
                 model_current["snapshot_id"] = project["snapshot_id"]
                 if current_paths != allowed_paths:
                     scope["scope_changed"] = True
+            if (
+                snapshot_changed
+                and current.get("sufficient")
+                and not current.get("error")
+            ):
+                invalidated = dict(current)
+                invalidated["sufficient"] = False
+                invalidated["sufficient_reason"] = (
+                    "资料快照已变化，需重新确认依据；未知项保留，推进门保持关闭。"
+                )
+                invalidated["sources"] = sources
+                invalidated["snapshot_id"] = project["snapshot_id"]
+                self._store_understanding(project, invalidated, error=None)
             result = gateway.discuss(
                 project_name=project["name"],
                 context_text=context_text,

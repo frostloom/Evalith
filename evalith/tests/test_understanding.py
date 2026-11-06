@@ -483,6 +483,63 @@ def test_sufficiency_withdrawal_survives_provider_failure(
     assert refreshed["readiness"]["generation_allowed"] is False
 
 
+def test_insufficiency_wording_closes_gate(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    opened = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "现有资料依据足够。"},
+    )
+    assert opened.status_code == 200, opened.text
+    assert opened.json()["readiness"]["generation_allowed"] is True
+
+    closed = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "资料还不够。"},
+    )
+    assert closed.status_code == 200, closed.text
+    assert closed.json()["understanding"]["sufficient"] is False
+    assert closed.json()["readiness"]["generation_allowed"] is False
+
+
+def test_changed_evidence_invalidates_sufficiency_before_failure(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.body_override = {
+        "summary": "sufficient",
+        "agent_or_flow": "",
+        "known": [{"text": "policy", "source": "README.md"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": True,
+        "sufficient_reason": "enough",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "changed-evidence-failure",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    assert detail["understanding"]["sufficient"] is True
+    (project_root / "README.md").unlink()
+    _RecordingHandler.fail = True
+    failed = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "补充"},
+    )
+    assert failed.status_code == 502, failed.text
+    refreshed = client.get(f"/api/projects/{detail['project']['id']}").json()
+    assert refreshed["understanding"]["sufficient"] is False
+    assert refreshed["readiness"]["generation_allowed"] is False
+
+
 def test_withdrawal_survives_provider_failure(
     client: TestClient, project_root: Path, recording_server
 ) -> None:

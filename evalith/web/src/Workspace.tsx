@@ -52,6 +52,7 @@ export function Workspace({
 }) {
   const { project, understanding, readiness, snapshot, messages } = detail;
   const [message, setMessage] = useState("");
+  const [composing, setComposing] = useState(false);
   const [working, setWorking] = useState(false);
   const [editingSources, setEditingSources] = useState(false);
   const [editingModel, setEditingModel] = useState(false);
@@ -224,8 +225,15 @@ export function Workspace({
                 ref={composerRef}
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
+                onCompositionStart={() => setComposing(true)}
+                onCompositionEnd={() => setComposing(false)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    !composing &&
+                    !event.nativeEvent.isComposing
+                  ) {
                     event.preventDefault();
                     void send(message);
                   }
