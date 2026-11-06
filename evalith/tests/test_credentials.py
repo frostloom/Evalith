@@ -65,6 +65,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "AKIAEXAMPLESECRET" not in request["body"]
     assert "synthetic-secret-value" not in request["body"]
     assert "synthetic-password" not in request["body"]
+    assert "synthetic-signing-secret" not in request["body"]
     assert "eu-central" in request["body"]
     assert "RELEASE_POLICY" in request["body"]
     assert "[REDACTED]" in request["body"]
@@ -127,6 +128,72 @@ def test_existing_paid_model_is_disabled_after_restart(
         response = other.post(f"/api/projects/{detail['project']['id']}/reanalyse")
         assert response.status_code == 502, response.text
         assert "付费模型默认禁用" in response.text
+
+
+def test_signing_secret_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    text = 'JWT_SECRET_KEY = "synthetic-signing-secret"\n'
+    redacted = redact_text(text)
+    assert "synthetic-signing-secret" not in redacted
+    assert "[REDACTED]" in redacted
+
+
+def test_withdrawal_persists_when_paid_models_are_disabled(
+    client: TestClient, settings, project_root: Path, recording_server
+) -> None:
+    from dataclasses import replace
+
+    from evalith.api import create_app
+
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": True,
+        "understanding": {
+            "summary": "sufficient",
+            "agent_or_flow": "",
+            "known": [],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": True,
+            "sufficient_reason": "enough",
+        },
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "withdrawal-disabled",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    continued = client.post(
+        f"/api/projects/{project_id}/messages", json={"content": "继续"}
+    )
+    assert continued.status_code == 200, continued.text
+    assert continued.json()["understanding"]["user_continued"] is True
+
+    disabled = replace(settings, allow_paid_models=False)
+    with TestClient(create_app(disabled)) as other:
+        refused = other.post(
+            f"/api/projects/{project_id}/messages",
+            json={"content": "我不同意继续。"},
+        )
+        assert refused.status_code == 502, refused.text
+        after_consent = other.get(f"/api/projects/{project_id}").json()
+        assert after_consent["understanding"]["user_continued"] is False
+
+        insufficient = other.post(
+            f"/api/projects/{project_id}/messages",
+            json={"content": "资料还不够。"},
+        )
+        assert insufficient.status_code == 502, insufficient.text
+        after_sufficiency = other.get(f"/api/projects/{project_id}").json()
+        assert after_sufficiency["understanding"]["sufficient"] is False
+        assert after_sufficiency["readiness"]["generation_allowed"] is False
 
 
 def test_aws_credential_assignments_are_redacted() -> None:

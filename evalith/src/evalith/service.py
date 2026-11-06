@@ -199,11 +199,17 @@ class WorkspaceService:
             "created_at": data["created_at"],
         }
 
-    def gateway_for(self, model_config_id: str | None) -> ModelGateway:
+    def gateway_for(
+        self, model_config_id: str | None, *, enforce_paid: bool = True
+    ) -> ModelGateway:
         row = self.db.get_model_config(model_config_id)
         if row is None:
             return ModelGateway(None, timeout=self.settings.model_timeout_seconds)
-        if row["provider"] != "stub" and not self.settings.allow_paid_models:
+        if (
+            enforce_paid
+            and row["provider"] != "stub"
+            and not self.settings.allow_paid_models
+        ):
             raise ModelError(
                 "付费模型默认禁用；请由维护者显式启用预算控制后再使用"
             )
@@ -875,7 +881,9 @@ class WorkspaceService:
             raise WorkspaceError("消息不能为空")
         if len(text) > 8_000:
             raise WorkspaceError("消息过长")
-        gateway = self.gateway_for(project["model_config_id"])
+        gateway = self.gateway_for(
+            project["model_config_id"], enforce_paid=False
+        )
         text = gateway.scrub(text)
         # Persist withdrawal before any fallible rescan/provider call. A
         # recorded refusal must close consent-only readiness even if the
@@ -906,6 +914,7 @@ class WorkspaceService:
                     project, withdrawn, error=current_before.get("error")
                 )
         self._append_message(project, role="user", content=text, payload={"kind": "chat"})
+        gateway = self.gateway_for(project["model_config_id"])
         try:
             try:
                 scan = self._rescan(project, store_new_snapshot=False)

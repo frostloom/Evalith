@@ -53,6 +53,7 @@ def project_root(tmp_path: Path) -> Path:
         "DB_PASSWORD=db-prefixed-secret\n"
         "AWS_ACCESS_KEY_ID=AKIAEXAMPLESECRET\n"
         "AWS_SECRET_ACCESS_KEY=synthetic-secret-value\n"
+        "JWT_SECRET_KEY=synthetic-signing-secret\n"
         "The agent approves releases.\n",
         encoding="utf-8",
     )

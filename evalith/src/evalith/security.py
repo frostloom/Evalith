@@ -24,7 +24,8 @@ _SECRET_PATTERNS = [
     # them because "_" is a word character.
     re.compile(
         r"(?i)(?<![A-Za-z0-9])[\"']?(?:[A-Za-z0-9]+[_-])*"
-        r"(?:secret[_-]?access[_-]?key|access[_-]?key[_-]?id|"
+        r"(?:secret[_-]?access[_-]?key|secret[_-]?key|signing[_-]?key|"
+        r"access[_-]?key[_-]?id|"
         r"api[_-]?key|access[_-]?token|client[_-]?secret|token|secret|"
         r"password|authorization)[\"']?\s*[:=]\s*"
         r"(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|[^\n,}]+)"

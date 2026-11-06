@@ -94,6 +94,11 @@ export function App() {
     setView("import");
   };
 
+  const openModels = () => {
+    importGeneration.current += 1;
+    setView("models");
+  };
+
   const goHome = () => {
     importGeneration.current += 1;
     openSequence.current += 1;
@@ -142,7 +147,7 @@ export function App() {
         <div className="rail-foot">
           <button
             className={`rail-link ${view === "models" ? "is-active" : ""}`}
-            onClick={() => setView("models")}
+            onClick={openModels}
           >
             模型与凭据
           </button>
@@ -165,7 +170,7 @@ export function App() {
             projects={projects}
             onOpen={(project) => void openProject(project)}
             onImport={startImport}
-            onModels={() => setView("models")}
+            onModels={openModels}
             models={models}
           />
         )}

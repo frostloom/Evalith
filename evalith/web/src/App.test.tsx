@@ -127,6 +127,34 @@ describe("import navigation", () => {
     expect(apiMock.createProject).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps model settings after a late import following sidebar navigation", async () => {
+    let resolveImport: ((value: unknown) => void) | undefined;
+    apiMock.createProject.mockReturnValue(
+      new Promise((resolve) => {
+        resolveImport = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getAllByRole("button", { name: /导入本地项目/ })[0]);
+    await user.type(screen.getByLabelText("项目名称"), "Late C");
+    await user.type(screen.getByLabelText(/本地目录/), "/tmp/c");
+    await user.click(
+      screen.getByRole("button", { name: "导入并生成初步理解" }),
+    );
+    await user.click(screen.getByRole("button", { name: "模型与凭据" }));
+    await screen.findByRole("heading", { name: "配置会话使用的模型服务。" });
+    await act(async () => {
+      resolveImport?.(detail("c", "Late C"));
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Late C" })).toBeNull(),
+    );
+    expect(
+      screen.getByRole("heading", { name: "配置会话使用的模型服务。" }),
+    ).toBeInTheDocument();
+  });
+
   it("ignores a late import response after cancellation", async () => {
     let resolveImport: ((value: unknown) => void) | undefined;
     apiMock.createProject.mockReturnValue(
