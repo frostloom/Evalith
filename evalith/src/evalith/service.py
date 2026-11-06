@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 import uuid
 from pathlib import Path
 from typing import Any
@@ -47,6 +48,12 @@ class WorkspaceService:
         self.db = db
         self.settings = settings
         self.cipher = cipher
+        self._project_locks: dict[str, threading.Lock] = {}
+        self._project_locks_guard = threading.Lock()
+
+    def _project_lock(self, project_id: str) -> threading.Lock:
+        with self._project_locks_guard:
+            return self._project_locks.setdefault(project_id, threading.Lock())
 
     # ------------------------------------------------------------------
     # model configs
@@ -647,6 +654,10 @@ class WorkspaceService:
         return scan
 
     def post_message(self, project_id: str, content: str) -> dict[str, Any]:
+        with self._project_lock(project_id):
+            return self._post_message(project_id, content)
+
+    def _post_message(self, project_id: str, content: str) -> dict[str, Any]:
         project = self.db.get_project(project_id)
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
@@ -796,6 +807,10 @@ class WorkspaceService:
         return self.get_project_detail(project_id)
 
     def assign_model(self, project_id: str, model_config_id: str | None) -> dict[str, Any]:
+        with self._project_lock(project_id):
+            return self._assign_model(project_id, model_config_id)
+
+    def _assign_model(self, project_id: str, model_config_id: str | None) -> dict[str, Any]:
         project = self.db.get_project(project_id)
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
@@ -830,6 +845,10 @@ class WorkspaceService:
         return self.get_project_detail(project_id)
 
     def request_continue(self, project_id: str) -> dict[str, Any]:
+        with self._project_lock(project_id):
+            return self._request_continue(project_id)
+
+    def _request_continue(self, project_id: str) -> dict[str, Any]:
         project = self.db.get_project(project_id)
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
@@ -859,6 +878,10 @@ class WorkspaceService:
         return self.get_project_detail(project_id)
 
     def rescan(self, project_id: str) -> dict[str, Any]:
+        with self._project_lock(project_id):
+            return self._rescan_project(project_id)
+
+    def _rescan_project(self, project_id: str) -> dict[str, Any]:
         project = self.db.get_project(project_id)
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
@@ -893,6 +916,10 @@ class WorkspaceService:
         return self.get_project_detail(project_id)
 
     def reanalyse(self, project_id: str) -> dict[str, Any]:
+        with self._project_lock(project_id):
+            return self._reanalyse(project_id)
+
+    def _reanalyse(self, project_id: str) -> dict[str, Any]:
         project = self.db.get_project(project_id)
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
@@ -912,6 +939,10 @@ class WorkspaceService:
         return self.get_project_detail(project_id)
 
     def update_sources(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        with self._project_lock(project_id):
+            return self._update_sources(project_id, payload)
+
+    def _update_sources(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         project = self.db.get_project(project_id)
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")

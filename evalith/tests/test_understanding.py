@@ -372,13 +372,14 @@ def test_valid_provider_sufficiency_survives_ordinary_discussion(
             "sufficient_reason": "关键事实已补齐",
         },
     }
-    response = client.post(
-        f"/api/projects/{detail['project']['id']}/messages",
-        json={"content": "补充：项目后端是 FastAPI。"},
-    )
-    assert response.status_code == 200, response.text
-    assert response.json()["understanding"]["sufficient"] is True
-    assert response.json()["readiness"]["generation_allowed"] is True
+    for text in ("补充：项目后端是 FastAPI。", "补充：这是等待事件的流程。"):
+        response = client.post(
+            f"/api/projects/{detail['project']['id']}/messages",
+            json={"content": text},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["understanding"]["sufficient"] is True
+        assert response.json()["readiness"]["generation_allowed"] is True
 
 
 def test_provider_accepts_explicit_continuation_phrases(
@@ -423,18 +424,19 @@ def test_continue_consent_can_be_withdrawn(
     model = create_stub_model(client)
     detail = import_project(client, project_root, model_config_id=model["id"]).json()
     project_id = detail["project"]["id"]
-    continued = client.post(
-        f"/api/projects/{project_id}/messages", json={"content": "继续"}
-    )
-    assert continued.status_code == 200, continued.text
-    assert continued.json()["understanding"]["user_continued"] is True
+    for refusal in ("我拒绝继续。", "我不同意继续。"):
+        continued = client.post(
+            f"/api/projects/{project_id}/messages", json={"content": "继续"}
+        )
+        assert continued.status_code == 200, continued.text
+        assert continued.json()["understanding"]["user_continued"] is True
 
-    withdrawn = client.post(
-        f"/api/projects/{project_id}/messages", json={"content": "我拒绝继续。"}
-    )
-    assert withdrawn.status_code == 200, withdrawn.text
-    assert withdrawn.json()["understanding"]["user_continued"] is False
-    assert withdrawn.json()["readiness"]["generation_allowed"] is False
+        withdrawn = client.post(
+            f"/api/projects/{project_id}/messages", json={"content": refusal}
+        )
+        assert withdrawn.status_code == 200, withdrawn.text
+        assert withdrawn.json()["understanding"]["user_continued"] is False
+        assert withdrawn.json()["readiness"]["generation_allowed"] is False
 
 
 def test_sufficiency_withdrawal_survives_provider_failure(

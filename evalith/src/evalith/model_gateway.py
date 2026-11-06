@@ -289,7 +289,11 @@ class ModelGateway:
         return self._scrub(text)
 
     def withdraws_continuation(self, text: str) -> bool:
-        return any(marker in text for marker in WITHDRAWAL_MARKERS)
+        if any(marker in text for marker in WITHDRAWAL_MARKERS):
+            return True
+        return any(
+            phrase in text for phrase in ("继续", "下一步", "开始出题", "开始设计", "下一阶段")
+        ) and _has_negation(text)
 
     def withdraws_sufficiency(self, text: str) -> bool:
         return _negates_sufficiency(text) or _is_uncertain_sufficiency(text)
@@ -514,6 +518,8 @@ NEGATION_MARKERS = (
     "中止",
     "不许",
     "不准",
+    "不再",
+    "从未",
     "不应该",
     "不该",
     "不应",
@@ -601,30 +607,6 @@ def _keyword_outside_quotes(text: str, keyword: str) -> bool:
     return _first_keyword_outside_quotes(text, keyword) is not None
 
 
-CONDITIONAL_MARKERS = (
-    "等",
-    "才",
-    "再",
-    "如果",
-    "假如",
-    "若",
-    "待",
-    "暂时",
-    "到时候",
-    "确认后",
-    "之前",
-    "以后",
-    "之后",
-    "后继续",
-    "之后再",
-    "材料齐全",
-    "齐全后",
-    "完成后",
-    "补充后",
-    "准备后",
-    "就绪后",
-)
-
 HESITATION_MARKERS = (
     "考虑",
     "想想",
@@ -686,8 +668,17 @@ DESCRIPTIVE_MARKERS = (
 )
 
 
+# Match conditional clauses and deferrals, not individual characters inside
+# ordinary words (e.g. "等待事件" or "后端"). Larger windows are deliberately
+# bounded so a long discussion sentence is not treated as conditional.
+_CONDITIONAL_READINESS = re.compile(
+    r"(?:等.{0,20}(?:才|再)|先.{0,20}(?:再|等)|.{0,20}后.{0,10}(?:才|再)|"
+    r"^(?:如果|假如|若|待|暂时)|确认后|之前|以后|之后|后继续|齐全后|"
+    r"完成后|补充后|准备后|就绪后|材料齐全)"
+)
+
 def _is_conditional_statement(text: str) -> bool:
-    return any(marker in text for marker in CONDITIONAL_MARKERS)
+    return bool(_CONDITIONAL_READINESS.search(text))
 
 
 def _is_descriptive_statement(text: str) -> bool:

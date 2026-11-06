@@ -98,6 +98,16 @@ export function Workspace({
     } catch (err) {
       if (projectIdRef.current === origin) {
         onError(err instanceof Error ? err.message : "发送失败");
+        // The server persists an explicit withdrawal before a failing model
+        // call. Re-read detail so readiness and the conversation reflect it.
+        try {
+          const latest = await api.getProject(origin);
+          if (projectIdRef.current === origin && latest.project.id === origin) {
+            onDetail(latest);
+          }
+        } catch {
+          // Keep the original request error; the next open will refresh.
+        }
       }
     } finally {
       if (projectIdRef.current === origin) setWorking(false);
