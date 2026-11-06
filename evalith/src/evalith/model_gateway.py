@@ -196,7 +196,9 @@ def _stub_understanding(
             rest = line[len("### FILE ") :]
             files.append(rest.split(" (sha256", 1)[0])
     supplements = [
-        str(item["path"]) for item in sources if item.get("supplemental")
+        str(item["path"])
+        for item in sources
+        if item.get("supplemental") and item.get("sent")
     ]
     known = []
     for path in files[:5]:

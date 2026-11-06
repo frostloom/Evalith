@@ -344,6 +344,23 @@ def test_oversized_gitignore_is_rejected(tmp_path: Path) -> None:
     assert excinfo.value.code == "gitignore_too_large"
 
 
+def test_gitignore_posix_character_class(tmp_path: Path) -> None:
+    root = tmp_path / "posix-class-ignore"
+    root.mkdir()
+    (root / ".gitignore").write_text(
+        "customer[[:digit:]].csv\n", encoding="utf-8"
+    )
+    (root / "customer1.csv").write_text("synthetic\n", encoding="utf-8")
+    default = scan_project(root, [], [])
+    assert "customer1.csv" not in {item.path for item in default.files}
+    assert any(
+        item["path"] == "customer1.csv" and "gitignore" in item["reason"]
+        for item in default.excluded
+    )
+    selected = scan_project(root, ["customer1.csv"], [])
+    assert "customer1.csv" in {item.path for item in selected.files}
+
+
 def test_gitignore_negation_does_not_cross_directories(tmp_path: Path) -> None:
     root = tmp_path / "gitignore-nested-negation"
     root.mkdir()

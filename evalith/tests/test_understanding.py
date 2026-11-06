@@ -318,6 +318,34 @@ def test_chat_scope_history_matches_provider_window(
     assert scope["history_messages"] == 6
 
 
+def test_unsent_supplement_is_not_claimed_as_known(
+    client: TestClient, tmp_path: Path
+) -> None:
+    root = tmp_path / "budget-supplement"
+    root.mkdir()
+    for index in range(5):
+        (root / f"big{index}.txt").write_text(
+            "x" * 6_000, encoding="utf-8"
+        )
+    model = create_stub_model(client)
+    detail = import_project(
+        client,
+        root,
+        model_config_id=model["id"],
+        supplemental=[{"title": "末尾补充", "content": "不应被声称已分析"}],
+    ).json()
+    known_texts = {
+        item["text"] for item in detail["understanding"]["known"]
+    }
+    assert not any("末尾补充" in text for text in known_texts)
+    supplements = [
+        item
+        for item in detail["messages"][-1]["sent_scope"]["sources"]
+        if item.get("supplemental")
+    ]
+    assert supplements and all(item["sent"] is False for item in supplements)
+
+
 def test_missing_model_records_zero_transmitted_scope(
     client: TestClient, project_root: Path
 ) -> None:

@@ -547,6 +547,28 @@ def _unescape_gitignore_pattern(pattern: str) -> str:
     return "".join(out)
 
 
+_POSIX_CLASSES = {
+    "alnum": "A-Za-z0-9",
+    "alpha": "A-Za-z",
+    "blank": " \t",
+    "cntrl": "\x00-\x1f\x7f",
+    "digit": "0-9",
+    "graph": "!-~",
+    "lower": "a-z",
+    "print": " -~",
+    "punct": "!-/:-@[-`{-~",
+    "space": " \t\n\r\f\v",
+    "upper": "A-Z",
+    "xdigit": "0-9A-Fa-f",
+}
+
+
+def _translate_posix_classes(pattern: str) -> str:
+    for name, replacement in _POSIX_CLASSES.items():
+        pattern = pattern.replace(f"[:{name}:]", replacement)
+    return pattern
+
+
 def _git_glob_match(path: str, pattern: str) -> bool:
     """Component-aware glob where a single * does not cross '/'."""
     path_parts = path.split("/")
@@ -578,7 +600,9 @@ def _gitignore_decision(
     ignored = False
     matched_pattern: str | None = None
     for pattern, negated in rules:
-        candidate = _unescape_gitignore_pattern(pattern)
+        candidate = _translate_posix_classes(
+            _unescape_gitignore_pattern(pattern)
+        )
         dir_only = candidate.endswith("/")
         candidate = candidate.rstrip("/")
         if not candidate:
