@@ -344,6 +344,44 @@ def test_oversized_gitignore_is_rejected(tmp_path: Path) -> None:
     assert excinfo.value.code == "gitignore_too_large"
 
 
+def test_escaped_gitignore_filename_is_excluded(tmp_path: Path) -> None:
+    root = tmp_path / "escaped-ignore"
+    root.mkdir()
+    (root / ".gitignore").write_text("customer\\ export.csv\n", encoding="utf-8")
+    (root / "customer export.csv").write_text("synthetic\n", encoding="utf-8")
+    scan = scan_project(root, [], [])
+    assert "customer export.csv" not in {item.path for item in scan.files}
+    assert any(
+        item["path"] == "customer export.csv" and "gitignore" in item["reason"]
+        for item in scan.excluded
+    )
+
+
+def test_context_budget_includes_file_framing(tmp_path: Path) -> None:
+    root = tmp_path / "tiny-budget"
+    root.mkdir()
+    long_name = "a" * 80 + ".txt"
+    (root / long_name).write_text("body\n", encoding="utf-8")
+    scan = scan_project(root, [long_name], [])
+    _, context_text, scope = build_model_context(scan, [], budget_chars=40)
+    assert len(context_text) <= 40
+    assert all(item.get("sent") is False for item in scope["sources"])
+
+
+def test_supplement_near_exhaustion_is_marked_unsent(tmp_path: Path) -> None:
+    root = tmp_path / "tiny-supplement"
+    root.mkdir()
+    scan = scan_project(root, [], [])
+    _, context_text, scope = build_model_context(
+        scan,
+        [{"title": "补充", "content": "body"}],
+        budget_chars=40,
+    )
+    assert len(context_text) <= 40
+    assert not context_text
+    assert all(item.get("sent") is False for item in scope["sources"])
+
+
 def test_supplement_title_respects_context_budget(project_root: Path) -> None:
     scan = scan_project(project_root, ["README.md"], [])
     _, context_text, _ = build_model_context(

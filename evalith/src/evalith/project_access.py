@@ -518,6 +518,21 @@ def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
     return rules
 
 
+def _unescape_gitignore_pattern(pattern: str) -> str:
+    """Apply Git's backslash escaping without treating it as a separator."""
+    out: list[str] = []
+    index = 0
+    while index < len(pattern):
+        char = pattern[index]
+        if char == "\\" and index + 1 < len(pattern):
+            out.append(pattern[index + 1])
+            index += 2
+            continue
+        out.append(char)
+        index += 1
+    return "".join(out)
+
+
 def _gitignore_decision(
     relative: str, is_dir: bool, rules: list[tuple[str, bool]]
 ) -> tuple[bool, bool, str | None]:
@@ -526,7 +541,7 @@ def _gitignore_decision(
     ignored = False
     matched_pattern: str | None = None
     for pattern, negated in rules:
-        candidate = pattern.replace("\\", "/")
+        candidate = _unescape_gitignore_pattern(pattern)
         dir_only = candidate.endswith("/")
         candidate = candidate.rstrip("/")
         if not candidate:
@@ -876,12 +891,43 @@ def build_model_context(
             continue
         header = f"### FILE {item.path} (sha256 {item.sha256[:16]}…, {item.size} bytes)"
         body = item.excerpt
+        separator = "\n" if blocks else ""
+        framing = (
+            len(separator)
+            + len(header)
+            + len("\n```text\n")
+            + len("\n```\n")
+        )
+        if framing > remaining:
+            sources.append(
+                {
+                    "path": item.path,
+                    "sha256": item.sha256,
+                    "size": item.size,
+                    "sent": False,
+                    "reason": "model context budget reached",
+                }
+            )
+            continue
         chunk = header + "\n```text\n" + body + "\n```\n"
-        if len(chunk) > remaining:
-            body = body[: max(0, remaining - len(header) - 20)]
-            chunk = header + "\n```text\n" + body + "…[truncated]\n```\n"
-        blocks.append(chunk)
-        remaining -= len(chunk)
+        if len(separator) + len(chunk) > remaining:
+            marker = "…[truncated]"
+            body_budget = remaining - framing - len(marker)
+            if body_budget < 0:
+                sources.append(
+                    {
+                        "path": item.path,
+                        "sha256": item.sha256,
+                        "size": item.size,
+                        "sent": False,
+                        "reason": "model context budget reached",
+                    }
+                )
+                continue
+            body = body[:body_budget] + marker
+            chunk = header + "\n```text\n" + body + "\n```\n"
+        blocks.append(separator + chunk)
+        remaining -= len(separator) + len(chunk)
         sent_bytes += len(body.encode("utf-8"))
         redaction_count += item.redactions
         sources.append(
@@ -904,9 +950,12 @@ def build_model_context(
         redaction_count += _count_redactions(raw_title + raw_content, title + content)
         prefix = "### SUPPLEMENT "
         footer = "\n```text\n\n```\n"
-        # Title, framing and content all share the same remaining budget.
-        title_budget = remaining - len(prefix) - len(footer)
-        if title_budget <= 1:
+        separator = "\n" if blocks else ""
+        label_suffix = f" [{content_digest}]"
+        label_budget = (
+            remaining - len(separator) - len(prefix) - len(footer) - len(label_suffix)
+        )
+        if label_budget < 1:
             sources.append(
                 {
                     "path": source_id,
@@ -919,25 +968,39 @@ def build_model_context(
                 }
             )
             continue
-        title_budget = min(
-            len(title), title_budget - len(f" [{content_digest}]"), 200
-        )
+        title_budget = min(len(title), label_budget, 200)
         if title_budget < len(title):
             title = title[: max(0, title_budget - 1)] + "…"
-        source_id = f"supplement:{title} [{content_digest}]"
-        content_budget = max(
-            0, remaining - len(prefix) - len(source_id) - len(footer)
+        source_id = f"supplement:{title}{label_suffix}"
+        content_budget = (
+            remaining
+            - len(separator)
+            - len(prefix)
+            - len(source_id)
+            - len(footer)
         )
+        if content_budget < 0:
+            sources.append(
+                {
+                    "path": source_id,
+                    "sha256": hashlib.sha256(raw_content.encode("utf-8")).hexdigest(),
+                    "size": len(raw_content.encode("utf-8")),
+                    "sent": False,
+                    "supplemental": True,
+                    "reason": "model context budget reached",
+                    "redactions": 0,
+                }
+            )
+            continue
         if len(content) > content_budget:
             marker = "…[truncated]"
-            content = content[: max(0, content_budget - len(marker))] + marker
+            if content_budget >= len(marker):
+                content = content[: content_budget - len(marker)] + marker
+            else:
+                content = ""
         chunk = f"{prefix}{source_id}\n```text\n{content}\n```\n"
-        if len(chunk) > remaining:
-            # Defensive final clamp: keep the serialized chunk bounded even if
-            # a future change adds framing without updating the calculation.
-            chunk = chunk[:remaining]
-        blocks.append(chunk)
-        remaining -= len(chunk)
+        blocks.append(separator + chunk)
+        remaining -= len(separator) + len(chunk)
         sent_bytes += len(content.encode("utf-8"))
         sources.append(
             {
