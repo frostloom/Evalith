@@ -907,6 +907,125 @@ def test_reanalysis_retires_facts_from_changed_files(
     assert "approval optional" not in texts
 
 
+def test_chat_unknown_source_is_a_visible_error(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "unknown-source",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "understanding": {
+            "summary": "invented",
+            "agent_or_flow": "",
+            "known": [{"text": "invented fact", "source": "not-in-snapshot.md"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": True,
+            "sufficient_reason": "invented",
+        },
+    }
+    response = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "补充"},
+    )
+    assert response.status_code == 502, response.text
+    refreshed = client.get(f"/api/projects/{detail['project']['id']}").json()
+    assert any(
+        (message.get("payload") or {}).get("kind") == "error"
+        for message in refreshed["messages"]
+    )
+    assert refreshed["readiness"]["generation_allowed"] is False
+
+
+def test_narrowed_reanalysis_does_not_send_removed_facts(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.body_override = {
+        "summary": "old policy",
+        "agent_or_flow": "",
+        "known": [
+            {"text": "approval optional", "source": "docs/RELEASE_POLICY.md"}
+        ],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "narrowed-input",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    updated = client.put(
+        f"/api/projects/{project_id}/sources",
+        json={
+            "include_paths": ["README.md"],
+            "exclude_patterns": [],
+            "supplemental": [],
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    body = _RecordingHandler.requests[-1]["body"]
+    assert "approval optional" not in body
+    assert "RELEASE_POLICY" not in body
+
+
+def test_chat_retires_facts_from_changed_file(
+    client: TestClient, tmp_path: Path, recording_server
+) -> None:
+    root = tmp_path / "chat-changing-policy"
+    root.mkdir()
+    (root / "README.md").write_text("# Project\n", encoding="utf-8")
+    (root / "policy.md").write_text("Approval optional.\n", encoding="utf-8")
+    _RecordingHandler.body_override = {
+        "summary": "old policy",
+        "agent_or_flow": "",
+        "known": [{"text": "approval optional", "source": "policy.md"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "chat-changing-policy",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, root, model_config_id=model["id"]).json()
+    (root / "policy.md").write_text("Approval required.\n", encoding="utf-8")
+    _RecordingHandler.body_override = {
+        "reply": "noted",
+        "continue_requested": False,
+    }
+    response = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "补充"},
+    )
+    assert response.status_code == 200, response.text
+    assert "approval optional" not in {
+        item["text"] for item in response.json()["understanding"]["known"]
+    }
+
+
 def test_chat_retires_facts_when_source_is_deleted(
     client: TestClient, project_root: Path
 ) -> None:

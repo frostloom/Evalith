@@ -182,6 +182,41 @@ def test_sensitive_directory_cannot_be_the_project_root(
     assert response.json()["code"] == "sensitive_path_denied"
 
 
+def test_sensitive_names_are_casefolded_for_explicit_selection(tmp_path: Path) -> None:
+    root = tmp_path / "casefold-project"
+    root.mkdir()
+    (root / ".ENV").write_text("SECRET=1\n", encoding="utf-8")
+    secrets = root / "SECRETS"
+    secrets.mkdir()
+    (secrets / "credentials.txt").write_text("token\n", encoding="utf-8")
+
+    for selected in (".ENV", "SECRETS/credentials.txt"):
+        with pytest.raises(AccessError) as excinfo:
+            scan_project(root, [selected], [])
+        assert excinfo.value.code == "sensitive_path_denied"
+
+
+def test_unreadable_gitignore_fails_closed(tmp_path: Path, monkeypatch) -> None:
+    import errno
+    import evalith.project_access as project_access
+
+    root = tmp_path / "unreadable-gitignore"
+    root.mkdir()
+    (root / "README.md").write_text("hello\n", encoding="utf-8")
+    (root / ".gitignore").write_text("private/\n", encoding="utf-8")
+    real_open = project_access.os.open
+
+    def fake_open(path, *args, **kwargs):
+        if path == ".gitignore":
+            raise PermissionError(errno.EACCES, "denied")
+        return real_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(project_access.os, "open", fake_open)
+    with pytest.raises(AccessError) as excinfo:
+        project_access.scan_project(root, [], [])
+    assert excinfo.value.code == "gitignore_unreadable"
+
+
 def test_resolve_root_preserves_identity_for_initial_scan(tmp_path: Path) -> None:
     root = tmp_path / "identity-project"
     root.mkdir()

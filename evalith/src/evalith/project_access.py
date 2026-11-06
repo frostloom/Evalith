@@ -145,7 +145,20 @@ def _matches(name: str, relpath: str, patterns: list[str]) -> str | None:
 
 
 def _always_excluded(name: str, relpath: str) -> str | None:
-    return _matches(name, relpath, ALWAYS_EXCLUDED)
+    # Case-insensitive filesystems (macOS by default) resolve .ENV to .env and
+    # SECRETS/ to secrets/.  Denylist checks must use the same equivalence.
+    folded_name = name.casefold()
+    folded_relpath = relpath.casefold()
+    parts = [part.casefold() for part in PurePosixPath(relpath).parts]
+    for pattern in ALWAYS_EXCLUDED:
+        folded = pattern.casefold()
+        if (
+            fnmatch.fnmatchcase(folded_name, folded)
+            or fnmatch.fnmatchcase(folded_relpath, folded)
+            or any(fnmatch.fnmatchcase(part, folded) for part in parts)
+        ):
+            return pattern
+    return None
 
 
 @dataclass(frozen=True)
@@ -429,13 +442,19 @@ def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
             | getattr(os, "O_NONBLOCK", 0),
             dir_fd=root_fd,
         )
-    except OSError:
-        return []
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            return []
+        raise AccessError(
+            f"无法读取项目 .gitignore：{exc.strerror}", code="gitignore_unreadable"
+        ) from exc
     try:
         info = os.fstat(fd)
-    except OSError:
+    except OSError as exc:
         os.close(fd)
-        return []
+        raise AccessError(
+            f"无法检查项目 .gitignore：{exc.strerror}", code="gitignore_unreadable"
+        ) from exc
     if not stat.S_ISREG(info.st_mode):
         os.close(fd)
         raise AccessError(
@@ -444,6 +463,10 @@ def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
         )
     try:
         raw = os.read(fd, 64_000)
+    except OSError as exc:
+        raise AccessError(
+            f"无法读取项目 .gitignore：{exc.strerror}", code="gitignore_unreadable"
+        ) from exc
     finally:
         os.close(fd)
     rules: list[tuple[str, bool]] = []

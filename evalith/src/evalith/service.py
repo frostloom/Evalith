@@ -508,13 +508,47 @@ class WorkspaceService:
                 for row in self.db.list_messages(project["id"], session["id"])
                 if row["role"] in ("user", "assistant")
             ][-10:]
+            current_scope = {
+                str(item.get("path"))
+                for item in (current.get("sources", []) if current else [])
+                if item.get("path")
+            }
+            new_scope = {
+                str(item.get("path")) for item in sources if item.get("path")
+            }
+            provider_current = usable_current
+            model_history = history
+            if usable_current is not None and current_scope != new_scope:
+                retained = new_scope | {"会话", "snapshot"}
+                provider_current = dict(usable_current)
+                provider_current["known"] = [
+                    item
+                    for item in usable_current.get("known", [])
+                    if isinstance(item, dict)
+                    and str(item.get("source", "")) in retained
+                ]
+                provider_current["inferred"] = []
+                provider_current["summary"] = ""
+                provider_current["sources"] = sources
+                provider_current["snapshot_id"] = project["snapshot_id"]
+                removed = current_scope - new_scope
+                model_history = [
+                    message
+                    for message in history
+                    if not any(
+                        str(path) in str(message.get("content", ""))
+                        for path in removed
+                    )
+                ]
+                scope["scope_changed"] = True
+                scope["history_messages"] = len(model_history)
             result = gateway.analyze(
                 project_name=project["name"],
                 context_text=context_text,
                 sources=sources,
                 supplemental=loads(project["supplemental"], []),
-                current=usable_current,
-                history=history,
+                current=provider_current,
+                history=model_history,
             )
             self._validate_known_sources(
                 result,
@@ -777,18 +811,35 @@ class WorkspaceService:
                         "模型未返回可验证的替代理解；项目理解失败状态保留，请重新分析"
                     )
             understanding = _redact_value(result["understanding"])
-            chat_sources = {
-                str(item.get("path")) for item in sources if item.get("path")
-            } | {"会话", "snapshot"}
+            # Validate first: an invented source must surface as a model
+            # error, not be silently dropped before validation.
+            self._validate_known_sources(
+                understanding, sources, current.get("sources", [])
+            )
+            old_hashes = {
+                str(item.get("path")): str(item.get("sha256", ""))
+                for item in current.get("sources", [])
+                if item.get("path")
+            }
+            new_hashes = {
+                str(item.get("path")): str(item.get("sha256", ""))
+                for item in sources
+                if item.get("path")
+            }
+
+            def source_is_current(source: str) -> bool:
+                if source in ("会话", "snapshot"):
+                    return True
+                if source not in new_hashes:
+                    return False
+                return old_hashes.get(source) == new_hashes[source]
+
             understanding["known"] = [
                 item
                 for item in understanding.get("known", [])
                 if isinstance(item, dict)
-                and str(item.get("source", "")) in chat_sources
+                and source_is_current(str(item.get("source", "")))
             ]
-            self._validate_known_sources(
-                understanding, sources, current.get("sources", [])
-            )
             understanding["model"] = result.get("model")
             understanding["sources"] = sources
             result["reply"] = redact_text(result["reply"])
