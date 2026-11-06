@@ -148,7 +148,21 @@ def _always_excluded(name: str, relpath: str) -> str | None:
     return _matches(name, relpath, ALWAYS_EXCLUDED)
 
 
+@dataclass(frozen=True)
+class ResolvedRoot:
+    path: Path
+    dev: int
+    ino: int
+
+
 def resolve_root(root_path: str, *, access_mode: str = "host") -> Path:
+    """Return the validated path (identity-preserving callers use the helper)."""
+    return resolve_root_with_identity(root_path, access_mode=access_mode).path
+
+
+def resolve_root_with_identity(
+    root_path: str, *, access_mode: str = "host"
+) -> ResolvedRoot:
     """Resolve and validate the user-selected project root.
 
     The final path component must not be a symbolic link.  Symlinks in parent
@@ -195,7 +209,7 @@ def resolve_root(root_path: str, *, access_mode: str = "host") -> Path:
                 f"项目根目录命中敏感凭据排除规则，不会读取：{part}",
                 code="sensitive_path_denied",
             )
-    return candidate
+    return ResolvedRoot(path=candidate, dev=stat_result.st_dev, ino=stat_result.st_ino)
 
 
 def _open_root(root: Path, expected_dev: int | None, expected_ino: int | None) -> tuple[int, os.stat_result]:
@@ -406,6 +420,70 @@ def _selection_exclusion(parts: tuple[str, ...], patterns: list[str]) -> str | N
     return None
 
 
+def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
+    try:
+        fd = os.open(
+            ".gitignore",
+            os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+            dir_fd=root_fd,
+        )
+    except OSError:
+        return []
+    try:
+        with os.fdopen(fd, "rb") as handle:
+            raw = handle.read(64_000)
+    except OSError:
+        return []
+    rules: list[tuple[str, bool]] = []
+    for line in raw.decode("utf-8", "replace").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        negated = line.startswith("!")
+        if negated:
+            line = line[1:].strip()
+        if line:
+            rules.append((line, negated))
+    return rules
+
+
+def _gitignore_match(
+    relative: str, is_dir: bool, rules: list[tuple[str, bool]]
+) -> str | None:
+    """Small but deterministic subset of gitignore matching (root file only)."""
+    ignored: str | None = None
+    for pattern, negated in rules:
+        candidate = pattern.replace("\\", "/")
+        dir_only = candidate.endswith("/")
+        candidate = candidate.rstrip("/")
+        if not candidate:
+            continue
+        anchored = candidate.startswith("/")
+        candidate = candidate.lstrip("/")
+        if "/" in candidate or anchored:
+            matched = fnmatch.fnmatchcase(relative, candidate)
+            if not matched and "**" in candidate:
+                matched = fnmatch.fnmatchcase(
+                    relative, candidate.replace("**/", "")
+                )
+            if dir_only and not is_dir:
+                ancestors = relative.split("/")[:-1]
+                matched = any(
+                    fnmatch.fnmatchcase("/".join(ancestors[: index + 1]), candidate)
+                    for index in range(len(ancestors))
+                )
+        else:
+            parts = relative.split("/")
+            matched = any(fnmatch.fnmatchcase(part, candidate) for part in parts)
+            if dir_only and not is_dir:
+                matched = any(
+                    fnmatch.fnmatchcase(part, candidate) for part in parts[:-1]
+                )
+        if matched:
+            ignored = None if negated else pattern
+    return ignored
+
+
 def scan_project(
     root: Path,
     include_paths: list[str] | None,
@@ -429,11 +507,16 @@ def scan_project(
     patterns = DEFAULT_EXCLUDE_PATTERNS + user_excludes
     result = ScanResult(root=str(root), digest="", selected_scope=includes or ["."])
     root_fd, root_stat = _open_root(root, expected_dev, expected_ino)
+    gitignore_rules = _read_gitignore(root_fd)
     result.root_dev = root_stat.st_dev
     result.root_ino = root_stat.st_ino
 
     def add_file_from_fd(
-        fd: int, relative: str, *, required: bool, scrub_text: Callable[[str], str] | None
+        fd: int,
+        relative: str,
+        *,
+        required: bool,
+        scrub_text: Callable[[str], str] | None,
     ) -> None:
         name = PurePosixPath(relative).name
         always = _always_excluded(name, relative)
@@ -448,6 +531,13 @@ def scan_project(
                     code="sensitive_path_denied",
                 )
             return
+        ignored = _gitignore_match(relative, False, gitignore_rules)
+        if ignored and not required:
+            os.close(fd)
+            result.excluded.append(
+                {"path": relative, "reason": f"gitignore: {ignored}"}
+            )
+            return
         matched = _matches(name, relative, patterns)
         if matched:
             os.close(fd)
@@ -460,14 +550,15 @@ def scan_project(
             )
             return
         try:
-            result.files.append(
-                _record_from_fd(
-                    fd,
-                    relative,
-                    max_file_bytes=max_file_bytes,
-                    scrub=scrub_text,
-                )
+            record = _record_from_fd(
+                fd,
+                relative,
+                max_file_bytes=max_file_bytes,
+                scrub=scrub_text,
             )
+            if ignored and required:
+                record.reason = "explicitly selected despite .gitignore"
+            result.files.append(record)
         except AccessError as exc:
             if required:
                 raise
@@ -481,7 +572,7 @@ def scan_project(
 
     visited: set[tuple[int, int]] = set()
 
-    def walk(dir_fd: int, prefix: str) -> None:
+    def walk(dir_fd: int, prefix: str, *, force: bool = False) -> None:
         dir_stat = os.fstat(dir_fd)
         key = (dir_stat.st_dev, dir_stat.st_ino)
         if key in visited:
@@ -513,6 +604,12 @@ def scan_project(
                 )
                 continue
             if stat.S_ISDIR(entry_stat.st_mode):
+                ignored = _gitignore_match(relative, True, gitignore_rules)
+                if ignored and not force:
+                    result.excluded.append(
+                        {"path": relative + "/", "reason": f"gitignore: {ignored}"}
+                    )
+                    continue
                 matched = _matches(name, relative, patterns)
                 if matched:
                     result.excluded.append(
@@ -531,7 +628,7 @@ def scan_project(
                     )
                     continue
                 try:
-                    walk(child_fd, relative)
+                    walk(child_fd, relative, force=force)
                 finally:
                     os.close(child_fd)
             elif stat.S_ISREG(entry_stat.st_mode):
@@ -548,7 +645,9 @@ def scan_project(
                         {"path": relative, "error": str(exc), "code": "read_error"}
                     )
                     continue
-                add_file_from_fd(fd, relative, required=False, scrub_text=scrub)
+                add_file_from_fd(
+                    fd, relative, required=force, scrub_text=scrub
+                )
             else:
                 result.excluded.append(
                     {"path": relative, "reason": "not a regular file or directory"}
@@ -567,7 +666,7 @@ def scan_project(
                 fd, entry_stat = _open_relative(root_fd, parts)
                 try:
                     if stat.S_ISDIR(entry_stat.st_mode):
-                        walk(fd, relative)
+                        walk(fd, relative, force=True)
                     elif stat.S_ISREG(entry_stat.st_mode):
                         # Transfer ownership before the helper runs: it closes
                         # the descriptor on success and on every error path.

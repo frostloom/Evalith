@@ -15,6 +15,7 @@ from evalith.project_access import (
     MAX_HASH_BYTES,
     _record_from_fd,
     resolve_root,
+    resolve_root_with_identity,
     scan_project,
 )
 
@@ -179,6 +180,58 @@ def test_sensitive_directory_cannot_be_the_project_root(
     response = import_project(client, root, model_config_id=model["id"])
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "sensitive_path_denied"
+
+
+def test_resolve_root_preserves_identity_for_initial_scan(tmp_path: Path) -> None:
+    root = tmp_path / "identity-project"
+    root.mkdir()
+    (root / "README.md").write_text("hello\n", encoding="utf-8")
+    resolved = resolve_root_with_identity(str(root))
+    assert resolved.path == root
+    assert (resolved.dev, resolved.ino) == (
+        os.lstat(root).st_dev,
+        os.lstat(root).st_ino,
+    )
+
+    replaced = tmp_path / "identity-project-old"
+    root.rename(replaced)
+    root.mkdir()
+    (root / "other.txt").write_text("other\n", encoding="utf-8")
+    with pytest.raises(AccessError) as excinfo:
+        scan_project(
+            root,
+            [],
+            [],
+            expected_dev=resolved.dev,
+            expected_ino=resolved.ino,
+        )
+    assert excinfo.value.code == "root_changed"
+
+
+def test_gitignore_excludes_default_and_explicit_selection(tmp_path: Path) -> None:
+    root = tmp_path / "gitignore-project"
+    root.mkdir()
+    (root / "README.md").write_text("hello\n", encoding="utf-8")
+    (root / ".gitignore").write_text("private/\n", encoding="utf-8")
+    private = root / "private"
+    private.mkdir()
+    (private / "customer-export.json").write_text(
+        '{"customer": "synthetic"}\n', encoding="utf-8"
+    )
+
+    default = scan_project(root, [], [])
+    assert "private/customer-export.json" not in {item.path for item in default.files}
+    assert any(
+        item["path"] == "private/" and "gitignore" in item["reason"]
+        for item in default.excluded
+    )
+
+    selected = scan_project(root, ["private/customer-export.json"], [])
+    records = {item.path: item for item in selected.files}
+    assert "private/customer-export.json" in records
+    assert records["private/customer-export.json"].reason == (
+        "explicitly selected despite .gitignore"
+    )
 
 
 def test_symlinked_project_root_is_rejected(

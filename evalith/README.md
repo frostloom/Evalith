@@ -30,7 +30,11 @@ cd ..
 EVALITH_DATA_DIR=$PWD/.evalith-data uv run uvicorn evalith.api:app --host 127.0.0.1 --port 8090
 ```
 
-Open <http://127.0.0.1:8090>. The service refuses to bind a non-loopback
+Open <http://127.0.0.1:8090>. Imports bind the validated root `(device, inode)` to the first scan, and default
+scanning honors the root `.gitignore` (explicit selections may override it with a
+recorded reason; credential denylist rules never can).
+
+The service refuses to bind a non-loopback
 address unless `EVALITH_ALLOW_REMOTE=1` is set: it can read local project paths
 and has no user authentication. It also rejects non-loopback `Host`/`Origin`
 headers (`EVALITH_ALLOWED_HOSTS`) to block DNS-rebinding access; CORS alone is

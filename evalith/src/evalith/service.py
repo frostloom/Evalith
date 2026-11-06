@@ -15,7 +15,7 @@ from .project_access import (
     AccessError,
     ScanResult,
     build_model_context,
-    resolve_root,
+    resolve_root_with_identity,
     scan_project,
 )
 from .security import CredentialCipher, redact_text
@@ -138,7 +138,10 @@ class WorkspaceService:
             raise WorkspaceError("项目名称不能为空")
         root_raw = str(payload.get("root_path", "")).strip()
         try:
-            root = resolve_root(root_raw, access_mode=self.settings.access_mode)
+            resolved = resolve_root_with_identity(
+                root_raw, access_mode=self.settings.access_mode
+            )
+            root = resolved.path
         except (AccessError, OSError) as exc:
             raise WorkspaceError(str(exc), status_code=422, code=getattr(exc, "code", "root_error")) from exc
         model_config_id = payload.get("model_config_id") or None
@@ -156,6 +159,8 @@ class WorkspaceService:
                 exclude_patterns,
                 max_files=self.settings.max_files,
                 max_file_bytes=self.settings.max_file_bytes,
+                expected_dev=resolved.dev,
+                expected_ino=resolved.ino,
                 scrub=gateway.scrub,
             )
         except AccessError as exc:
@@ -519,7 +524,17 @@ class WorkspaceService:
             # A reanalysis must not silently drop corrections the user already
             # made in this main session, even when the provider returns a fresh
             # understanding based on the new source set.
-            merged = list(result.get("known", []))
+            allowed_sources = {
+                str(item.get("path")) for item in sources if item.get("path")
+            } | {"会话", "snapshot"}
+            # Retire facts whose source was removed from the new scope rather
+            # than carrying a provenance that can no longer be resolved.
+            merged = [
+                item
+                for item in result.get("known", [])
+                if isinstance(item, dict)
+                and str(item.get("source", "")) in allowed_sources
+            ]
             merged_texts = {
                 str(item.get("text")) for item in merged if isinstance(item, dict)
             }
@@ -527,7 +542,15 @@ class WorkspaceService:
                 for item in usable_current.get("known", []):
                     text = item.get("text") if isinstance(item, dict) else str(item)
                     source = item.get("source") if isinstance(item, dict) else None
-                    if source == "会话" or str(text).startswith("用户纠正"):
+                    if source in allowed_sources and (
+                        source == "会话"
+                        or str(text).startswith("用户纠正")
+                        or source in {
+                            str(entry.get("path"))
+                            for entry in sources
+                            if entry.get("path")
+                        }
+                    ):
                         candidate = item if isinstance(item, dict) else {"text": str(item)}
                         if candidate not in merged:
                             merged.append(candidate)

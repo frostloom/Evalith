@@ -858,3 +858,33 @@ def test_supplemental_update_is_in_scope(client: TestClient, project_root: Path)
     assert files == {"README.md"}
     scope = updated.json()["messages"][-1]["sent_scope"]
     assert "supplement:评审补充" in {item["path"] for item in scope["sources"]}
+
+
+def test_narrowed_scope_keeps_discussion_and_reanalysis_working(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    updated = client.put(
+        f"/api/projects/{project_id}/sources",
+        json={
+            "include_paths": ["README.md"],
+            "exclude_patterns": [],
+            "supplemental": [],
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    known = updated.json()["understanding"]["known"]
+    assert "docs/RELEASE_POLICY.md" not in {
+        item.get("source") for item in known
+    }
+
+    chat = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "继续"},
+    )
+    assert chat.status_code == 200, chat.text
+
+    reanalysed = client.post(f"/api/projects/{project_id}/reanalyse")
+    assert reanalysed.status_code == 200, reanalysed.text
