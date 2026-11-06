@@ -102,6 +102,23 @@ def _source_hashes(sources: list[dict[str, Any]]) -> dict[str, str]:
     }
 
 
+def _transmitted_scope(
+    scope: dict[str, Any] | None, attempted: bool
+) -> dict[str, Any] | None:
+    if scope is None or attempted:
+        return scope
+    return {
+        **scope,
+        "files_sent": 0,
+        "bytes_sent": 0,
+        "sources": [
+            {**item, "sent": False, "reason": "provider was not invoked"}
+            for item in scope.get("sources", [])
+            if isinstance(item, dict)
+        ],
+    }
+
+
 def _known_for_sources(
     known: list[Any],
     old_hashes: dict[str, str],
@@ -599,6 +616,7 @@ class WorkspaceService:
         current = None
         scope = None
         gateway = None
+        attempted = False
         try:
             if scan is None:
                 scan = self._rescan(project, store_new_snapshot=False)
@@ -693,6 +711,7 @@ class WorkspaceService:
                 provider_current["snapshot_id"] = project["snapshot_id"]
                 if current_scope != new_scope:
                     scope["scope_changed"] = True
+            attempted = True
             result = gateway.analyze(
                 project_name=project["name"],
                 context_text=context_text,
@@ -779,6 +798,7 @@ class WorkspaceService:
                 if isinstance(item, dict)
                 and str(item.get("source", "")) == "会话"
             ]
+            transmitted = _transmitted_scope(scope, attempted)
             self._store_understanding(
                 project,
                 {
@@ -787,7 +807,7 @@ class WorkspaceService:
                     "known": preserved,
                     "inferred": [],
                     "unknowns": [],
-                    "sources": (scope or {}).get("sources", []),
+                    "sources": (transmitted or {}).get("sources", []),
                     "sufficient": False,
                     "sufficient_reason": "",
                     "model": gateway.name if gateway is not None else "error",
@@ -805,11 +825,12 @@ class WorkspaceService:
                     "kind": "error",
                     "stage": "analysis",
                     "message": message,
-                    "sent_scope": scope,
+                    "sent_scope": transmitted,
+                    "prepared_scope": scope,
                     "model": gateway.name if gateway is not None else None,
                 },
                 model=gateway.name if gateway is not None else None,
-                sent_scope=scope,
+                sent_scope=transmitted,
             )
 
     def _store_understanding(
@@ -849,7 +870,9 @@ class WorkspaceService:
                 code="root_identity_missing",
             )
         root = Path(project["root_path"])
-        gateway = self.gateway_for(project["model_config_id"])
+        gateway = self.gateway_for(
+            project["model_config_id"], enforce_paid=False
+        )
         try:
             scan = scan_project(
                 root,
@@ -906,6 +929,7 @@ class WorkspaceService:
             project["model_config_id"], enforce_paid=False
         )
         scope = None
+        attempted = False
         text = gateway.scrub(text)
         # Persist withdrawal before any fallible rescan/provider call. A
         # recorded refusal must close consent-only readiness even if the
@@ -1097,6 +1121,7 @@ class WorkspaceService:
                 invalidated["sources"] = sources
                 invalidated["snapshot_id"] = project["snapshot_id"]
                 self._store_understanding(project, invalidated, error=None)
+            attempted = True
             result = gateway.discuss(
                 project_name=project["name"],
                 context_text=context_text,
@@ -1202,6 +1227,7 @@ class WorkspaceService:
             )
         except (ModelError, AccessError, OSError) as exc:
             message = str(exc)
+            transmitted = _transmitted_scope(scope, attempted)
             self._append_message(
                 project,
                 role="system",
@@ -1210,11 +1236,12 @@ class WorkspaceService:
                     "kind": "error",
                     "stage": "chat",
                     "message": message,
-                    "sent_scope": scope,
+                    "sent_scope": transmitted,
+                    "prepared_scope": scope,
                     "model": gateway.name if gateway is not None else None,
                 },
                 model=gateway.name if gateway is not None else None,
-                sent_scope=scope,
+                sent_scope=transmitted,
             )
             raise WorkspaceError(
                 message, status_code=502, code="model_error"

@@ -132,8 +132,35 @@ def test_existing_paid_model_is_disabled_after_restart(
     disabled = replace(settings, allow_paid_models=False)
     with TestClient(create_app(disabled)) as other:
         response = other.post(f"/api/projects/{detail['project']['id']}/reanalyse")
-        assert response.status_code == 502, response.text
-        assert "付费模型默认禁用" in response.text
+        assert response.status_code == 200, response.text
+        refreshed = response.json()
+        assert "付费模型默认禁用" in refreshed["understanding"]["error"]
+        errors = [
+            item
+            for item in refreshed["messages"]
+            if item["payload"]["kind"] == "error"
+            and item["payload"]["stage"] == "analysis"
+        ]
+        assert errors
+        assert errors[-1]["sent_scope"]["files_sent"] == 0
+        assert errors[-1]["sent_scope"]["bytes_sent"] == 0
+        assert all(
+            item["sent"] is False for item in errors[-1]["sent_scope"]["sources"]
+        )
+        assert errors[-1]["payload"]["prepared_scope"]["files_sent"] > 0
+        errors = [
+            item
+            for item in refreshed["messages"]
+            if item["payload"]["kind"] == "error"
+            and item["payload"]["stage"] == "analysis"
+        ]
+        assert errors
+        assert errors[-1]["sent_scope"]["files_sent"] == 0
+        assert errors[-1]["sent_scope"]["bytes_sent"] == 0
+        assert all(
+            item["sent"] is False for item in errors[-1]["sent_scope"]["sources"]
+        )
+        assert errors[-1]["payload"]["prepared_scope"]["files_sent"] > 0
 
 
 def test_rfc6750_bearer_tokens_are_redacted() -> None:

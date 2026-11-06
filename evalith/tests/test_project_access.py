@@ -344,6 +344,32 @@ def test_oversized_gitignore_is_rejected(tmp_path: Path) -> None:
     assert excinfo.value.code == "gitignore_too_large"
 
 
+def test_escaped_gitignore_metacharacters_are_literal(tmp_path: Path) -> None:
+    root = tmp_path / "escaped-metacharacters"
+    root.mkdir()
+    (root / ".gitignore").write_text(
+        "private\\[v1\\].txt\ntrailing\\ \n", encoding="utf-8"
+    )
+    (root / "private[v1].txt").write_text("synthetic\n", encoding="utf-8")
+    (root / "trailing ").write_text("synthetic\n", encoding="utf-8")
+    scan = scan_project(root, [], [])
+    excluded = {item["path"] for item in scan.excluded}
+    assert "private[v1].txt" in excluded
+    assert "trailing " in excluded
+    assert {item.path for item in scan.files} == {".gitignore"}
+
+
+def test_multiple_blocks_respect_context_budget(tmp_path: Path) -> None:
+    root = tmp_path / "multiple-blocks"
+    root.mkdir()
+    (root / "README.md").write_text("hello\n", encoding="utf-8")
+    (root / "notes.txt").write_text("world\n", encoding="utf-8")
+    scan = scan_project(root, ["README.md", "notes.txt"], [])
+    _, context_text, scope = build_model_context(scan, [], budget_chars=120)
+    assert len(context_text) <= 120
+    assert scope["files_sent"] <= 2
+
+
 def test_escaped_gitignore_filename_is_excluded(tmp_path: Path) -> None:
     root = tmp_path / "escaped-ignore"
     root.mkdir()

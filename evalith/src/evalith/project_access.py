@@ -507,25 +507,40 @@ def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
         os.close(fd)
     rules: list[tuple[str, bool]] = []
     for line in raw.decode("utf-8", "replace").splitlines():
-        line = line.strip()
+        line = line.lstrip(" \t")
+        while line and line[-1] in " \t":
+            slashes = 0
+            cursor = len(line) - 2
+            while cursor >= 0 and line[cursor] == "\\":
+                slashes += 1
+                cursor -= 1
+            if slashes % 2 == 1:
+                break
+            line = line[:-1]
         if not line or line.startswith("#"):
             continue
         negated = line.startswith("!")
         if negated:
-            line = line[1:].strip()
+            line = line[1:].lstrip(" \t")
         if line:
             rules.append((line, negated))
     return rules
 
 
 def _unescape_gitignore_pattern(pattern: str) -> str:
-    """Apply Git's backslash escaping without treating it as a separator."""
+    """Translate Git escaping into fnmatch patterns with literal wildcards."""
     out: list[str] = []
     index = 0
     while index < len(pattern):
         char = pattern[index]
         if char == "\\" and index + 1 < len(pattern):
-            out.append(pattern[index + 1])
+            literal = pattern[index + 1]
+            if literal == "]":
+                out.append("[]]")
+            elif literal in "*?[":
+                out.append(f"[{literal}]")
+            else:
+                out.append(literal)
             index += 2
             continue
         out.append(char)
@@ -1022,4 +1037,4 @@ def build_model_context(
         "redactions": redaction_count,
         "sources": sources,
     }
-    return sources, "\n".join(blocks), scope
+    return sources, "".join(blocks), scope
