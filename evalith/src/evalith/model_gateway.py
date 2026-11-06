@@ -455,7 +455,7 @@ class ModelGateway:
         # requiring the user to repeat "依据足够" would override the model.
         if understanding["sufficient"] and (
             _negates_sufficiency(user_message)
-            or _is_conditional_statement(user_message)
+            or _conditional_affects_readiness(user_message)
             or _is_uncertain_sufficiency(user_message)
             or (
                 "足够" in user_message
@@ -700,6 +700,29 @@ _CONDITIONAL_READINESS = re.compile(
 
 def _is_conditional_statement(text: str) -> bool:
     return bool(_CONDITIONAL_READINESS.search(text))
+
+
+_READINESS_TERMS = (
+    "继续",
+    "下一步",
+    "开始出题",
+    "开始设计",
+    "下一阶段",
+    "依据",
+    "资料",
+    "材料",
+    "证据",
+    "足够",
+    "确认",
+    "理解",
+    "准备好",
+)
+
+
+def _conditional_affects_readiness(text: str) -> bool:
+    return _is_conditional_statement(text) and any(
+        term in text for term in _READINESS_TERMS
+    )
 
 
 def _is_descriptive_statement(text: str) -> bool:

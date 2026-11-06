@@ -455,6 +455,19 @@ def _selection_exclusion(parts: tuple[str, ...], patterns: list[str]) -> str | N
     return None
 
 
+def _validate_gitignore_pattern(pattern: str) -> None:
+    for part in pattern.split("/"):
+        if "\\" not in part and "[:" not in part:
+            continue
+        try:
+            _git_segment_regex(part)
+        except re.error as exc:
+            raise AccessError(
+                f"无效的 .gitignore 模式：{pattern}",
+                code="gitignore_invalid",
+            ) from exc
+
+
 def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
     try:
         fd = os.open(
@@ -523,6 +536,7 @@ def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
         if negated:
             line = line[1:]
         if line:
+            _validate_gitignore_pattern(line)
             rules.append((line, negated))
     return rules
 

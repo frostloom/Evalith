@@ -215,6 +215,16 @@ def test_nested_gitignore_negation_overrides_parent(tmp_path: Path) -> None:
     assert "sub/README.md" in {item.path for item in scan.files}
 
 
+def test_invalid_gitignore_expression_fails_closed(tmp_path: Path) -> None:
+    root = tmp_path / "invalid-gitignore"
+    root.mkdir()
+    (root / ".gitignore").write_text("[z-a]\\*\n", encoding="utf-8")
+    (root / "customer1.csv").write_text("synthetic\n", encoding="utf-8")
+    with pytest.raises(AccessError) as excinfo:
+        scan_project(root, [], [])
+    assert excinfo.value.code == "gitignore_invalid"
+
+
 def test_nested_gitignore_failure_closes_child_descriptor(
     tmp_path: Path, monkeypatch
 ) -> None:

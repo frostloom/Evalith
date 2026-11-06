@@ -207,8 +207,7 @@ export function App() {
             onRefresh={load}
             onBack={() => {
               if (detail) {
-                selectedProjectRef.current = detail.project.id;
-                setView("project");
+                void openProject(detail.project);
               } else {
                 setView("home");
               }

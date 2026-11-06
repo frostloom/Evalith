@@ -964,6 +964,50 @@ def test_provider_rejects_conditional_intent(
     assert conditional.json()["readiness"]["generation_allowed"] is False
 
 
+def test_conditional_business_rule_preserves_sufficiency(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.body_override = {
+        "summary": "rules",
+        "agent_or_flow": "",
+        "known": [{"text": "policy", "source": "README.md"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "conditional-rule",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "understanding": {
+            "summary": "rules",
+            "agent_or_flow": "",
+            "known": [{"text": "policy", "source": "README.md"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": True,
+            "sufficient_reason": "evidence complete",
+        },
+    }
+    response = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "如果审批失败，应转人工处理。"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["understanding"]["sufficient"] is True
+    assert response.json()["readiness"]["generation_allowed"] is True
+
+
 def test_provider_refusal_does_not_open_gate(
     client: TestClient, project_root: Path, recording_server
 ) -> None:
