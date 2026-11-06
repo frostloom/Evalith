@@ -519,7 +519,7 @@ def scan_project(
     patterns = DEFAULT_EXCLUDE_PATTERNS + user_excludes
     result = ScanResult(root=str(root), digest="", selected_scope=includes or ["."])
     root_fd, root_stat = _open_root(root, expected_dev, expected_ino)
-    gitignore_rules = _read_gitignore(root_fd)
+    gitignore_rules: list[tuple[str, bool]] = []
     result.root_dev = root_stat.st_dev
     result.root_ino = root_stat.st_ino
 
@@ -666,6 +666,7 @@ def scan_project(
                 )
 
     try:
+        gitignore_rules = _read_gitignore(root_fd)
         if includes:
             for relative in includes:
                 parts = _include_parts(relative)

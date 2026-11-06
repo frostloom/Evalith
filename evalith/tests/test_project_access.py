@@ -234,6 +234,39 @@ def test_gitignore_excludes_default_and_explicit_selection(tmp_path: Path) -> No
     )
 
 
+def test_gitignore_error_closes_root_descriptor(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import evalith.project_access as project_access
+
+    root = tmp_path / "gitignore-error"
+    root.mkdir()
+    (root / "README.md").write_text("hello\n", encoding="utf-8")
+    opened: list[int] = []
+    real_open_root = project_access._open_root
+
+    def tracking_open(*args, **kwargs):
+        fd, info = real_open_root(*args, **kwargs)
+        opened.append(fd)
+        return fd, info
+
+    def boom(_fd: int):
+        raise AccessError("forced .gitignore failure", code="gitignore_not_regular")
+
+    closed: list[int] = []
+    real_close = project_access.os.close
+    monkeypatch.setattr(project_access, "_open_root", tracking_open)
+    monkeypatch.setattr(project_access, "_read_gitignore", boom)
+    monkeypatch.setattr(
+        project_access.os,
+        "close",
+        lambda fd: (closed.append(fd), real_close(fd)),
+    )
+    with pytest.raises(AccessError):
+        project_access.scan_project(root, [], [])
+    assert opened and opened[0] in closed
+
+
 def test_fifo_gitignore_is_not_read_blocking(tmp_path: Path) -> None:
     root = tmp_path / "fifo-gitignore"
     root.mkdir()

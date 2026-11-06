@@ -777,6 +777,15 @@ class WorkspaceService:
                         "模型未返回可验证的替代理解；项目理解失败状态保留，请重新分析"
                     )
             understanding = _redact_value(result["understanding"])
+            chat_sources = {
+                str(item.get("path")) for item in sources if item.get("path")
+            } | {"会话", "snapshot"}
+            understanding["known"] = [
+                item
+                for item in understanding.get("known", [])
+                if isinstance(item, dict)
+                and str(item.get("source", "")) in chat_sources
+            ]
             self._validate_known_sources(
                 understanding, sources, current.get("sources", [])
             )

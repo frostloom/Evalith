@@ -907,6 +907,29 @@ def test_reanalysis_retires_facts_from_changed_files(
     assert "approval optional" not in texts
 
 
+def test_chat_retires_facts_when_source_is_deleted(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    (project_root / "README.md").unlink()
+    response = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "继续"},
+    )
+    assert response.status_code == 200, response.text
+    updated = response.json()
+    assert "README.md" not in {
+        item.get("source") for item in updated["understanding"]["known"]
+    }
+    assert "README.md" not in {
+        item["path"] for item in updated["snapshot"]["files"]
+    }
+    reanalysed = client.post(f"/api/projects/{project_id}/reanalyse")
+    assert reanalysed.status_code == 200, reanalysed.text
+
+
 def test_narrowed_scope_keeps_discussion_and_reanalysis_working(
     client: TestClient, project_root: Path
 ) -> None:
