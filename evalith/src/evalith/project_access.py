@@ -232,7 +232,7 @@ def _open_relative(root_fd: int, parts: tuple[str, ...]) -> tuple[int, os.stat_r
                     dir_fd=current,
                 )
             except OSError as exc:
-                _raise_open_error(part, exc, directory=True)
+                _raise_open_error(part, exc)
             os.close(current)
             current = child
         try:
@@ -242,13 +242,13 @@ def _open_relative(root_fd: int, parts: tuple[str, ...]) -> tuple[int, os.stat_r
                 dir_fd=current,
             )
         except OSError as exc:
-            _raise_open_error(parts[-1], exc, directory=False)
+            _raise_open_error(parts[-1], exc)
         return final, os.fstat(final)
     finally:
         os.close(current)
 
 
-def _raise_open_error(name: str, exc: OSError, *, directory: bool) -> None:
+def _raise_open_error(name: str, exc: OSError) -> None:
     if exc.errno == errno.ELOOP:
         raise AccessError(
             f"选定的路径包含符号链接，已拒绝：{name}", code="symlink_rejected"
