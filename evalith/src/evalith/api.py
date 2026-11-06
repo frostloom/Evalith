@@ -15,6 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from .config import Settings, settings_from_env
 from .db import Database
+from .model_gateway import ModelError
 from .security import CredentialCipher, install_log_redaction
 from .service import WorkspaceError, WorkspaceService
 
@@ -69,6 +70,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     service = WorkspaceService(database, settings, cipher)
 
     app = FastAPI(title="Evalith", version="0.1.0")
+
+    async def model_error_handler(_request: Request, exc: ModelError) -> JSONResponse:
+        return JSONResponse(
+            status_code=502,
+            content={"error": str(exc), "code": "model_error"},
+        )
+
+    app.add_exception_handler(ModelError, model_error_handler)
     app.state.settings = settings
     app.state.db = database
     app.state.service = service

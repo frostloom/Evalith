@@ -203,6 +203,10 @@ class WorkspaceService:
         row = self.db.get_model_config(model_config_id)
         if row is None:
             return ModelGateway(None, timeout=self.settings.model_timeout_seconds)
+        if row["provider"] != "stub" and not self.settings.allow_paid_models:
+            raise ModelError(
+                "付费模型默认禁用；请由维护者显式启用预算控制后再使用"
+            )
         config = ModelConfig(
             id=row["id"],
             name=row["name"],

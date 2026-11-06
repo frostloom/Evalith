@@ -214,16 +214,26 @@ def resolve_root_with_identity(
         )
     if not stat.S_ISDIR(stat_result.st_mode):
         raise AccessError("项目路径不是目录", code="root_not_directory")
-    if candidate == Path.home():
+    try:
+        canonical = candidate.resolve(strict=True)
+    except OSError as exc:
+        raise AccessError(
+            f"项目目录不可访问：{exc.strerror}", code="root_missing"
+        ) from exc
+    if canonical == Path("/"):
+        raise AccessError(
+            "不能将文件系统根目录作为项目范围", code="root_too_broad"
+        )
+    if canonical == Path.home():
         raise AccessError("不能将整个用户主目录作为项目范围", code="root_too_broad")
-    for part in candidate.parts:
+    for part in canonical.parts:
         denied = _always_excluded(part, part)
         if denied:
             raise AccessError(
                 f"项目根目录命中敏感凭据排除规则，不会读取：{part}",
                 code="sensitive_path_denied",
             )
-    return ResolvedRoot(path=candidate, dev=stat_result.st_dev, ino=stat_result.st_ino)
+    return ResolvedRoot(path=canonical, dev=stat_result.st_dev, ino=stat_result.st_ino)
 
 
 def _open_root(root: Path, expected_dev: int | None, expected_ino: int | None) -> tuple[int, os.stat_result]:

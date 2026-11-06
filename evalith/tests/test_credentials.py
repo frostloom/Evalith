@@ -104,6 +104,31 @@ def test_paid_models_are_disabled_by_default(tmp_path: Path) -> None:
     assert Settings(data_dir=tmp_path).allow_paid_models is False
 
 
+def test_existing_paid_model_is_disabled_after_restart(
+    client: TestClient, settings, project_root: Path, recording_server
+) -> None:
+    from dataclasses import replace
+
+    from evalith.api import create_app
+
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "persisted-paid",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+
+    disabled = replace(settings, allow_paid_models=False)
+    with TestClient(create_app(disabled)) as other:
+        response = other.post(f"/api/projects/{detail['project']['id']}/reanalyse")
+        assert response.status_code == 502, response.text
+        assert "付费模型默认禁用" in response.text
+
+
 def test_aws_credential_assignments_are_redacted() -> None:
     from evalith.security import redact_text
 

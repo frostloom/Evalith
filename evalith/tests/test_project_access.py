@@ -324,6 +324,13 @@ def test_fifo_gitignore_is_not_read_blocking(tmp_path: Path) -> None:
     assert excinfo.value.code == "gitignore_not_regular"
 
 
+def test_filesystem_root_aliases_are_rejected() -> None:
+    for alias in ("/", "//", "///"):
+        with pytest.raises(AccessError) as excinfo:
+            resolve_root(alias)
+        assert excinfo.value.code == "root_too_broad"
+
+
 def test_symlinked_project_root_is_rejected(
     client: TestClient, tmp_path: Path
 ) -> None:

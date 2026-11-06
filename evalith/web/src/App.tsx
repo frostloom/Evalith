@@ -22,6 +22,7 @@ export function App() {
   const [notice, setNotice] = useState<string | null>(null);
   const selectedProjectRef = useRef<string | null>(null);
   const openSequence = useRef(0);
+  const importGeneration = useRef(0);
 
   const load = useCallback(async () => {
     try {
@@ -47,6 +48,7 @@ export function App() {
   }, [notice]);
 
   const openProject = async (project: Project) => {
+    importGeneration.current += 1;
     const sequence = ++openSequence.current;
     selectedProjectRef.current = project.id;
     setBusy(true);
@@ -66,7 +68,9 @@ export function App() {
     }
   };
 
-  const handleCreated = (next: ProjectDetail) => {
+  const handleCreated = (next: ProjectDetail, token: number) => {
+    if (token !== importGeneration.current) return;
+    if (selectedProjectRef.current !== null) return;
     selectedProjectRef.current = next.project.id;
     setDetail(next);
     setView("project");
@@ -85,6 +89,7 @@ export function App() {
   };
 
   const goHome = () => {
+    importGeneration.current += 1;
     openSequence.current += 1;
     selectedProjectRef.current = null;
     setView("home");
@@ -153,7 +158,10 @@ export function App() {
           <Home
             projects={projects}
             onOpen={(project) => void openProject(project)}
-            onImport={() => setView("import")}
+            onImport={() => {
+              importGeneration.current += 1;
+              setView("import");
+            }}
             onModels={() => setView("models")}
             models={models}
           />
@@ -162,9 +170,15 @@ export function App() {
         {view === "import" && (
           <ImportSheet
             models={models}
-            onCancel={() => setView(projects.length ? "home" : "home")}
-            onCreated={handleCreated}
-            onNeedModel={() => setView("models")}
+            onCancel={() => {
+              importGeneration.current += 1;
+              setView("home");
+            }}
+            onCreated={(next) => handleCreated(next, importGeneration.current)}
+            onNeedModel={() => {
+              importGeneration.current += 1;
+              setView("models");
+            }}
             onError={setError}
           />
         )}
