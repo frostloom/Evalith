@@ -950,15 +950,15 @@ def test_narrowed_reanalysis_does_not_send_removed_facts(
     client: TestClient, project_root: Path, recording_server
 ) -> None:
     _RecordingHandler.body_override = {
-        "summary": "old policy",
-        "agent_or_flow": "",
+        "summary": "approval optional is the rule",
+        "agent_or_flow": "approval optional flow",
         "known": [
             {"text": "approval optional", "source": "docs/RELEASE_POLICY.md"}
         ],
         "inferred": [],
-        "unknowns": [],
+        "unknowns": [{"text": "approval optional exception", "why": "old scope"}],
         "sufficient": False,
-        "sufficient_reason": "pending",
+        "sufficient_reason": "approval optional pending",
     }
     model = client.post(
         "/api/model-configs",
@@ -1015,15 +1015,24 @@ def test_chat_retires_facts_from_changed_file(
     _RecordingHandler.body_override = {
         "reply": "noted",
         "continue_requested": False,
+        "understanding": {
+            "summary": "new policy",
+            "agent_or_flow": "",
+            "known": [{"text": "approval required", "source": "policy.md"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": False,
+            "sufficient_reason": "pending",
+        },
     }
     response = client.post(
         f"/api/projects/{detail['project']['id']}/messages",
         json={"content": "补充"},
     )
     assert response.status_code == 200, response.text
-    assert "approval optional" not in {
-        item["text"] for item in response.json()["understanding"]["known"]
-    }
+    texts = {item["text"] for item in response.json()["understanding"]["known"]}
+    assert "approval required" in texts
+    assert "approval optional" not in texts
 
 
 def test_chat_retires_facts_when_source_is_deleted(

@@ -527,18 +527,19 @@ class WorkspaceService:
                     if isinstance(item, dict)
                     and str(item.get("source", "")) in retained
                 ]
+                provider_current["agent_or_flow"] = ""
                 provider_current["inferred"] = []
+                provider_current["unknowns"] = []
                 provider_current["summary"] = ""
+                provider_current["sufficient"] = False
+                provider_current["sufficient_reason"] = ""
                 provider_current["sources"] = sources
                 provider_current["snapshot_id"] = project["snapshot_id"]
-                removed = current_scope - new_scope
+                # Only user instructions are safe historical context after a
+                # scope change; assistant summaries can contain excluded
+                # material without naming its file.
                 model_history = [
-                    message
-                    for message in history
-                    if not any(
-                        str(path) in str(message.get("content", ""))
-                        for path in removed
-                    )
+                    message for message in history if message.get("role") == "user"
                 ]
                 scope["scope_changed"] = True
                 scope["history_messages"] = len(model_history)
@@ -827,18 +828,30 @@ class WorkspaceService:
                 if item.get("path")
             }
 
-            def source_is_current(source: str) -> bool:
+            old_known_keys = {
+                (str(item.get("text", "")), str(item.get("source", "")))
+                for item in current.get("known", [])
+                if isinstance(item, dict)
+            }
+
+            def known_is_current(item: dict[str, Any]) -> bool:
+                source = str(item.get("source", ""))
                 if source in ("会话", "snapshot"):
                     return True
                 if source not in new_hashes:
                     return False
-                return old_hashes.get(source) == new_hashes[source]
+                key = (str(item.get("text", "")), source)
+                # A carried-over fact tied to a file version that changed is
+                # stale.  A fresh provider fact with new text is valid against
+                # the snapshot that was just supplied.
+                if key in old_known_keys and old_hashes.get(source) != new_hashes[source]:
+                    return False
+                return True
 
             understanding["known"] = [
                 item
                 for item in understanding.get("known", [])
-                if isinstance(item, dict)
-                and source_is_current(str(item.get("source", "")))
+                if isinstance(item, dict) and known_is_current(item)
             ]
             understanding["model"] = result.get("model")
             understanding["sources"] = sources
