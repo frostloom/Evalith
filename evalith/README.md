@@ -1,0 +1,67 @@
+# Evalith phase-1 service
+
+A local, single-user service for the stage-1 project workspace:
+
+- import a local project through an explicit, read-only scope;
+- create one persistent main session per project (concurrency-safe);
+- generate an evidence-backed initial understanding that separates known,
+  inferred and unknown items;
+- let the user correct the understanding, add supplemental material, or state
+  that they want to continue — without treating "continue" as confirmation of
+  unknown business rules;
+- keep model credentials encrypted and out of the model context and logs.
+
+Question generation, environments and runs belong to later phases. The service
+does not create any of them; `POST /api/projects/{id}/generate` is a testable
+gate that refuses before readiness and reports "not implemented in phase 1"
+after it.
+
+## Run
+
+```bash
+cd evalith
+uv sync
+
+cd web
+npm install
+npm run build
+cd ..
+
+EVALITH_DATA_DIR=$PWD/.evalith-data uv run uvicorn evalith.api:app --host 127.0.0.1 --port 8090
+```
+
+Open <http://127.0.0.1:8090>. The first model configuration should be the
+`stub` provider if you want an offline walkthrough; it is a deterministic替身
+and its output is not a real model assessment.
+
+Without `EVALITH_SECRET_KEY`, the service generates a 0600 key file at
+`$EVALITH_DATA_DIR/secret.key`. Model API keys are encrypted with that key and
+never returned by the API.
+
+## Test
+
+```bash
+cd evalith
+uv run pytest -q
+```
+
+The suite covers scope enforcement (traversal, symlink escape, secret denylist),
+read-only behaviour, source fingerprints, session uniqueness under concurrency,
+reopen restoration, cross-project isolation, credentials in model requests and
+logs, model-failure visibility, and the question-generation gate.
+
+## Project access
+
+The service is host-first. A container deployment must declare an explicit
+host-to-container read-only mount with `EVALITH_PROJECT_MOUNT_MAP` and run with
+`EVALITH_ACCESS_MODE=container`; an unmapped root fails closed. The same
+allowlist, secret denylist and symlink rules apply in both modes. See
+`docs/stage1/project-access.md` for the full boundary.
+
+## Scope of this phase
+
+This app is deliberately separate from the EE-free Rhesis workbench tree. The
+workbench (projects, test sets, runs, results) is built and smoke-tested in
+`workbench/`; this service owns the stage-1 local project access and main
+session experience. The UI shows test-set and run entries as later-phase
+placeholders; it does not claim those flows work yet.
