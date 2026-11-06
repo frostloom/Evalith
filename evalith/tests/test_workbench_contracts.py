@@ -26,5 +26,7 @@ def test_workbench_frontend_start_is_loopback_only() -> None:
     script = (REPO / "workbench/run_local.sh").read_text(encoding="utf-8")
     assert "NEXT_TELEMETRY_DISABLED=1" in script
     assert "npm start -- --hostname 127.0.0.1" in script
+    assert "frontend did not become healthy" in script
+    assert "exit 1" in script
     assert "uvicorn rhesis.backend.app.main:app" in script
     assert "--host 127.0.0.1" in script

@@ -136,6 +136,10 @@ for _ in $(seq 1 90); do
   fi
   sleep 1
 done
+if ! curl -fsS http://127.0.0.1:3000/api/health >/dev/null 2>&1; then
+  echo "[workbench] frontend did not become healthy; see $LOG_DIR/frontend.log" >&2
+  exit 1
+fi
 echo "[workbench] backend http://127.0.0.1:8080  frontend http://127.0.0.1:3000"
 echo "[workbench] logs: $LOG_DIR"
 echo "[workbench] stop: workbench/stop_local.sh"

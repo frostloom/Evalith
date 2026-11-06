@@ -66,6 +66,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-secret-value" not in request["body"]
     assert "synthetic-password" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
+    assert "sk-yaml-project-secret" not in request["body"]
     assert "eu-central" in request["body"]
     assert "RELEASE_POLICY" in request["body"]
     assert "[REDACTED]" in request["body"]
@@ -128,6 +129,62 @@ def test_existing_paid_model_is_disabled_after_restart(
         response = other.post(f"/api/projects/{detail['project']['id']}/reanalyse")
         assert response.status_code == 502, response.text
         assert "付费模型默认禁用" in response.text
+
+
+def test_yaml_block_scalar_secret_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    text = "api_key: |\n  sk-yaml-project-secret\n"
+    redacted = redact_text(text)
+    assert "sk-yaml-project-secret" not in redacted
+    assert "[REDACTED]" in redacted
+
+
+def test_malformed_direction_cannot_smuggle_configured_key(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.body_override = {
+        "summary": "ok",
+        "agent_or_flow": "",
+        "known": [{"text": "policy", "source": "README.md"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "direction-leak",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+            "api_key": SECRET_KEY,
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "direction_update": {SECRET_KEY: "x"},
+        "understanding": {
+            "summary": "ok",
+            "agent_or_flow": "",
+            "known": [{"text": "policy", "source": "README.md"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": False,
+            "sufficient_reason": "pending",
+        },
+    }
+    response = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "补充"},
+    )
+    assert response.status_code == 200, response.text
+    assert SECRET_KEY not in response.text
+    refreshed = client.get(f"/api/projects/{detail['project']['id']}")
+    assert SECRET_KEY not in refreshed.text
 
 
 def test_signing_secret_is_redacted() -> None:

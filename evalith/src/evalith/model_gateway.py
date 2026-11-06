@@ -308,7 +308,10 @@ class ModelGateway:
         if isinstance(value, list):
             return [self._scrub_value(item) for item in value]
         if isinstance(value, dict):
-            return {key: self._scrub_value(item) for key, item in value.items()}
+            return {
+                self._scrub(str(key)): self._scrub_value(item)
+                for key, item in value.items()
+            }
         return value
 
     def _request_chat(self, messages: list[dict[str, str]]) -> dict[str, Any]:
@@ -453,12 +456,16 @@ class ModelGateway:
             understanding["sufficient_reason"] = (
                 "用户明确表示依据仍不足或仅作描述；未知项保留，推进门保持关闭。"
             )
+        direction = value.get("direction_update", "")
+        direction = direction.strip() if isinstance(direction, str) else ""
+        reply_value = value.get("reply", "")
+        reply_text = reply_value.strip() if isinstance(reply_value, str) else ""
         return {
-            "reply": reply.strip(),
+            "reply": reply_text,
             "continue_requested": continue_requested,
             "understanding": understanding,
             "understanding_supplied": understanding_supplied,
-            "direction_update": str(value.get("direction_update", "") or "").strip(),
+            "direction_update": direction,
             "model": self.name,
         }
 

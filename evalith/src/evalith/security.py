@@ -18,6 +18,12 @@ from pathlib import Path
 from cryptography.fernet import Fernet, InvalidToken
 
 _SECRET_PATTERNS = [
+    # YAML literal/folded block scalars, e.g. api_key: |
+    #   sk-project-secret
+    re.compile(
+        r"(?im)^[ \t]*(?:[A-Za-z0-9_-]*(?:secret|token|key|password)[A-Za-z0-9_-]*)"
+        r"[\"']?\s*:\s*[|>][-+0-9]*[ \t]*\n(?:[ \t]+.*(?:\n|$))*"
+    ),
     # key=value / "key": "value" forms, including JSON and quoted values.
     # The optional identifier prefix (e.g. OPENAI_API_KEY, DB_PASSWORD) is what
     # makes prefixed credential names visible; a bare word-boundary would miss
