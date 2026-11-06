@@ -67,6 +67,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-password" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
+    assert "registry-secret-value" not in request["body"]
     assert "sk-quoted-yaml-secret" not in request["body"]
     assert "sk-sequence-yaml-secret" not in request["body"]
     assert "eu-central" in request["body"]
@@ -131,6 +132,14 @@ def test_existing_paid_model_is_disabled_after_restart(
         response = other.post(f"/api/projects/{detail['project']['id']}/reanalyse")
         assert response.status_code == 502, response.text
         assert "付费模型默认禁用" in response.text
+
+
+def test_yarn_registry_token_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text('npmAuthToken: "registry-secret-value"\n')
+    assert "registry-secret-value" not in redacted
+    assert "[REDACTED]" in redacted
 
 
 def test_yaml_block_scalar_secret_is_redacted() -> None:

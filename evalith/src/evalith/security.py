@@ -32,7 +32,7 @@ _SECRET_PATTERNS = [
     re.compile(
         r"(?i)(?<![A-Za-z0-9])[\"']?(?:[A-Za-z0-9]+[_-])*"
         r"(?:secret[_-]?access[_-]?key|secret[_-]?key|signing[_-]?key|"
-        r"access[_-]?key[_-]?id|"
+        r"npm[_-]?auth[_-]?token|npmAuthToken|access[_-]?key[_-]?id|"
         r"api[_-]?key|access[_-]?token|client[_-]?secret|token|secret|"
         r"password|authorization)[\"']?\s*[:=]\s*"
         r"(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|[^\n,}]+)"

@@ -50,6 +50,8 @@ ALWAYS_EXCLUDED = [
     "credentials*",
     "secrets*",
     ".npmrc",
+    ".yarnrc",
+    ".yarnrc.yml",
     ".pypirc",
     ".netrc",
     "netrc",
