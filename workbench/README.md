@@ -9,10 +9,12 @@ baseline pinned in `pin.json`:
 - license: MIT core; the non-MIT `/ee/` directory is deleted, not disabled
 
 The generated tree lives in `workbench/.workbench/ee-free/` and is not
-committed. It is built by `build.py`, which copies only the MIT core, applies
-30+ asserted patches (EE removal, brand removal, legal imprint, telemetry/SaaS
-defaults), regenerates the dependency locks, and verifies that no EE package or
-brand artwork remains. The full change list is written to
+committed. `build.py` exports the pinned commit's **committed objects** with
+`git archive` (never the mutable working tree), applies 30+ asserted patches
+(EE removal, brand removal, legal imprint, telemetry/SaaS defaults, unlicensed
+fonts), regenerates the dependency locks, and verifies that no EE package,
+brand artwork or unlicensed font family remains. The full change list and
+whether the source checkout was dirty are written to
 `.workbench/ee-free/BUILD_INFO.json`.
 
 No published Rhesis image is used: the official images contain `/ee/` and must

@@ -17,7 +17,7 @@ from .project_access import (
     resolve_root,
     scan_project,
 )
-from .security import CredentialCipher
+from .security import CredentialCipher, redact_text
 
 
 class WorkspaceError(Exception):
@@ -29,6 +29,17 @@ class WorkspaceError(Exception):
 
 def _id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:16]}"
+
+
+def _redact_value(value: Any) -> Any:
+    """Recursively redact strings while preserving the JSON structure."""
+    if isinstance(value, str):
+        return redact_text(value)
+    if isinstance(value, list):
+        return [_redact_value(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _redact_value(item) for key, item in value.items()}
+    return value
 
 
 class WorkspaceService:
@@ -149,6 +160,8 @@ class WorkspaceService:
                 "id": project_id,
                 "name": name,
                 "root_path": str(root),
+                "root_dev": scan.root_dev,
+                "root_ino": scan.root_ino,
                 "include_paths": json.dumps(include_paths, ensure_ascii=False),
                 "exclude_patterns": json.dumps(exclude_patterns, ensure_ascii=False),
                 "supplemental": json.dumps(supplemental, ensure_ascii=False),
@@ -193,18 +206,29 @@ class WorkspaceService:
         if value is None:
             return []
         if isinstance(value, str):
-            return [{"title": "补充资料", "content": value}] if value.strip() else []
+            return (
+                [{"title": "补充资料", "content": redact_text(value)}]
+                if value.strip()
+                else []
+            )
         if not isinstance(value, list):
             raise WorkspaceError("补充资料必须是数组")
         docs: list[dict[str, str]] = []
         for index, item in enumerate(value):
             if isinstance(item, str):
-                docs.append({"title": f"补充资料 {index + 1}", "content": item})
+                docs.append(
+                    {
+                        "title": f"补充资料 {index + 1}",
+                        "content": redact_text(item),
+                    }
+                )
             elif isinstance(item, dict) and str(item.get("content", "")).strip():
                 docs.append(
                     {
-                        "title": str(item.get("title") or f"补充资料 {index + 1}"),
-                        "content": str(item["content"]),
+                        "title": redact_text(
+                            str(item.get("title") or f"补充资料 {index + 1}")
+                        ),
+                        "content": redact_text(str(item["content"])),
                     }
                 )
         return docs
@@ -388,14 +412,18 @@ class WorkspaceService:
         sent_scope: dict[str, Any] | None = None,
     ) -> None:
         session = self.db.ensure_main_session(project["id"])
+        safe_content = redact_text(content)
+        safe_payload = _redact_value(payload) if payload is not None else None
         self.db.add_message(
             {
                 "id": _id("msg"),
                 "session_id": session["id"],
                 "project_id": project["id"],
                 "role": role,
-                "content": content,
-                "payload": json.dumps(payload, ensure_ascii=False) if payload is not None else None,
+                "content": safe_content,
+                "payload": json.dumps(safe_payload, ensure_ascii=False)
+                if safe_payload is not None
+                else None,
                 "model": model,
                 "sent_scope": json.dumps(sent_scope, ensure_ascii=False)
                 if sent_scope is not None
@@ -483,14 +511,20 @@ class WorkspaceService:
             {
                 "project_id": project["id"],
                 "snapshot_id": result.get("snapshot_id") or project["snapshot_id"],
-                "summary": result.get("summary", ""),
-                "agent_or_flow": result.get("agent_or_flow", ""),
-                "known": json.dumps(result.get("known", []), ensure_ascii=False),
-                "inferred": json.dumps(result.get("inferred", []), ensure_ascii=False),
-                "unknowns": json.dumps(result.get("unknowns", []), ensure_ascii=False),
-                "sources": json.dumps(result.get("sources", []), ensure_ascii=False),
-                "sufficient": 1 if result.get("sufficient") else 0,
-                "sufficient_reason": result.get("sufficient_reason", ""),
+                "summary": redact_text(result.get("summary", "")),
+                "agent_or_flow": redact_text(result.get("agent_or_flow", "")),
+                "known": json.dumps(_redact_value(result.get("known", [])), ensure_ascii=False),
+                "inferred": json.dumps(
+                    _redact_value(result.get("inferred", [])), ensure_ascii=False
+                ),
+                "unknowns": json.dumps(
+                    _redact_value(result.get("unknowns", [])), ensure_ascii=False
+                ),
+                "sources": json.dumps(
+                    _redact_value(result.get("sources", [])), ensure_ascii=False
+                ),
+                "sufficient": 1 if result.get("sufficient") is True else 0,
+                "sufficient_reason": redact_text(result.get("sufficient_reason", "")),
                 "user_continued": 1 if result.get("user_continued") else 0,
                 "model": result.get("model"),
                 "error": error,
@@ -499,6 +533,12 @@ class WorkspaceService:
         )
 
     def _rescan(self, project: Any, *, store_new_snapshot: bool = True) -> ScanResult:
+        if project["root_dev"] is None or project["root_ino"] is None:
+            raise WorkspaceError(
+                "项目缺少根目录身份记录；请重新导入项目",
+                status_code=409,
+                code="root_identity_missing",
+            )
         root = Path(project["root_path"])
         try:
             scan = scan_project(
@@ -507,9 +547,12 @@ class WorkspaceService:
                 loads(project["exclude_patterns"], []),
                 max_files=self.settings.max_files,
                 max_file_bytes=self.settings.max_file_bytes,
+                expected_dev=project["root_dev"],
+                expected_ino=project["root_ino"],
             )
         except AccessError as exc:
-            raise WorkspaceError(str(exc), status_code=422, code=exc.code) from exc
+            status = 409 if exc.code == "root_changed" else 422
+            raise WorkspaceError(str(exc), status_code=status, code=exc.code) from exc
         if store_new_snapshot:
             snapshot_id = self._store_snapshot(project["id"], scan)
             self.db.update_project_snapshot(project["id"], snapshot_id, None)
@@ -521,15 +564,24 @@ class WorkspaceService:
         project = self.db.get_project(project_id)
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
-        text = (content or "").strip()
+        text = redact_text((content or "").strip())
         if not text:
             raise WorkspaceError("消息不能为空")
         if len(text) > 8_000:
             raise WorkspaceError("消息过长")
         self._append_message(project, role="user", content=text, payload={"kind": "chat"})
         try:
+            try:
+                scan = self._rescan(project, store_new_snapshot=False)
+            except WorkspaceError as exc:
+                self._append_message(
+                    project,
+                    role="system",
+                    content=f"资料读取失败：{exc}",
+                    payload={"kind": "error", "stage": "rescan", "message": str(exc)},
+                )
+                raise
             current_snapshot = self.db.get_snapshot(project["snapshot_id"])
-            scan = self._rescan(project, store_new_snapshot=False)
             if current_snapshot is None or scan.digest != current_snapshot["digest"]:
                 # Files changed while the session was open: record a new
                 # snapshot so the sources shown afterwards match what was sent.
@@ -566,9 +618,10 @@ class WorkspaceService:
                 history=history,
                 user_message=text,
             )
-            understanding = result["understanding"]
+            understanding = _redact_value(result["understanding"])
             understanding["model"] = result.get("model")
             understanding["sources"] = sources
+            result["reply"] = redact_text(result["reply"])
             understanding["snapshot_id"] = project["snapshot_id"]
             understanding["user_continued"] = bool(
                 current.get("user_continued") or result.get("continue_requested")
@@ -577,7 +630,7 @@ class WorkspaceService:
             self._append_message(
                 project,
                 role="assistant",
-                content=result["reply"],
+                content=redact_text(result["reply"]),
                 payload={
                     "kind": "chat",
                     "reply": result["reply"],
@@ -637,7 +690,7 @@ class WorkspaceService:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
         try:
             scan = self._rescan(project)
-        except (AccessError, OSError) as exc:
+        except (WorkspaceError, AccessError, OSError) as exc:
             message = str(exc)
             self._append_message(
                 project,
@@ -645,7 +698,9 @@ class WorkspaceService:
                 content=f"资料重新扫描失败：{message}",
                 payload={"kind": "error", "stage": "rescan", "message": message},
             )
-            raise WorkspaceError(message, status_code=422, code="scan_error") from exc
+            status = exc.status_code if isinstance(exc, WorkspaceError) else 422
+            code = exc.code if isinstance(exc, WorkspaceError) else "scan_error"
+            raise WorkspaceError(message, status_code=status, code=code) from exc
         self._append_message(
             project,
             role="system",
@@ -667,7 +722,16 @@ class WorkspaceService:
         project = self.db.get_project(project_id)
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
-        scan = self._rescan(project)
+        try:
+            scan = self._rescan(project)
+        except WorkspaceError as exc:
+            self._append_message(
+                project,
+                role="system",
+                content=f"资料读取失败：{exc}",
+                payload={"kind": "error", "stage": "rescan", "message": str(exc)},
+            )
+            raise
         project = self.db.get_project(project_id)
         assert project is not None
         self._analyse(project, scan=scan)
@@ -680,6 +744,12 @@ class WorkspaceService:
         supplemental = self._supplemental(payload.get("supplemental"))
         include_paths = self._string_list(payload.get("include_paths"))
         exclude_patterns = self._string_list(payload.get("exclude_patterns"))
+        if project["root_dev"] is None or project["root_ino"] is None:
+            raise WorkspaceError(
+                "项目缺少根目录身份记录；请重新导入项目",
+                status_code=409,
+                code="root_identity_missing",
+            )
         try:
             scan = scan_project(
                 Path(project["root_path"]),
@@ -687,6 +757,8 @@ class WorkspaceService:
                 exclude_patterns,
                 max_files=self.settings.max_files,
                 max_file_bytes=self.settings.max_file_bytes,
+                expected_dev=project["root_dev"],
+                expected_ino=project["root_ino"],
             )
         except AccessError as exc:
             raise WorkspaceError(str(exc), status_code=422, code=exc.code) from exc

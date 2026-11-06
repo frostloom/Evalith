@@ -43,7 +43,10 @@ def project_root(tmp_path: Path) -> Path:
     (root / ".env").write_text(SECRET_ENV + "\n", encoding="utf-8")
     (root / "secrets" / "credentials.txt").write_text(SECRET_FILE + "\n", encoding="utf-8")
     (root / "notes.txt").write_text(
-        'API_KEY = "sk-inline-secret-value"\nThe agent approves releases.\n',
+        'API_KEY = "sk-inline-secret-value"\n'
+        "OPENAI_API_KEY=sk-prefixed-secret\n"
+        "DB_PASSWORD=db-prefixed-secret\n"
+        "The agent approves releases.\n",
         encoding="utf-8",
     )
     (root / "config").mkdir()
@@ -120,6 +123,7 @@ def sha256(path: Path) -> str:
 class _RecordingHandler(BaseHTTPRequestHandler):
     requests: list[dict[str, Any]] = []
     fail = False
+    body_override: dict[str, Any] | None = None
 
     def do_POST(self) -> None:  # noqa: N802 - stdlib API
         length = int(self.headers.get("Content-Length", "0"))
@@ -136,7 +140,7 @@ class _RecordingHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"upstream failure")
             return
-        body = {
+        body = type(self).body_override or {
             "summary": "这是一个发布审批流程的初步理解。",
             "agent_or_flow": "release approval agent",
             "known": [
@@ -164,6 +168,7 @@ class _RecordingHandler(BaseHTTPRequestHandler):
 def recording_server() -> Iterator[ThreadingHTTPServer]:
     _RecordingHandler.requests = []
     _RecordingHandler.fail = False
+    _RecordingHandler.body_override = None
     server = ThreadingHTTPServer(("127.0.0.1", 0), _RecordingHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()

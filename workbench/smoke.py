@@ -142,6 +142,15 @@ def check_artifact() -> dict[str, Any]:
         TREE / "apps/frontend/package.json"
     ).read_text()
     checks["brand_logo_dir_absent"] = not (TREE / "apps/frontend/public/logos").exists()
+    checks["unlicensed_font_families_absent"] = not any(
+        (TREE / "apps/frontend/public/fonts" / name).exists()
+        for name in ("sora", "sometype-mono", "geist")
+    )
+    fonts_css = TREE / "apps/frontend/src/styles/fonts.css"
+    checks["fonts_css_only_licensed_family"] = fonts_css.exists() and not any(
+        f"font-family: '{family}'" in fonts_css.read_text()
+        for family in ("Sora", "Sometype Mono", "Geist", "Geist Mono")
+    )
     python = TREE / "apps/backend/.venv/bin/python"
     if python.exists():
         result = subprocess.run(

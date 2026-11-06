@@ -18,11 +18,15 @@ from pathlib import Path
 from cryptography.fernet import Fernet, InvalidToken
 
 _SECRET_PATTERNS = [
-    # key=value / "key": "value" forms, including JSON and quoted values
+    # key=value / "key": "value" forms, including JSON and quoted values.
+    # The optional identifier prefix (e.g. OPENAI_API_KEY, DB_PASSWORD) is what
+    # makes prefixed credential names visible; a bare word-boundary would miss
+    # them because "_" is a word character.
     re.compile(
-        r"(?i)[\"']?\b(?:api[_-]?key|access[_-]?token|client[_-]?secret|token|secret|"
-        r"password|authorization)\b[\"']?\s*[:=]\s*"
-        r"(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|[^\s,}]+)"
+        r"(?i)(?<![A-Za-z0-9])[\"']?(?:[A-Za-z0-9]+[_-])*"
+        r"(?:api[_-]?key|access[_-]?token|client[_-]?secret|token|secret|"
+        r"password|authorization)[\"']?\s*[:=]\s*"
+        r"(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|[^\n,}]+)"
     ),
     re.compile(r"(?i)\bbearer\s+[a-z0-9._\-]+"),
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),

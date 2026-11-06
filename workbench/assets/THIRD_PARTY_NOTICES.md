@@ -26,11 +26,14 @@ non-endorsement statement from the upstream NOTICE. The base images and Python
 dependencies keep their own licenses; see the upstream NOTICE and each
 dependency's metadata.
 
+Font handling: the upstream `Sora`, `Sometype Mono` and `Geist` files ship
+without OFL text, so the generated EE-free build removes those families and
+keeps Be Vietnam Pro, whose `OFL.txt` ships in
+`apps/frontend/public/fonts/be-vietnam-pro/`. The generated `fonts.css` and auth
+tokens use Be Vietnam Pro plus system stacks.
+
 Known gaps intentionally left for follow-up, not claimed as complete:
 
-- the upstream `Sora`, `Sometype Mono` and `Geist` font files ship without OFL
-  text; Evalith must add the font licenses or replace the families before any
-  public image distribution;
 - some in-copy references to Rhesis (documentation links, attribution strings)
   remain where they identify upstream provenance rather than Evalith branding;
 - no image is published by this repository, so MIT/Apache notice inclusion in a

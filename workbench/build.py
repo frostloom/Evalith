@@ -22,6 +22,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tarfile
 import time
 from pathlib import Path
 
@@ -37,21 +38,6 @@ ASSETS = ROOT / "assets"
 
 COPY_DIRS = ["sdk", "packages", "penelope", "skills", "apps/backend", "apps/frontend"]
 COPY_FILES = ["LICENSE", "NOTICE", "VERSION"]
-IGNORE = shutil.ignore_patterns(
-    ".git",
-    "ee",
-    "node_modules",
-    ".venv",
-    ".next",
-    "__pycache__",
-    "*.pyc",
-    ".env",
-    ".env.*",
-    "coverage",
-    "dist",
-)
-
-
 def run(
     command: list[str],
     *,
@@ -123,18 +109,42 @@ def ensure_source(source: Path | None) -> Path:
     return SRC
 
 
-def copy_source(source: Path) -> None:
+def copy_source(source: Path) -> bool:
+    """Export the pinned commit's committed objects, never the working tree.
+
+    ``git archive`` reads the commit object, so modified or untracked files in
+    the checkout cannot enter an artifact labelled with that commit.  The
+    checkout's dirty state is still recorded in BUILD_INFO for transparency.
+    """
+    dirty = bool(
+        run(["git", "status", "--porcelain"], cwd=source, check=False).stdout.strip()
+    )
     if OUT.exists():
         shutil.rmtree(OUT)
     OUT.mkdir(parents=True)
-    for name in COPY_FILES:
-        shutil.copy2(source / name, OUT / name)
-    for name in COPY_DIRS:
-        shutil.copytree(source / name, OUT / name, ignore=IGNORE)
+    archive = WORK / "rhesis-source.tar"
+    if archive.exists():
+        archive.unlink()
+    run(
+        [
+            "git",
+            "archive",
+            "--format=tar",
+            f"--output={archive}",
+            COMMIT,
+            *COPY_FILES,
+            *COPY_DIRS,
+        ],
+        cwd=source,
+    )
+    with tarfile.open(archive) as handle:
+        handle.extractall(OUT, filter="data")
+    archive.unlink(missing_ok=True)
     shutil.copy2(ASSETS / "THIRD_PARTY_NOTICES.md", OUT / "THIRD_PARTY_NOTICES.md")
     shutil.copy2(ASSETS / "evalith-mark.svg", OUT / "apps/frontend/public/evalith-mark.svg")
     shutil.copy2(ROOT / "docker/backend.Dockerfile", OUT / "Dockerfile.backend")
     shutil.copy2(ROOT / "docker/frontend.Dockerfile", OUT / "Dockerfile.frontend")
+    return dirty
 
 
 def patch_backend() -> list[str]:
@@ -448,6 +458,111 @@ export default function ThemeAwareLogo({
         shutil.rmtree(demo)
         changed.append("removed Rhesis sales demo route")
 
+    # 5. Font licensing: remove families that upstream ships without OFL text
+    # (Sora, Sometype Mono, Geist) and keep Be Vietnam Pro, which carries its
+    # OFL.txt. This avoids distributing unlicensed font files.
+    for relative in ["public/fonts/sora", "public/fonts/sometype-mono", "public/fonts/geist"]:
+        target = frontend / relative
+        if target.exists():
+            shutil.rmtree(target)
+            changed.append(f"removed {relative}/ (no upstream OFL text)")
+    write(
+        frontend / "src/styles/fonts.css",
+        """/* Evalith EE-free build: Be Vietnam Pro only.
+   Sora, Sometype Mono and Geist were removed because the upstream tree did
+   not ship their OFL license texts. Be Vietnam Pro ships OFL.txt in
+   public/fonts/be-vietnam-pro/OFL.txt. */
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  src: url('/fonts/be-vietnam-pro/be-vietnam-pro-light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  src: url('/fonts/be-vietnam-pro/be-vietnam-pro-regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  src: url('/fonts/be-vietnam-pro/be-vietnam-pro-medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  src: url('/fonts/be-vietnam-pro/be-vietnam-pro-semibold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  src: url('/fonts/be-vietnam-pro/be-vietnam-pro-bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+""",
+    )
+    changed.append("fonts.css: keep only Be Vietnam Pro (OFL supplied)")
+
+    auth_tokens = frontend / "src/components/auth/authTokens.ts"
+    replace_once(
+        auth_tokens,
+        """export const AUTH_FONT_SANS =
+  '"Geist", "Be Vietnam Pro", system-ui, sans-serif';""",
+        """export const AUTH_FONT_SANS =
+  '"Be Vietnam Pro", system-ui, sans-serif';""",
+    )
+    replace_once(
+        auth_tokens,
+        "export const AUTH_FONT_MONO = '\"Geist Mono\", \"Sometype Mono\", monospace';",
+        "export const AUTH_FONT_MONO = 'ui-monospace, \"SFMono-Regular\", Menlo, monospace';",
+    )
+    replace_once(
+        auth_tokens,
+        "export const AUTH_FONT_DISPLAY = '\"Sora\", \"Be Vietnam Pro\", sans-serif';",
+        "export const AUTH_FONT_DISPLAY = '\"Be Vietnam Pro\", system-ui, sans-serif';",
+    )
+    replace_once(
+        auth_tokens,
+        "/** Geist, registered in `src/styles/fonts.css`. Auth pages only. */",
+        "/** Be Vietnam Pro (OFL); the upstream Sora/Geist families were removed. */",
+    )
+    replace_once(
+        auth_tokens,
+        "/** Geist Mono — the badge row under the message column. */",
+        "/** System monospace — the badge row under the message column. */",
+    )
+    replace_once(
+        auth_tokens,
+        "/** Sora stays the wordmark face, matching the website navbar. */",
+        "/** Display stack for the auth wordmark. */",
+    )
+    changed.append("authTokens.ts: removed unlicensed font families")
+
+    for relative in [
+        "src/app/(protected)/tests/[identifier]/components/TestTechnicalCard.tsx",
+        "src/app/(protected)/tests/[identifier]/components/TestParametersBlock.tsx",
+    ]:
+        target = frontend / relative
+        replace_optional(
+            target,
+            "fontFamily: '\"Sometype Mono\", monospace',",
+            "fontFamily: 'ui-monospace, \"SFMono-Regular\", Menlo, monospace',",
+        )
+    changed.append("technical cards: system monospace")
+
     # 4. Copy and links ---------------------------------------------------
     layout = frontend / "src/app/layout.tsx"
     replace_once(layout, "      title: 'Star Rhesis',", "      title: '项目仓库',")
@@ -555,16 +670,28 @@ def verify_tree() -> None:
         problems.append("frontend package.json still references EE")
     if (OUT / "apps/frontend/src/ee_bootstrap.ts").read_text().count("bootstrapEE"):
         problems.append("frontend EE bootstrap still active")
+    for name in ("sora", "sometype-mono", "geist"):
+        if (OUT / "apps/frontend/public/fonts" / name).exists():
+            problems.append(f"unlicensed font family still present: {name}")
+    fonts_css = OUT / "apps/frontend/src/styles/fonts.css"
+    if fonts_css.exists():
+        css = fonts_css.read_text()
+        for family in ("Sora", "Sometype Mono", "Geist", "Geist Mono"):
+            if f"font-family: '{family}'" in css or f'font-family: "{family}"' in css:
+                problems.append(f"fonts.css still registers unlicensed family: {family}")
     if problems:
         raise SystemExit("EE-free verification failed:\n- " + "\n- ".join(problems))
 
 
 def main() -> None:
+    global OUT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=None)
+    parser.add_argument("--out", type=Path, default=OUT)
     parser.add_argument("--skip-lock", action="store_true")
     parser.add_argument("--check-only", action="store_true")
     args = parser.parse_args()
+    OUT = args.out.resolve()
 
     WORK.mkdir(parents=True, exist_ok=True)
     created_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -573,7 +700,7 @@ def main() -> None:
         source = ensure_source(args.source)
         source_head = run(["git", "rev-parse", "HEAD"], cwd=source).stdout.strip()
         print(f"source: {source} @ {source_head}")
-        copy_source(source)
+        dirty = copy_source(source)
         changes = []
         changes += patch_backend()
         changes += patch_frontend()
@@ -592,6 +719,7 @@ def main() -> None:
             "upstream_commit": source_head,
             "upstream_version": VERSION,
             "ee_removed": True,
+            "source_worktree_dirty": dirty,
             "changes": changes,
             "builder": "workbench/build.py",
         }
@@ -599,6 +727,8 @@ def main() -> None:
             json.dumps(info, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
         print(f"built {OUT}")
+        if dirty:
+            print("source checkout had modified/untracked files; they were NOT copied")
         print(f"recorded {len(changes)} automated changes in BUILD_INFO.json")
 
     verify_tree()

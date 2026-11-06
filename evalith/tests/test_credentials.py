@@ -60,6 +60,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "sk-file-secret-abcdef" not in request["body"]
     assert "sk-inline-secret-value" not in request["body"]
     assert "sk-json-secret-value" not in request["body"]
+    assert "sk-prefixed-secret" not in request["body"]
+    assert "db-prefixed-secret" not in request["body"]
     assert "eu-central" in request["body"]
     assert "RELEASE_POLICY" in request["body"]
     assert "[REDACTED]" in request["body"]
@@ -96,9 +98,91 @@ def test_credentials_do_not_reach_logs_or_errors(
 def test_child_loggers_redact_credentials(client: TestClient, caplog) -> None:
     logger = logging.getLogger("evalith.model")
     with caplog.at_level(logging.DEBUG, logger="evalith.model"):
-        logger.error("upstream said api_key=%s", SECRET_KEY)
+        logger.error("upstream said OPENAI_API_KEY=%s", SECRET_KEY)
     assert SECRET_KEY not in caplog.text
     assert "[REDACTED]" in caplog.text
+
+
+def test_supplemental_and_chat_are_redacted(
+    client: TestClient,
+    project_root: Path,
+    recording_server,
+    settings,
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "redaction",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+            "api_key": SECRET_KEY,
+        },
+    ).json()
+    detail = import_project(
+        client,
+        project_root,
+        model_config_id=model["id"],
+        supplemental=[
+            {
+                "title": "OPENAI_API_KEY=title-secret-value",
+                "content": "DB_PASSWORD=supplement-secret-value\nsafe context",
+            }
+        ],
+    )
+    assert detail.status_code == 201, detail.text
+    first = detail.json()
+    assert "title-secret-value" not in str(first)
+    assert "supplement-secret-value" not in str(first)
+    assert "safe context" in str(first)
+
+    _RecordingHandler.body_override = {
+        "reply": "收到补充。",
+        "continue_requested": False,
+        "understanding": {
+            "summary": first["understanding"]["summary"],
+            "agent_or_flow": first["understanding"]["agent_or_flow"],
+            "known": first["understanding"]["known"],
+            "inferred": first["understanding"]["inferred"],
+            "unknowns": first["understanding"]["unknowns"],
+            "sufficient": False,
+            "sufficient_reason": first["understanding"]["sufficient_reason"],
+        },
+    }
+    chat = client.post(
+        f"/api/projects/{first['project']['id']}/messages",
+        json={"content": "OPENAI_API_KEY=chat-secret-value\nplease continue"},
+    )
+    assert chat.status_code == 200, chat.text
+    assert "chat-secret-value" not in chat.text
+
+    for recorded in _RecordingHandler.requests:
+        for secret in (
+            "title-secret-value",
+            "supplement-secret-value",
+            "chat-secret-value",
+        ):
+            assert secret not in recorded["body"]
+
+    import sqlite3
+
+    connection = sqlite3.connect(settings.database_path)
+    try:
+        rows = connection.execute(
+            "SELECT content, payload FROM messages"
+        ).fetchall()
+        project_row = connection.execute(
+            "SELECT supplemental FROM projects"
+        ).fetchone()
+    finally:
+        connection.close()
+    stored = str(rows) + str(project_row)
+    for secret in (
+        "title-secret-value",
+        "supplement-secret-value",
+        "chat-secret-value",
+    ):
+        assert secret not in stored
 
 
 def test_stub_connection_test_is_clearly_labelled(client: TestClient) -> None:

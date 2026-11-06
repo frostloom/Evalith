@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import type {
   Message,
@@ -48,6 +48,10 @@ export function Workspace({
   const [working, setWorking] = useState(false);
   const [editingSources, setEditingSources] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const projectIdRef = useRef(project.id);
+  useEffect(() => {
+    projectIdRef.current = project.id;
+  }, [project.id]);
 
   const lastScope: SentScope | null = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -57,30 +61,38 @@ export function Workspace({
   }, [messages]);
 
   const run = async (action: () => Promise<ProjectDetail>, success?: string) => {
+    const origin = project.id;
     setWorking(true);
     try {
       const next = await action();
+      if (projectIdRef.current !== origin || next.project.id !== origin) return;
       onDetail(next);
       if (success) onNotice(success);
     } catch (err) {
-      onError(err instanceof Error ? err.message : "操作失败");
+      if (projectIdRef.current === origin) {
+        onError(err instanceof Error ? err.message : "操作失败");
+      }
     } finally {
-      setWorking(false);
+      if (projectIdRef.current === origin) setWorking(false);
     }
   };
 
   const send = async (text: string) => {
     const content = text.trim();
     if (!content) return;
+    const origin = project.id;
     setWorking(true);
     try {
       const next = await api.sendMessage(project.id, content);
+      if (projectIdRef.current !== origin || next.project.id !== origin) return;
       onDetail(next);
       setMessage("");
     } catch (err) {
-      onError(err instanceof Error ? err.message : "发送失败");
+      if (projectIdRef.current === origin) {
+        onError(err instanceof Error ? err.message : "发送失败");
+      }
     } finally {
-      setWorking(false);
+      if (projectIdRef.current === origin) setWorking(false);
     }
   };
 
@@ -462,6 +474,7 @@ function SourceEditor({
         exclude_patterns: excludePatterns.split("\n").map((item) => item.trim()).filter(Boolean),
         supplemental: docs,
       });
+      if (next.project.id !== detail.project.id) return;
       onSaved(next);
     } catch (err) {
       const message = err instanceof Error ? err.message : "保存失败";

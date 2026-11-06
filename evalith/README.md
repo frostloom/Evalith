@@ -45,12 +45,19 @@ never returned by the API.
 ```bash
 cd evalith
 uv run pytest -q
+
+cd web
+npm test
+npm run build
 ```
 
-The suite covers scope enforcement (traversal, symlink escape, secret denylist),
-read-only behaviour, source fingerprints, session uniqueness under concurrency,
-reopen restoration, cross-project isolation, credentials in model requests and
-logs, model-failure visibility, and the question-generation gate.
+The Python suite covers descriptor-anchored traversal, replaced/symlinked root
+rejection, scope enforcement, secret denylist, read-only behaviour, source
+fingerprints, session uniqueness under concurrency, reopen restoration,
+cross-project isolation, credential redaction in supplemental/chat/model
+requests/logs, strict boolean gate handling, model-failure visibility, and the
+question-generation gate. The frontend tests cover project-switch draft reset
+and stale-response rejection.
 
 ## Project access
 

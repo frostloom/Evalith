@@ -73,6 +73,100 @@ def test_user_correction_updates_summary_but_keeps_unknowns(
     assert any("用户纠正" in str(item) for item in refreshed["understanding"]["known"])
 
 
+def test_negative_continuation_and_insufficient_evidence_keep_gate_closed(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+
+    refused = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "先不要继续，我还需要补充资料。"},
+    )
+    assert refused.status_code == 200, refused.text
+    refused_detail = refused.json()
+    assert refused_detail["readiness"]["generation_allowed"] is False
+    assert refused_detail["understanding"]["user_continued"] is False
+    assert refused_detail["understanding"]["sufficient"] is False
+
+    insufficient = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "现在还不能说依据足够，未知规则还没有确认。"},
+    )
+    assert insufficient.status_code == 200, insufficient.text
+    insufficient_detail = insufficient.json()
+    assert insufficient_detail["readiness"]["generation_allowed"] is False
+    assert insufficient_detail["understanding"]["sufficient"] is False
+    assert insufficient_detail["understanding"]["unknowns"]
+
+
+def test_non_boolean_sufficiency_is_a_visible_error(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.body_override = {
+        "summary": "malformed understanding",
+        "agent_or_flow": "",
+        "known": [],
+        "inferred": [],
+        "unknowns": [{"text": "unknown", "why": "unknown"}],
+        "sufficient": "false",
+        "sufficient_reason": "string is not a boolean",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "malformed",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    assert detail["readiness"]["generation_allowed"] is False
+    assert detail["project"]["analysis_error"]
+    assert "必须是布尔值" in detail["project"]["analysis_error"]
+    assert any(
+        item["payload"]["kind"] == "error" for item in detail["messages"]
+    )
+
+
+def test_non_boolean_continue_is_a_visible_error(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "malformed-chat",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": "false",
+        "understanding": {
+            "summary": "valid summary",
+            "agent_or_flow": "",
+            "known": [],
+            "inferred": [],
+            "unknowns": [{"text": "unknown", "why": "unknown"}],
+            "sufficient": False,
+            "sufficient_reason": "not enough",
+        },
+    }
+    response = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "继续"},
+    )
+    assert response.status_code == 502
+    assert "必须是布尔值" in response.json()["error"]
+    refreshed = client.get(f"/api/projects/{detail['project']['id']}").json()
+    assert refreshed["readiness"]["generation_allowed"] is False
+
+
 def test_sufficiency_can_open_gate_without_confirming_unknowns(
     client: TestClient, project_root: Path
 ) -> None:

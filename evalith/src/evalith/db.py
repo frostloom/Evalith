@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS projects (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     root_path TEXT NOT NULL,
+    root_dev INTEGER,
+    root_ino INTEGER,
     include_paths TEXT NOT NULL DEFAULT '[]',
     exclude_patterns TEXT NOT NULL DEFAULT '[]',
     supplemental TEXT NOT NULL DEFAULT '[]',
@@ -120,6 +122,15 @@ class Database:
         with self._connect() as connection:
             connection.execute("PRAGMA journal_mode = WAL")
             connection.executescript(SCHEMA)
+            # Minimal in-place migration for databases created by an earlier
+            # phase-1 build; new databases already have these columns.
+            columns = {
+                row["name"]
+                for row in connection.execute("PRAGMA table_info(projects)").fetchall()
+            }
+            for name in ("root_dev", "root_ino"):
+                if name not in columns:
+                    connection.execute(f"ALTER TABLE projects ADD COLUMN {name} INTEGER")
 
     @contextmanager
     def connection(self) -> Iterator[sqlite3.Connection]:
@@ -181,11 +192,12 @@ class Database:
         with self.connection() as connection:
             connection.execute(
                 """INSERT INTO projects
-                (id, name, root_path, include_paths, exclude_patterns, supplemental,
-                 model_config_id, snapshot_id, analysis_error, created_at, updated_at)
-                VALUES (:id, :name, :root_path, :include_paths, :exclude_patterns,
-                        :supplemental, :model_config_id, :snapshot_id, :analysis_error,
-                        :created_at, :updated_at)""",
+                (id, name, root_path, root_dev, root_ino, include_paths,
+                 exclude_patterns, supplemental, model_config_id, snapshot_id,
+                 analysis_error, created_at, updated_at)
+                VALUES (:id, :name, :root_path, :root_dev, :root_ino, :include_paths,
+                        :exclude_patterns, :supplemental, :model_config_id,
+                        :snapshot_id, :analysis_error, :created_at, :updated_at)""",
                 row,
             )
 

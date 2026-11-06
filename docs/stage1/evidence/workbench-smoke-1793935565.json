@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-06T02:34:55.229710+00:00",
+  "generated_at": "2026-11-06T03:26:05.809233+00:00",
   "backend_url": "http://127.0.0.1:8080",
   "frontend_url": "http://127.0.0.1:3000",
   "source_build": "uv sync from workbench/.workbench/ee-free (no published image)",
@@ -58,6 +58,8 @@
       "backend_pyproject_no_ee": true,
       "frontend_package_no_ee": true,
       "brand_logo_dir_absent": true,
+      "unlicensed_font_families_absent": true,
+      "fonts_css_only_licensed_family": true,
       "ee_package_not_importable": true,
       "ee_package_not_installed": true,
       "build_info_pinned": true
@@ -66,9 +68,9 @@
     "passed": true
   },
   "ids": {
-    "project_id": "0c02300d-64dd-4d10-8cf5-a5b436c2dc51",
-    "model_id": "53d7dbd5-60bc-4c38-ba74-6f2f26467bd0",
-    "architect_session_id": "e07dc921-a926-433e-9102-91c30918cfc6"
+    "project_id": "a22528e3-3f5f-4020-9a06-0cf61cabe7cc",
+    "model_id": "df370b2a-d1e8-4d36-9471-f47a2db34aa1",
+    "architect_session_id": "c2f798d6-41d2-4a4d-a4ad-8c228dd85a6c"
   },
   "errors": [],
   "limitations": [

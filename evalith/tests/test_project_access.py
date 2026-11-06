@@ -155,6 +155,67 @@ def test_selected_exclude_pattern_removes_subtree(
     assert files == {"src/agent.py"}
 
 
+def test_symlinked_project_root_is_rejected(
+    client: TestClient, tmp_path: Path
+) -> None:
+    real = tmp_path / "real-project"
+    real.mkdir()
+    (real / "README.md").write_text("# Real\n", encoding="utf-8")
+    link = tmp_path / "linked-project"
+    link.symlink_to(real)
+    model = create_stub_model(client)
+    response = import_project(client, link, model_config_id=model["id"])
+    assert response.status_code == 422
+    assert response.json()["code"] == "root_symlink"
+
+
+def test_replaced_project_root_is_rejected_on_chat(
+    client: TestClient, project_root: Path, tmp_path: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+
+    outside = tmp_path / "replacement"
+    outside.mkdir()
+    (outside / "unrelated-secret.txt").write_text(
+        "unrelated content api_key=must-not-be-read\n", encoding="utf-8"
+    )
+    original = tmp_path / "original-project"
+    project_root.rename(original)
+    project_root.symlink_to(outside)
+
+    response = client.post(
+        f"/api/projects/{project_id}/messages", json={"content": "继续"}
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "root_changed"
+    assert "must-not-be-read" not in response.text
+    detail_after = client.get(f"/api/projects/{project_id}").json()
+    assert "must-not-be-read" not in str(detail_after)
+    assert any(
+        item["payload"]["kind"] == "error"
+        and item["payload"].get("stage") == "rescan"
+        for item in detail_after["messages"]
+    )
+
+
+def test_replaced_project_root_is_rejected_on_reanalyse(
+    client: TestClient, project_root: Path, tmp_path: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    original = tmp_path / "old-project"
+    project_root.rename(original)
+    project_root.mkdir()
+    (project_root / "README.md").write_text("# Replaced\n", encoding="utf-8")
+
+    response = client.post(f"/api/projects/{project_id}/reanalyse")
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "root_changed"
+
+
 def test_container_mode_fails_closed(project_root: Path) -> None:
     with pytest.raises(AccessError) as excinfo:
         resolve_root(str(project_root), access_mode="container")

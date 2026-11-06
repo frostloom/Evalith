@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import type { ModelConfig, Project, ProjectDetail } from "./types";
 import { ImportSheet } from "./ImportSheet";
@@ -20,6 +20,8 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const selectedProjectRef = useRef<string | null>(null);
+  const openSequence = useRef(0);
 
   const load = useCallback(async () => {
     try {
@@ -45,20 +47,27 @@ export function App() {
   }, [notice]);
 
   const openProject = async (project: Project) => {
+    const sequence = ++openSequence.current;
+    selectedProjectRef.current = project.id;
     setBusy(true);
     setError(null);
     try {
       const next = await api.enterProject(project.id);
+      if (sequence !== openSequence.current) return;
+      if (next.project.id !== selectedProjectRef.current) return;
       setDetail(next);
       setView("project");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "无法进入项目");
+      if (sequence === openSequence.current) {
+        setError(err instanceof Error ? err.message : "无法进入项目");
+      }
     } finally {
-      setBusy(false);
+      if (sequence === openSequence.current) setBusy(false);
     }
   };
 
   const handleCreated = (next: ProjectDetail) => {
+    selectedProjectRef.current = next.project.id;
     setDetail(next);
     setView("project");
     setNotice("项目已导入，初步理解已生成。");
@@ -66,6 +75,9 @@ export function App() {
   };
 
   const handleDetail = (next: ProjectDetail) => {
+    // A pending response from project A must never replace the workspace of
+    // the project the user switched to, nor submit its drafts to B.
+    if (selectedProjectRef.current !== next.project.id) return;
     setDetail(next);
     setProjects((current) =>
       current.map((item) => (item.id === next.project.id ? next.project : item)),
@@ -73,6 +85,8 @@ export function App() {
   };
 
   const goHome = () => {
+    openSequence.current += 1;
+    selectedProjectRef.current = null;
     setView("home");
     setDetail(null);
     void load();
@@ -167,6 +181,7 @@ export function App() {
 
         {view === "project" && detail && (
           <Workspace
+            key={detail.project.id}
             detail={detail}
             busy={busy}
             onDetail={handleDetail}

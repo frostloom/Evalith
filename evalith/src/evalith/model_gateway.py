@@ -89,6 +89,20 @@ def _extract_json(text: str) -> dict[str, Any]:
     return value
 
 
+def _boolean_field(value: dict[str, Any], name: str, *, default: bool = False) -> bool:
+    """Accept only JSON booleans.
+
+    A malformed ``"false"`` string must never be coerced into authorization or
+    sufficiency; raise so the failure is visible and the gate stays closed.
+    """
+    if name not in value:
+        return default
+    actual = value[name]
+    if not isinstance(actual, bool):
+        raise ModelError(f"模型返回的 {name} 必须是布尔值，收到 {type(actual).__name__}")
+    return actual
+
+
 def _normalise_understanding(value: dict[str, Any], *, model_name: str) -> dict[str, Any]:
     def as_list(key: str) -> list[Any]:
         raw = value.get(key, [])
@@ -105,7 +119,7 @@ def _normalise_understanding(value: dict[str, Any], *, model_name: str) -> dict[
         "known": as_list("known"),
         "inferred": as_list("inferred"),
         "unknowns": as_list("unknowns"),
-        "sufficient": bool(value.get("sufficient", False)),
+        "sufficient": _boolean_field(value, "sufficient"),
         "sufficient_reason": str(value.get("sufficient_reason", "") or "").strip(),
         "model": model_name,
     }
@@ -216,9 +230,15 @@ class ModelGateway:
         headers = {"Content-Type": "application/json"}
         if self.config.api_key:
             headers["Authorization"] = f"Bearer {self.config.api_key}"
+        # Every model-input route is redacted again here, independent of the
+        # caller, so a new caller cannot bypass the credential boundary.
+        safe_messages = [
+            {"role": item["role"], "content": redact_text(item["content"])}
+            for item in messages
+        ]
         body = {
             "model": self.config.model_name,
-            "messages": messages,
+            "messages": safe_messages,
             "temperature": 0.1,
         }
         try:
@@ -262,7 +282,7 @@ class ModelGateway:
                 model_name="stub",
             )
         prompt = (
-            f"项目名称：{project_name}\n"
+            f"项目名称：{redact_text(project_name)}\n"
             f"资料范围：{len(sources)} 项，内容指纹已随资料给出。\n\n"
             f"{context_text}\n\n"
             "请给出初步理解。"
@@ -289,7 +309,7 @@ class ModelGateway:
         if self.config.provider == "stub":
             return _stub_discuss(current, user_message)
         prompt = (
-            f"项目名称：{project_name}\n\n当前理解（JSON）：\n"
+            f"项目名称：{redact_text(project_name)}\n\n当前理解（JSON）：\n"
             f"{json.dumps(current, ensure_ascii=False)}\n\n"
             f"资料摘要：\n{context_text}\n\n"
             f"最近对话：\n{json.dumps(history[-6:], ensure_ascii=False)}\n\n"
@@ -308,9 +328,17 @@ class ModelGateway:
         if not isinstance(understanding, dict):
             understanding = current
         understanding = _normalise_understanding(understanding, model_name=self.name)
+        continue_requested = _boolean_field(value, "continue_requested")
+        if continue_requested and _has_negation(user_message):
+            continue_requested = False
+        if understanding["sufficient"] and _negates_sufficiency(user_message):
+            understanding["sufficient"] = False
+            understanding["sufficient_reason"] = (
+                "用户明确表示依据仍不足；未知项保留，推进门保持关闭。"
+            )
         return {
             "reply": reply.strip(),
-            "continue_requested": bool(value.get("continue_requested", False)),
+            "continue_requested": continue_requested,
             "understanding": understanding,
             "direction_update": str(value.get("direction_update", "") or "").strip(),
             "model": self.name,
@@ -343,16 +371,62 @@ class ModelGateway:
         return False, f"服务返回 HTTP {response.status_code}"
 
 
+NEGATION_MARKERS = (
+    "不要",
+    "不想",
+    "先不",
+    "还不能",
+    "不能",
+    "尚未",
+    "还没",
+    "别",
+    "暂不",
+    "不继续",
+    "不开始",
+    "不足以",
+    "不觉得",
+    "没有足够",
+)
+
+
+def _has_negation(text: str) -> bool:
+    return any(marker in text for marker in NEGATION_MARKERS)
+
+
+def _negates_sufficiency(text: str) -> bool:
+    if any(
+        marker in text
+        for marker in (
+            "还不能说依据足够",
+            "依据不足",
+            "不足以",
+            "不能算足够",
+            "不觉得足够",
+            "尚未足够",
+            "没有足够",
+        )
+    ):
+        return True
+    return "足够" in text and _has_negation(text)
+
+
 def _stub_discuss(current: dict[str, Any], user_message: str) -> dict[str, Any]:
     text = user_message.strip()
     understanding = json.loads(json.dumps(current, ensure_ascii=False))
-    continue_requested = any(
-        keyword in text for keyword in ("继续", "开始出题", "进入下一步", "可以设计")
+    negative = _has_negation(text)
+    continue_requested = (
+        any(keyword in text for keyword in ("继续", "开始出题", "进入下一步", "可以设计"))
+        and not negative
     )
     sufficient = bool(understanding.get("sufficient", False))
-    if "依据足够" in text:
+    if "依据足够" in text and not negative:
         sufficient = True
         understanding["sufficient_reason"] = "用户声明依据足够；未知项仍保留，等待后续阶段核对。"
+    if _negates_sufficiency(text):
+        sufficient = False
+        understanding["sufficient_reason"] = (
+            "用户明确表示依据仍不足；未知项保留，推进门保持关闭。"
+        )
     if text.startswith("纠正：") or text.startswith("纠正:"):
         corrected = text.split("：", 1)[-1].split(":", 1)[-1].strip()
         understanding["summary"] = corrected or understanding.get("summary", "")
