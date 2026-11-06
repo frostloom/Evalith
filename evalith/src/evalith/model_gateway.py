@@ -418,13 +418,11 @@ class ModelGateway:
             if understanding_supplied
             else _normalise_understanding(current, model_name=self.name)
         )
-        continue_requested = _boolean_field(value, "continue_requested")
-        if continue_requested and (
-            _has_negation(user_message)
-            or _is_non_affirmative(user_message)
-            or not _keyword_outside_quotes(user_message, "继续")
-        ):
-            continue_requested = False
+        _boolean_field(value, "continue_requested")  # reject malformed fields
+        # Explicit user consent is decided by the message, identically for both
+        # providers.  The provider's boolean is validated but must not invent
+        # consent from a descriptive/correction message.
+        continue_requested = _affirmative_continuation(user_message)
         # Preserve a validated model sufficiency judgement during ordinary
         # discussion. Only an explicit retraction/contradiction revokes it;
         # requiring the user to repeat "依据足够" would override the model.
@@ -492,6 +490,14 @@ NEGATION_MARKERS = (
     "不可以",
     "不行",
     "不肯",
+    "不打算",
+    "不准备",
+    "无意",
+    "不情愿",
+    "停止",
+    "中止",
+    "不许",
+    "不准",
 )
 
 
@@ -557,6 +563,33 @@ def _is_affirmative_mention(text: str, keyword: str) -> bool:
     return _keyword_outside_quotes(text, keyword)
 
 
+CONTINUATION_PHRASES = ("继续", "进入下一步", "开始出题", "开始设计", "进入下一阶段")
+DESCRIPTIVE_MARKERS = (
+    "按钮",
+    "文案",
+    "应为",
+    "改为",
+    "位于",
+    "描述",
+    "示例",
+    "引用",
+)
+
+
+def _affirmative_continuation(text: str) -> bool:
+    """Return True only for an explicit, non-descriptive continuation request."""
+    stripped = text.strip()
+    if not stripped:
+        return False
+    if _has_negation(stripped) or _is_non_affirmative(stripped):
+        return False
+    if stripped.startswith(("纠正：", "纠正:")):
+        return False
+    if any(marker in stripped for marker in DESCRIPTIVE_MARKERS):
+        return False
+    return any(_keyword_outside_quotes(stripped, phrase) for phrase in CONTINUATION_PHRASES)
+
+
 def _negates_sufficiency(text: str) -> bool:
     if any(
         marker in text
@@ -578,10 +611,7 @@ def _stub_discuss(current: dict[str, Any], user_message: str) -> dict[str, Any]:
     text = user_message.strip()
     understanding = json.loads(json.dumps(current, ensure_ascii=False))
     negative = _has_negation(text)
-    continue_requested = any(
-        _is_affirmative_mention(text, keyword)
-        for keyword in ("继续", "开始出题", "进入下一步", "可以设计")
-    ) and not negative
+    continue_requested = _affirmative_continuation(text)
     sufficient = bool(understanding.get("sufficient", False))
     if _is_affirmative_mention(text, "依据足够") and not negative:
         sufficient = True

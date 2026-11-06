@@ -381,6 +381,77 @@ def test_valid_provider_sufficiency_survives_ordinary_discussion(
     assert response.json()["readiness"]["generation_allowed"] is True
 
 
+def test_provider_accepts_explicit_continuation_phrases(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "explicit-phrases",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": True,
+        "understanding": {
+            "summary": "explicit continuation",
+            "agent_or_flow": "",
+            "known": [{"text": "policy", "source": "README.md"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": False,
+            "sufficient_reason": "still unknown",
+        },
+    }
+    for phrase in ("进入下一步", "开始出题"):
+        response = client.post(
+            f"/api/projects/{detail['project']['id']}/messages",
+            json={"content": phrase},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["readiness"]["generation_allowed"] is True
+        assert response.json()["understanding"]["user_continued"] is True
+
+
+def test_provider_refusal_does_not_open_gate(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "refusal-provider",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": True,
+        "understanding": {
+            "summary": "refusal",
+            "agent_or_flow": "",
+            "known": [{"text": "policy", "source": "README.md"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": False,
+            "sufficient_reason": "still unknown",
+        },
+    }
+    response = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "我拒绝继续。"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["readiness"]["generation_allowed"] is False
+    assert response.json()["understanding"]["user_continued"] is False
+
+
 def test_quoted_continuation_cannot_override_provider_intent(
     client: TestClient, project_root: Path, recording_server
 ) -> None:

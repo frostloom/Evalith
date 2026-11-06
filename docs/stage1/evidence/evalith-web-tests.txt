@@ -1,7 +1,7 @@
 # Evalith phase-1 frontend test run
 
 Command: cd evalith/web && npm test
-Date: 2026-11-06T05:05:53Z
+Date: 2026-11-06T05:12:36Z
 Result: exit 0
 
  RUN  v5.1.0 <worktree>/evalith/web
@@ -9,6 +9,6 @@ Result: exit 0
 
  Test Files  1 passed (1)
       Tests  2 passed (2)
-   Start at  13:05:44
-   Duration  1.20s (environment 57%, tests 23%, setup 9%, import 8%, transform 2%, worker 1%)
+   Start at  13:12:27
+   Duration  1.62s (environment 56%, tests 27%, setup 8%, import 7%, transform 2%, worker 1%)
 

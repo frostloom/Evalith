@@ -409,6 +409,8 @@ def test_questions_and_quoted_instructions_do_not_open_gate(
         "纠正：按钮文案是“点击继续”。",
         "请解释“继续”的含义。",
         "我拒绝继续。",
+        "我不打算继续。",
+        "纠正：继续按钮应位于右侧。",
     ):
         response = client.post(
             f"/api/projects/{project_id}/messages", json={"content": text}
