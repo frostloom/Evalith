@@ -101,6 +101,54 @@ def test_negative_continuation_and_insufficient_evidence_keep_gate_closed(
     assert insufficient_detail["understanding"]["unknowns"]
 
 
+def test_sufficiency_retraction_closes_an_open_gate(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+
+    opened = client.post(
+        f"/api/projects/{project_id}/messages", json={"content": "现有资料依据足够。"}
+    )
+    assert opened.status_code == 200, opened.text
+    assert opened.json()["readiness"]["generation_allowed"] is True
+
+    retracted = client.post(
+        f"/api/projects/{project_id}/messages", json={"content": "刚才说错了，依据不足。"}
+    )
+    assert retracted.status_code == 200, retracted.text
+    assert retracted.json()["understanding"]["sufficient"] is False
+    assert retracted.json()["readiness"]["generation_allowed"] is False
+
+
+def test_malformed_understanding_items_are_a_visible_error(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.body_override = {
+        "summary": "malformed items",
+        "agent_or_flow": "",
+        "known": [None],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "not enough",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "malformed-items",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    assert detail["project"]["analysis_error"]
+    assert "known[0]" in detail["project"]["analysis_error"]
+    assert detail["readiness"]["generation_allowed"] is False
+
+
 def test_non_boolean_sufficiency_is_a_visible_error(
     client: TestClient, project_root: Path, recording_server
 ) -> None:
@@ -217,6 +265,109 @@ def test_model_failure_is_visible_not_silent(
     assert chat.status_code == 502
     assert "模型服务返回 500" in chat.json()["error"]
     assert "sk-model-secret" not in str(chat.json())
+
+
+def test_reanalysis_keeps_session_correction_for_real_provider(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "correction-model",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+
+    _RecordingHandler.body_override = {
+        "reply": "已记录纠正。",
+        "continue_requested": False,
+        "understanding": {
+            "summary": "人工复核流程",
+            "agent_or_flow": "approval",
+            "known": [],
+            "inferred": [],
+            "unknowns": [{"text": "验收标准未知", "why": "资料未写明"}],
+            "sufficient": False,
+            "sufficient_reason": "仍需确认验收标准。",
+        },
+    }
+    corrected = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "纠正：这是人工复核流程，评测重点是审计记录。"},
+    )
+    assert corrected.status_code == 200, corrected.text
+
+    _RecordingHandler.body_override = None
+    reanalysed = client.post(f"/api/projects/{project_id}/reanalyse")
+    assert reanalysed.status_code == 200, reanalysed.text
+    assert any(
+        "人工复核" in str(item)
+        for item in reanalysed.json()["understanding"]["known"]
+    )
+    analysis_request = _RecordingHandler.requests[-1]["body"]
+    assert "人工复核" in analysis_request
+    assert "当前理解" in analysis_request
+
+
+def test_existing_project_can_acquire_a_model_without_new_session(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=None).json()
+    project_id = detail["project"]["id"]
+    session_id = detail["session"]["id"]
+    assert detail["project"]["analysis_error"]
+
+    repaired = client.put(
+        f"/api/projects/{project_id}/model", json={"model_config_id": model["id"]}
+    )
+    assert repaired.status_code == 200, repaired.text
+    refreshed = repaired.json()
+    assert refreshed["project"]["model_config_id"] == model["id"]
+    assert refreshed["project"]["analysis_error"] is None
+    assert refreshed["session"]["id"] == session_id
+    assert refreshed["understanding"]["model"] == "stub"
+    assert refreshed["understanding"]["known"]
+
+
+def test_existing_project_rejects_unknown_model(
+    client: TestClient, project_root: Path
+) -> None:
+    detail = import_project(client, project_root, model_config_id=None).json()
+    response = client.put(
+        f"/api/projects/{detail['project']['id']}/model",
+        json={"model_config_id": "mdl_missing"},
+    )
+    assert response.status_code == 422
+
+
+def test_supplemental_update_keeps_chat_correction(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    corrected = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "纠正：评测重点是审计记录。"},
+    )
+    assert corrected.status_code == 200, corrected.text
+    updated = client.put(
+        f"/api/projects/{project_id}/sources",
+        json={
+            "include_paths": ["README.md"],
+            "exclude_patterns": [],
+            "supplemental": [{"title": "补充", "content": "新增验收口径。"}],
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    assert any(
+        "审计记录" in str(item) for item in updated.json()["understanding"]["known"]
+    )
 
 
 def test_rescan_records_new_snapshot_and_reanalyse(

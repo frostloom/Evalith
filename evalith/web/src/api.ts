@@ -71,6 +71,11 @@ export const api = {
     request<ProjectDetail>(`/api/projects/${id}/rescan`, { method: "POST" }),
   reanalyse: (id: string) =>
     request<ProjectDetail>(`/api/projects/${id}/reanalyse`, { method: "POST" }),
+  updateProjectModel: (id: string, modelConfigId: string | null) =>
+    request<ProjectDetail>(`/api/projects/${id}/model`, {
+      method: "PUT",
+      body: JSON.stringify({ model_config_id: modelConfigId }),
+    }),
   updateSources: (id: string, body: Record<string, unknown>) =>
     request<ProjectDetail>(`/api/projects/${id}/sources`, {
       method: "PUT",

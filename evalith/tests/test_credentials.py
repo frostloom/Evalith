@@ -95,6 +95,40 @@ def test_credentials_do_not_reach_logs_or_errors(
     assert "sk-env-secret-123456" not in str(detail)
 
 
+def test_upstream_error_echoing_configured_key_is_scrubbed(
+    client: TestClient, project_root: Path, recording_server, settings
+) -> None:
+    _RecordingHandler.fail = True
+    _RecordingHandler.fail_body = f"Incorrect API key provided: {SECRET_KEY}"
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "echo",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+            "api_key": SECRET_KEY,
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    assert detail["project"]["analysis_error"]
+    assert SECRET_KEY not in str(detail)
+    assert "[REDACTED]" in detail["project"]["analysis_error"]
+    connection = client.post(f"/api/model-configs/{model['id']}/test")
+    assert SECRET_KEY not in str(connection.json())
+    import sqlite3
+
+    connection_db = sqlite3.connect(settings.database_path)
+    try:
+        rows = connection_db.execute("SELECT content, payload FROM messages").fetchall()
+        errors = connection_db.execute(
+            "SELECT analysis_error FROM projects"
+        ).fetchall()
+    finally:
+        connection_db.close()
+    assert SECRET_KEY not in str(rows) + str(errors)
+
+
 def test_child_loggers_redact_credentials(client: TestClient, caplog) -> None:
     logger = logging.getLogger("evalith.model")
     with caplog.at_level(logging.DEBUG, logger="evalith.model"):

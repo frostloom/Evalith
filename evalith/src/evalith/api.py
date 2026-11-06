@@ -119,6 +119,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def rescan(project_id: str) -> dict[str, Any]:
         return service.rescan(project_id)
 
+    @app.put("/api/projects/{project_id}/model")
+    def assign_project_model(
+        project_id: str, payload: dict[str, Any] = Body(...)
+    ) -> dict[str, Any]:
+        model_config_id = payload.get("model_config_id") or None
+        return service.assign_model(project_id, model_config_id)
+
     @app.post("/api/projects/{project_id}/reanalyse")
     def reanalyse(project_id: str) -> dict[str, Any]:
         return service.reanalyse(project_id)

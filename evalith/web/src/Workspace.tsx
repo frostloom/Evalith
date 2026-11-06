@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import type {
   Message,
+  ModelConfig,
   ProjectDetail,
   SentScope,
   Understanding,
@@ -19,17 +20,22 @@ function bytes(value?: number) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function itemText(item: UnderstandingItem | string): string {
-  return typeof item === "string" ? item : item.text ?? "";
+function itemText(item: UnderstandingItem | string | null | undefined): string {
+  if (typeof item === "string") return item;
+  if (item && typeof item === "object" && typeof item.text === "string") {
+    return item.text;
+  }
+  return "";
 }
 
-function itemHint(item: UnderstandingItem | string): string | null {
-  if (typeof item === "string") return null;
+function itemHint(item: UnderstandingItem | string | null | undefined): string | null {
+  if (!item || typeof item !== "object") return null;
   return item.source ?? item.basis ?? item.why ?? null;
 }
 
 export function Workspace({
   detail,
+  models,
   busy,
   onDetail,
   onHome,
@@ -37,6 +43,7 @@ export function Workspace({
   onNotice,
 }: {
   detail: ProjectDetail;
+  models: ModelConfig[];
   busy: boolean;
   onDetail: (detail: ProjectDetail) => void;
   onHome: () => void;
@@ -47,6 +54,7 @@ export function Workspace({
   const [message, setMessage] = useState("");
   const [working, setWorking] = useState(false);
   const [editingSources, setEditingSources] = useState(false);
+  const [editingModel, setEditingModel] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const projectIdRef = useRef(project.id);
   useEffect(() => {
@@ -114,6 +122,9 @@ export function Workspace({
           </p>
         </div>
         <div className="workspace-actions">
+          <button className="btn btn-quiet" onClick={() => setEditingModel(true)}>
+            模型
+          </button>
           <button
             className="btn btn-quiet"
             onClick={() => void run(() => api.rescan(project.id), "资料范围已重新扫描。")}
@@ -215,7 +226,10 @@ export function Workspace({
               />
               <div className="composer-foot">
                 <span>
-                  模型：{understanding?.model ?? "未配置"} · 阶段 1 不生成题目
+                  模型：
+                  {models.find((item) => item.id === project.model_config_id)?.name ??
+                    "未配置"}
+                  {" · "}阶段 1 不生成题目
                 </span>
                 <button
                   className="btn btn-primary"
@@ -327,6 +341,20 @@ export function Workspace({
         </aside>
       </div>
 
+      {editingModel && (
+        <ModelPicker
+          project={project}
+          models={models}
+          onClose={() => setEditingModel(false)}
+          onSaved={(next) => {
+            onDetail(next);
+            setEditingModel(false);
+            onNotice("模型配置已保存，项目主会话保持不变。");
+          }}
+          onError={onError}
+        />
+      )}
+
       {editingSources && (
         <SourceEditor
           detail={detail}
@@ -429,6 +457,90 @@ function MessageRow({ message }: { message: Message }) {
     <div className={`message message-${message.role}`}>
       <span className="message-role">{message.role === "user" ? "你" : "助手"}</span>
       <p>{message.content}</p>
+    </div>
+  );
+}
+
+function ModelPicker({
+  project,
+  models,
+  onClose,
+  onSaved,
+  onError,
+}: {
+  project: ProjectDetail["project"];
+  models: ModelConfig[];
+  onClose: () => void;
+  onSaved: (detail: ProjectDetail) => void;
+  onError: (message: string) => void;
+}) {
+  const [modelId, setModelId] = useState(project.model_config_id ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await api.updateProjectModel(project.id, modelId || null);
+      onSaved(next);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "保存失败";
+      setError(message);
+      onError(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="模型配置">
+      <div className="modal">
+        <header>
+          <div>
+            <p className="kicker">模型配置</p>
+            <h2>为项目选择模型服务</h2>
+          </div>
+          <button className="link-button" onClick={onClose}>
+            关闭
+          </button>
+        </header>
+        <div className="modal-body">
+          {models.length === 0 ? (
+            <p className="inline-note">
+              还没有模型配置。请先在“模型与凭据”中添加；保存项目模型不会创建新的主会话。
+            </p>
+          ) : (
+            <label className="field">
+              <span>模型服务</span>
+              <select value={modelId} onChange={(event) => setModelId(event.target.value)}>
+                <option value="">未配置（保留当前会话，暂停分析）</option>
+                {models.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name} · {model.provider === "stub" ? "确定性替身" : model.model_name}
+                  </option>
+                ))}
+              </select>
+              <small>
+                保存后如项目此前因缺少模型而分析失败，会自动重新分析；主会话与已有纠正保留。
+              </small>
+            </label>
+          )}
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
+        <footer>
+          <button className="btn btn-primary" onClick={() => void save()} disabled={busy || models.length === 0}>
+            {busy ? "保存并分析中…" : "保存模型"}
+          </button>
+          <button className="btn btn-quiet" onClick={onClose}>
+            取消
+          </button>
+        </footer>
+      </div>
     </div>
   );
 }

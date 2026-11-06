@@ -238,7 +238,9 @@ def _open_relative(root_fd: int, parts: tuple[str, ...]) -> tuple[int, os.stat_r
         try:
             final = os.open(
                 parts[-1],
-                os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                os.O_RDONLY
+                | getattr(os, "O_NOFOLLOW", 0)
+                | getattr(os, "O_NONBLOCK", 0),
                 dir_fd=current,
             )
         except OSError as exc:
@@ -479,7 +481,9 @@ def scan_project(
                 try:
                     fd = os.open(
                         name,
-                        os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                        os.O_RDONLY
+                        | getattr(os, "O_NOFOLLOW", 0)
+                        | getattr(os, "O_NONBLOCK", 0),
                         dir_fd=dir_fd,
                     )
                 except OSError as exc:

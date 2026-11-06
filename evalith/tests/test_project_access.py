@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import time
 from pathlib import Path
 
 import pytest
@@ -214,6 +215,22 @@ def test_replaced_project_root_is_rejected_on_reanalyse(
     response = client.post(f"/api/projects/{project_id}/reanalyse")
     assert response.status_code == 409, response.text
     assert response.json()["code"] == "root_changed"
+
+
+def test_special_file_selection_is_rejected_without_blocking(
+    client: TestClient, project_root: Path
+) -> None:
+    if not hasattr(os, "mkfifo"):
+        pytest.skip("mkfifo is unavailable")
+    os.mkfifo(project_root / "pipe.fifo")
+    model = create_stub_model(client)
+    started = time.monotonic()
+    response = import_project(
+        client, project_root, model_config_id=model["id"], include=["pipe.fifo"]
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "not_regular_file"
+    assert time.monotonic() - started < 5
 
 
 def test_container_mode_fails_closed(project_root: Path) -> None:

@@ -123,6 +123,7 @@ def sha256(path: Path) -> str:
 class _RecordingHandler(BaseHTTPRequestHandler):
     requests: list[dict[str, Any]] = []
     fail = False
+    fail_body: str | None = None
     body_override: dict[str, Any] | None = None
 
     def do_POST(self) -> None:  # noqa: N802 - stdlib API
@@ -138,7 +139,7 @@ class _RecordingHandler(BaseHTTPRequestHandler):
         if type(self).fail:
             self.send_response(500)
             self.end_headers()
-            self.wfile.write(b"upstream failure")
+            self.wfile.write((type(self).fail_body or "upstream failure").encode())
             return
         body = type(self).body_override or {
             "summary": "这是一个发布审批流程的初步理解。",
@@ -168,6 +169,7 @@ class _RecordingHandler(BaseHTTPRequestHandler):
 def recording_server() -> Iterator[ThreadingHTTPServer]:
     _RecordingHandler.requests = []
     _RecordingHandler.fail = False
+    _RecordingHandler.fail_body = None
     _RecordingHandler.body_override = None
     server = ThreadingHTTPServer(("127.0.0.1", 0), _RecordingHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)

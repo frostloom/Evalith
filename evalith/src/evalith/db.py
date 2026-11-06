@@ -223,7 +223,7 @@ class Database:
                 (snapshot_id, analysis_error, utc_now(), project_id),
             )
 
-    def update_project_model(self, project_id: str, model_config_id: str) -> None:
+    def update_project_model(self, project_id: str, model_config_id: str | None) -> None:
         with self.connection() as connection:
             connection.execute(
                 "UPDATE projects SET model_config_id = ?, updated_at = ? WHERE id = ?",

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.parse
 from dataclasses import dataclass
 from typing import Any
 
@@ -89,6 +90,17 @@ def _extract_json(text: str) -> dict[str, Any]:
     return value
 
 
+def _scrub_known_secret(text: str, secret: str | None) -> str:
+    """Remove pattern-shaped and literally configured credentials from text."""
+    cleaned = redact_text(text)
+    if secret:
+        variants = {secret, secret.strip(), urllib.parse.quote(secret, safe="")}
+        for variant in variants:
+            if variant:
+                cleaned = cleaned.replace(variant, "[REDACTED]")
+    return cleaned
+
+
 def _boolean_field(value: dict[str, Any], name: str, *, default: bool = False) -> bool:
     """Accept only JSON booleans.
 
@@ -103,27 +115,64 @@ def _boolean_field(value: dict[str, Any], name: str, *, default: bool = False) -
     return actual
 
 
-def _normalise_understanding(value: dict[str, Any], *, model_name: str) -> dict[str, Any]:
-    def as_list(key: str) -> list[Any]:
-        raw = value.get(key, [])
-        if not isinstance(raw, list):
-            raise ModelError(f"模型返回的 {key} 不是数组")
-        return raw
+def _normalise_items(key: str, raw: Any) -> list[dict[str, str]]:
+    """Validate model-generated array elements before they reach the UI or DB.
 
+    Each item must have a non-empty string ``text``.  Allowed metadata fields
+    are strings; ``None`` is dropped.  Anything else is a visible model error,
+    not a value the workspace later dereferences.
+    """
+    if not isinstance(raw, list):
+        raise ModelError(f"模型返回的 {key} 不是数组")
+    allowed = {"known": "source", "inferred": "basis", "unknowns": "why"}
+    metadata = allowed[key]
+    normalised: list[dict[str, str]] = []
+    for index, item in enumerate(raw):
+        if isinstance(item, str):
+            text = item.strip()
+            if not text:
+                raise ModelError(f"模型返回的 {key}[{index}] 缺少 text")
+            normalised.append({"text": text})
+            continue
+        if not isinstance(item, dict):
+            raise ModelError(f"模型返回的 {key}[{index}] 不是对象或字符串")
+        text = item.get("text")
+        if not isinstance(text, str) or not text.strip():
+            raise ModelError(f"模型返回的 {key}[{index}] 缺少非空 text")
+        entry = {"text": text.strip()}
+        value = item.get(metadata)
+        if value is not None:
+            if not isinstance(value, str):
+                raise ModelError(f"模型返回的 {key}[{index}].{metadata} 必须是字符串")
+            entry[metadata] = value.strip()
+        normalised.append(entry)
+    return normalised
+
+
+def _normalise_understanding(value: dict[str, Any], *, model_name: str) -> dict[str, Any]:
     summary = value.get("summary")
     if not isinstance(summary, str) or not summary.strip():
         raise ModelError("模型返回的理解缺少 summary")
-    result = {
+    agent_or_flow = value.get("agent_or_flow", "")
+    if agent_or_flow is None:
+        agent_or_flow = ""
+    if not isinstance(agent_or_flow, str):
+        raise ModelError("模型返回的 agent_or_flow 必须是字符串")
+    sufficient_reason = value.get("sufficient_reason", "")
+    if sufficient_reason is None:
+        sufficient_reason = ""
+    if not isinstance(sufficient_reason, str):
+        raise ModelError("模型返回的 sufficient_reason 必须是字符串")
+    return {
         "summary": summary.strip(),
-        "agent_or_flow": str(value.get("agent_or_flow", "") or "").strip(),
-        "known": as_list("known"),
-        "inferred": as_list("inferred"),
-        "unknowns": as_list("unknowns"),
+        "agent_or_flow": agent_or_flow.strip(),
+        "known": _normalise_items("known", value.get("known", [])),
+        "inferred": _normalise_items("inferred", value.get("inferred", [])),
+        "unknowns": _normalise_items("unknowns", value.get("unknowns", [])),
         "sufficient": _boolean_field(value, "sufficient"),
-        "sufficient_reason": str(value.get("sufficient_reason", "") or "").strip(),
+        "sufficient_reason": sufficient_reason.strip(),
         "model": model_name,
     }
-    return result
 
 
 def _stub_understanding(
@@ -222,6 +271,11 @@ class ModelGateway:
             return "stub"
         return f"{self.config.provider}:{self.config.model_name}"
 
+    def _scrub(self, text: str) -> str:
+        return _scrub_known_secret(
+            text, self.config.api_key if self.config is not None else None
+        )
+
     def _request_chat(self, messages: list[dict[str, str]]) -> dict[str, Any]:
         assert self.config is not None
         if not self.config.base_url:
@@ -250,11 +304,9 @@ class ModelGateway:
                 trust_env=False,
             )
         except httpx.HTTPError as exc:
-            raise ModelError(
-                f"模型服务请求失败：{redact_text(str(exc))}"
-            ) from exc
+            raise ModelError(f"模型服务请求失败：{self._scrub(str(exc))}") from exc
         if response.status_code >= 400:
-            detail = redact_text(response.text[:300])
+            detail = self._scrub(response.text[:300])
             raise ModelError(f"模型服务返回 {response.status_code}：{detail}")
         try:
             payload = response.json()
@@ -273,6 +325,7 @@ class ModelGateway:
         sources: list[dict[str, Any]],
         supplemental: list[dict[str, str]],
         current: dict[str, Any] | None = None,
+        history: list[dict[str, str]] | None = None,
     ) -> dict[str, Any]:
         if self.config is None:
             raise ModelError("项目尚未配置模型，无法分析")
@@ -281,11 +334,18 @@ class ModelGateway:
                 _stub_understanding(project_name, context_text, sources, current),
                 model_name="stub",
             )
+        current_payload = (
+            json.dumps(current, ensure_ascii=False) if current is not None else "无"
+        )
+        history_payload = json.dumps((history or [])[-10:], ensure_ascii=False)
         prompt = (
             f"项目名称：{redact_text(project_name)}\n"
             f"资料范围：{len(sources)} 项，内容指纹已随资料给出。\n\n"
+            f"当前理解（JSON）：\n{current_payload}\n\n"
+            f"最近会话（JSON）：\n{history_payload}\n\n"
             f"{context_text}\n\n"
-            "请给出初步理解。"
+            "请重新分析项目。必须保留用户此前的纠正和已表达的评测方向；"
+            "不要把用户纠正改写成未经验证的推断。"
         )
         value = self._request_chat(
             [
@@ -363,7 +423,7 @@ class ModelGateway:
                 trust_env=False,
             )
         except httpx.HTTPError as exc:
-            return False, f"连接失败：{redact_text(str(exc))}"
+            return False, f"连接失败：{self._scrub(str(exc))}"
         if response.status_code == 200:
             return True, "连接成功"
         if response.status_code in (401, 403):
@@ -436,8 +496,8 @@ def _stub_discuss(current: dict[str, Any], user_message: str) -> dict[str, Any]:
         understanding["sufficient_reason"] = (
             "用户提供了纠正，但尚未确认关键未知项；继续保留未知项。"
         )
-    if sufficient:
-        understanding["sufficient"] = True
+    # Persist both true and false; a retraction must close an already-open gate.
+    understanding["sufficient"] = sufficient
     reply = (
         "已记录。这不会把未知业务规则自动标记为已确认。"
         if continue_requested

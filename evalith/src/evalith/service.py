@@ -447,13 +447,49 @@ class WorkspaceService:
             gateway = self.gateway_for(project["model_config_id"])
             current_row = self.db.get_understanding(project["id"])
             current = self.parse_understanding(current_row)
+            session = self.db.ensure_main_session(project["id"])
+            history = [
+                {"role": row["role"], "content": row["content"]}
+                for row in self.db.list_messages(project["id"], session["id"])
+                if row["role"] in ("user", "assistant")
+            ][-10:]
             result = gateway.analyze(
                 project_name=project["name"],
                 context_text=context_text,
                 sources=sources,
                 supplemental=loads(project["supplemental"], []),
                 current=current,
+                history=history,
             )
+            # A reanalysis must not silently drop corrections the user already
+            # made in this main session, even when the provider returns a fresh
+            # understanding based on the new source set.
+            merged = list(result.get("known", []))
+            merged_texts = {
+                str(item.get("text")) for item in merged if isinstance(item, dict)
+            }
+            if current:
+                for item in current.get("known", []):
+                    text = item.get("text") if isinstance(item, dict) else str(item)
+                    source = item.get("source") if isinstance(item, dict) else None
+                    if source == "会话" or str(text).startswith("用户纠正"):
+                        candidate = item if isinstance(item, dict) else {"text": str(item)}
+                        if candidate not in merged:
+                            merged.append(candidate)
+                            merged_texts.add(str(candidate.get("text", "")))
+            # A correction may exist only in the conversation (the model can
+            # update its summary without adding a known item). Preserve the
+            # user's own correction text across a source-set reanalysis.
+            for message in history:
+                text = str(message.get("content", "")).strip()
+                if (
+                    message.get("role") == "user"
+                    and text.startswith(("纠正：", "纠正:"))
+                    and text not in merged_texts
+                ):
+                    merged.append({"text": text, "source": "会话"})
+                    merged_texts.add(text)
+            result["known"] = merged
             result["sources"] = sources
             result["snapshot_id"] = project["snapshot_id"]
             result["user_continued"] = bool(current and current.get("user_continued"))
@@ -653,6 +689,40 @@ class WorkspaceService:
             raise WorkspaceError(
                 message, status_code=502, code="model_error"
             ) from exc
+        return self.get_project_detail(project_id)
+
+    def assign_model(self, project_id: str, model_config_id: str | None) -> dict[str, Any]:
+        project = self.db.get_project(project_id)
+        if project is None:
+            raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
+        if model_config_id:
+            if self.db.get_model_config(model_config_id) is None:
+                raise WorkspaceError("选择的模型配置不存在", status_code=422)
+        else:
+            model_config_id = None
+        self.db.update_project_model(project_id, model_config_id)
+        project = self.db.get_project(project_id)
+        assert project is not None
+        current = self.parse_understanding(self.db.get_understanding(project_id))
+        needs_analysis = (
+            current is None
+            or bool(current.get("error"))
+            or bool(project["analysis_error"])
+        )
+        if model_config_id and needs_analysis:
+            try:
+                scan = self._rescan(project)
+            except WorkspaceError as exc:
+                self._append_message(
+                    project,
+                    role="system",
+                    content=f"模型已保存，但资料读取失败：{exc}",
+                    payload={"kind": "error", "stage": "rescan", "message": str(exc)},
+                )
+                raise
+            project = self.db.get_project(project_id)
+            assert project is not None
+            self._analyse(project, scan=scan)
         return self.get_project_detail(project_id)
 
     def request_continue(self, project_id: str) -> dict[str, Any]:

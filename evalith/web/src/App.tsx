@@ -183,6 +183,7 @@ export function App() {
           <Workspace
             key={detail.project.id}
             detail={detail}
+            models={models}
             busy={busy}
             onDetail={handleDetail}
             onHome={goHome}
