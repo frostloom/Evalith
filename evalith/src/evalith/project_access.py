@@ -534,15 +534,10 @@ def _unescape_gitignore_pattern(pattern: str) -> str:
     while index < len(pattern):
         char = pattern[index]
         if char == "\\" and index + 1 < len(pattern):
-            literal = pattern[index + 1]
-            if literal == "-":
-                out.append("\\-")
-            elif literal == "]":
-                out.append("[]]")
-            elif literal in "*?[":
-                out.append(f"[{literal}]")
-            else:
-                out.append(literal)
+            # Keep the escape; the bracket-aware translator below decides
+            # whether it is a literal inside or outside a character class.
+            out.append("\\")
+            out.append(pattern[index + 1])
             index += 2
             continue
         out.append(char)
@@ -626,7 +621,7 @@ def _git_segment_regex(segment: str) -> re.Pattern[str]:
 
 
 def _git_segment_match(path_part: str, pattern_part: str) -> bool:
-    if "[:" in pattern_part or "\\-" in pattern_part:
+    if "\\" in pattern_part or "[:" in pattern_part:
         return bool(_git_segment_regex(pattern_part).match(path_part))
     return fnmatch.fnmatchcase(path_part, pattern_part)
 
