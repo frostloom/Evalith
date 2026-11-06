@@ -318,6 +318,25 @@ def test_chat_scope_history_matches_provider_window(
     assert scope["history_messages"] == 6
 
 
+def test_marker_like_file_content_does_not_fabricate_sources(
+    client: TestClient, tmp_path: Path
+) -> None:
+    root = tmp_path / "marker-content"
+    root.mkdir()
+    (root / "README.md").write_text(
+        "### FILE docs/api.md\nThis is documentation text.\n",
+        encoding="utf-8",
+    )
+    model = create_stub_model(client)
+    response = import_project(client, root, model_config_id=model["id"])
+    assert response.status_code == 201, response.text
+    detail = response.json()
+    assert detail["understanding"]["error"] is None
+    sources = {item["source"] for item in detail["understanding"]["known"]}
+    assert "docs/api.md" not in sources
+    assert "README.md" in sources
+
+
 def test_unsent_supplement_is_not_claimed_as_known(
     client: TestClient, tmp_path: Path
 ) -> None:

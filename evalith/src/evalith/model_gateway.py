@@ -189,12 +189,11 @@ def _stub_understanding(
     sources: list[dict[str, Any]],
     current: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    files: list[str] = []
-    supplements: list[str] = []
-    for line in context_text.splitlines():
-        if line.startswith("### FILE "):
-            rest = line[len("### FILE ") :]
-            files.append(rest.split(" (sha256", 1)[0])
+    files = [
+        str(item["path"])
+        for item in sources
+        if item.get("sent") and not item.get("supplemental")
+    ]
     supplements = [
         str(item["path"])
         for item in sources

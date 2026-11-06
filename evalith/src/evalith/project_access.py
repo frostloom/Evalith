@@ -535,7 +535,9 @@ def _unescape_gitignore_pattern(pattern: str) -> str:
         char = pattern[index]
         if char == "\\" and index + 1 < len(pattern):
             literal = pattern[index + 1]
-            if literal == "]":
+            if literal == "-":
+                out.append("\\-")
+            elif literal == "]":
                 out.append("[]]")
             elif literal in "*?[":
                 out.append(f"[{literal}]")
@@ -597,23 +599,34 @@ def _git_segment_regex(segment: str) -> re.Pattern[str]:
                         )
                         cursor = close + 2
                         continue
-                body.append(re.escape(segment[cursor]))
+                if segment[cursor] == "\\" and cursor + 1 < len(segment):
+                    body.append(re.escape(segment[cursor + 1]))
+                    cursor += 2
+                    continue
+                if segment[cursor] == "-":
+                    body.append("-")
+                else:
+                    body.append(re.escape(segment[cursor]))
                 cursor += 1
             if cursor < len(segment) and segment[cursor] == "]":
-                body_text = "".join(body).replace("\\-", "-")
+                body_text = "".join(body)
                 out.append("[" + ("^" if negated else "") + body_text + "]")
                 index = cursor + 1
                 continue
             out.append(re.escape(char))
             index += 1
         else:
+            if char == "\\" and index + 1 < len(segment):
+                out.append(re.escape(segment[index + 1]))
+                index += 2
+                continue
             out.append(re.escape(char))
             index += 1
     return re.compile("^" + "".join(out) + "$")
 
 
 def _git_segment_match(path_part: str, pattern_part: str) -> bool:
-    if "[:" in pattern_part:
+    if "[:" in pattern_part or "\\-" in pattern_part:
         return bool(_git_segment_regex(pattern_part).match(path_part))
     return fnmatch.fnmatchcase(path_part, pattern_part)
 

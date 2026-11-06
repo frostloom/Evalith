@@ -344,6 +344,21 @@ def test_oversized_gitignore_is_rejected(tmp_path: Path) -> None:
     assert excinfo.value.code == "gitignore_too_large"
 
 
+def test_gitignore_escaped_hyphen_in_mixed_class(tmp_path: Path) -> None:
+    root = tmp_path / "escaped-hyphen-class"
+    root.mkdir()
+    (root / ".gitignore").write_text(
+        "customer[[:digit:]a\\-z].csv\n", encoding="utf-8"
+    )
+    for name in ("customer-.csv", "customer5.csv", "customerb.csv"):
+        (root / name).write_text("synthetic\n", encoding="utf-8")
+    scan = scan_project(root, [], [])
+    paths = {item.path for item in scan.files}
+    assert "customer-.csv" not in paths
+    assert "customer5.csv" not in paths
+    assert "customerb.csv" in paths
+
+
 def test_gitignore_leading_literal_bracket(tmp_path: Path) -> None:
     root = tmp_path / "leading-literal-bracket"
     root.mkdir()
