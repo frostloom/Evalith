@@ -420,11 +420,15 @@ class ModelGateway:
         )
         continue_requested = _boolean_field(value, "continue_requested")
         if continue_requested and (
-            _has_negation(user_message) or _is_non_affirmative(user_message)
+            _has_negation(user_message)
+            or _is_non_affirmative(user_message)
+            or not _keyword_outside_quotes(user_message, "继续")
         ):
             continue_requested = False
         if understanding["sufficient"] and (
-            _negates_sufficiency(user_message) or _is_non_affirmative(user_message)
+            _negates_sufficiency(user_message)
+            or _is_non_affirmative(user_message)
+            or not _keyword_outside_quotes(user_message, "依据足够")
         ):
             understanding["sufficient"] = False
             understanding["sufficient_reason"] = (
@@ -516,13 +520,34 @@ def _is_non_affirmative(text: str) -> bool:
     return any(marker in text for marker in NON_AFFIRMATIVE_MARKERS)
 
 
+def _keyword_outside_quotes(text: str, keyword: str) -> bool:
+    spans: list[tuple[int, int]] = []
+    for left, right in (("“", "”"), ("\"", "\""), ("「", "」"), ("『", "』")):
+        start = 0
+        while True:
+            opening = text.find(left, start)
+            if opening < 0:
+                break
+            closing = text.find(right, opening + 1)
+            if closing < 0:
+                spans.append((opening, len(text)))
+                break
+            spans.append((opening, closing + 1))
+            start = closing + 1
+    position = 0
+    while True:
+        found = text.find(keyword, position)
+        if found < 0:
+            return False
+        if not any(start <= found and found + len(keyword) <= end for start, end in spans):
+            return True
+        position = found + 1
+
+
 def _is_affirmative_mention(text: str, keyword: str) -> bool:
     if keyword not in text or _is_non_affirmative(text):
         return False
-    for left, right in (("“", "”"), ("\"", "\""), ("「", "」")):
-        if f"{left}{keyword}{right}" in text:
-            return False
-    return True
+    return _keyword_outside_quotes(text, keyword)
 
 
 def _negates_sufficiency(text: str) -> bool:

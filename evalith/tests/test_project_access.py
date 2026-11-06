@@ -169,6 +169,18 @@ def test_selected_exclude_pattern_removes_subtree(
     assert files == {"src/agent.py"}
 
 
+def test_sensitive_directory_cannot_be_the_project_root(
+    client: TestClient, tmp_path: Path
+) -> None:
+    root = tmp_path / "secrets"
+    root.mkdir()
+    (root / "deploy-token.txt").write_text("unlabelled-token-value\n", encoding="utf-8")
+    model = create_stub_model(client)
+    response = import_project(client, root, model_config_id=model["id"])
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "sensitive_path_denied"
+
+
 def test_symlinked_project_root_is_rejected(
     client: TestClient, tmp_path: Path
 ) -> None:

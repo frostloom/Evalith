@@ -51,6 +51,8 @@ def project_root(tmp_path: Path) -> Path:
         'API_KEY = "sk-inline-secret-value"\n'
         "OPENAI_API_KEY=sk-prefixed-secret\n"
         "DB_PASSWORD=db-prefixed-secret\n"
+        "AWS_ACCESS_KEY_ID=AKIAEXAMPLESECRET\n"
+        "AWS_SECRET_ACCESS_KEY=synthetic-secret-value\n"
         "The agent approves releases.\n",
         encoding="utf-8",
     )

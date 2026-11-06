@@ -62,6 +62,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "sk-json-secret-value" not in request["body"]
     assert "sk-prefixed-secret" not in request["body"]
     assert "db-prefixed-secret" not in request["body"]
+    assert "AKIAEXAMPLESECRET" not in request["body"]
+    assert "synthetic-secret-value" not in request["body"]
     assert "eu-central" in request["body"]
     assert "RELEASE_POLICY" in request["body"]
     assert "[REDACTED]" in request["body"]
@@ -93,6 +95,19 @@ def test_credentials_do_not_reach_logs_or_errors(
     assert SECRET_KEY not in caplog.text
     assert SECRET_KEY not in str(detail)
     assert "sk-env-secret-123456" not in str(detail)
+
+
+def test_aws_credential_assignments_are_redacted() -> None:
+    from evalith.security import redact_text
+
+    text = (
+        'AWS_ACCESS_KEY_ID = "AKIAEXAMPLESECRET"\n'
+        'AWS_SECRET_ACCESS_KEY = "synthetic-secret-value"\n'
+    )
+    redacted = redact_text(text)
+    assert "AKIAEXAMPLESECRET" not in redacted
+    assert "synthetic-secret-value" not in redacted
+    assert redacted.count("[REDACTED]") == 2
 
 
 def test_upstream_error_echoing_configured_key_is_scrubbed(
@@ -362,6 +377,7 @@ def test_child_loggers_redact_credentials(client: TestClient, caplog) -> None:
     logger = logging.getLogger("evalith.model")
     with caplog.at_level(logging.DEBUG, logger="evalith.model"):
         logger.error("upstream said OPENAI_API_KEY=%s", SECRET_KEY)
+        logger.error("AWS_SECRET_ACCESS_KEY=%s", SECRET_KEY)
     assert SECRET_KEY not in caplog.text
     assert "[REDACTED]" in caplog.text
 

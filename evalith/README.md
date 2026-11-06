@@ -58,9 +58,11 @@ cross-project isolation, credential redaction in supplemental/chat/model
 requests/logs plus literal key scrubbing from upstream errors and outgoing
 content, full-content PEM redaction before excerpt truncation, literal-key scrubbing of
 successful responses, strict boolean/sufficiency/affirmative-intent handling,
-sourced known facts, malformed understanding arrays, FIFO rejection, oversized
-and read-error descriptor ownership, ancestor exclusions for explicit
-selections, preservation of failed analysis until a validated replacement,
+sourced known facts, malformed understanding arrays, quoted/descriptive
+continuation rejection, sensitive-root rejection, AWS credential redaction,
+FIFO rejection, oversized and read-error descriptor ownership, ancestor
+exclusions for explicit selections, preservation of failed analysis until a
+validated replacement,
 project model repair, reanalysis history/correction preservation, model-failure
 visibility, and the question-generation gate. The frontend tests cover project-switch draft reset
 and stale-response rejection.

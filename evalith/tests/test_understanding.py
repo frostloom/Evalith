@@ -346,6 +346,51 @@ def test_existing_project_rejects_unknown_model(
     assert response.status_code == 422
 
 
+def test_quoted_continuation_cannot_override_provider_intent(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.body_override = {
+        "summary": "quoted intent",
+        "agent_or_flow": "",
+        "known": [{"text": "policy", "source": "README.md"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "not enough",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "quoted",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    _RecordingHandler.body_override = {
+        "reply": "noted",
+        "continue_requested": True,
+        "understanding": {
+            "summary": "quoted intent",
+            "agent_or_flow": "",
+            "known": [{"text": "policy", "source": "README.md"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": True,
+            "sufficient_reason": "model says enough",
+        },
+    }
+    response = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "纠正：按钮文案应为“可以继续”。"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["readiness"]["generation_allowed"] is False
+    assert response.json()["understanding"]["sufficient"] is False
+    assert response.json()["understanding"]["user_continued"] is False
+
+
 def test_failed_understanding_is_not_cleared_by_reply_only_response(
     client: TestClient, project_root: Path, recording_server
 ) -> None:

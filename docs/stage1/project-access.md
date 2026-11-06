@@ -23,7 +23,7 @@
 无论选择方式如何：
 
 - 绝对路径、空路径、`..` 段一律拒绝（`path_outside_root`）；
-- 项目根目录本身不能是符号链接；每次重扫都核对根目录的 `(device, inode)`，身份变化时拒绝并提示重新导入；
+- 项目根目录本身不能是符号链接，也不能命中固定敏感名称规则（`secrets`、`credentials` 等）；每次重扫都核对根目录的 `(device, inode)`，身份变化时拒绝并提示重新导入；
 - 选定路径及其每个祖先必须不命中排除模式；显式选择被排除的目录/文件会记录为排除且不打开；
 - 选定路径必须存在，且只能通过根目录描述符逐级打开；
 - 默认排除版本库、依赖、构建产物和缓存（`.git`、`node_modules`、`.venv`、`.next`、`dist`、`build` 等）；
@@ -80,7 +80,7 @@
 路径规则之外，读入模型上下文的文本还会经过一次内容脱敏：
 
 - `api_key=...`、`token: ...`、`password=...`、`authorization: ...` 形式的赋值；
-- 带常见前缀的凭据名，例如 `OPENAI_API_KEY=...`、`DB_PASSWORD=...`、`STRIPE_SECRET=...`；
+- 带常见前缀的凭据名，例如 `OPENAI_API_KEY=...`、`DB_PASSWORD=...`、`STRIPE_SECRET=...`、`AWS_ACCESS_KEY_ID=...`、`AWS_SECRET_ACCESS_KEY=...`；
 - JSON/带引号的 `"api_key": "..."`、`"client_secret": "..."` 等键值；
 - `Bearer ...`；
 - PEM 私钥块。

@@ -188,6 +188,13 @@ def resolve_root(root_path: str, *, access_mode: str = "host") -> Path:
         raise AccessError("项目路径不是目录", code="root_not_directory")
     if candidate == Path.home():
         raise AccessError("不能将整个用户主目录作为项目范围", code="root_too_broad")
+    for part in candidate.parts:
+        denied = _always_excluded(part, part)
+        if denied:
+            raise AccessError(
+                f"项目根目录命中敏感凭据排除规则，不会读取：{part}",
+                code="sensitive_path_denied",
+            )
     return candidate
 
 
