@@ -84,6 +84,7 @@ def settings(tmp_path: Path) -> Settings:
         secret_key="test-secret-key",
         static_dir=tmp_path / "no-static",
         max_files=100,
+        allow_paid_models=True,
     )
 
 

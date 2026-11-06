@@ -36,6 +36,9 @@ class Settings:
     max_files: int = 400
     #: Model request timeout in seconds.
     model_timeout_seconds: float = 60.0
+    #: Paid OpenAI-compatible calls stay disabled unless an operator explicitly
+    #: opts in; no monetary budget control exists in phase 1.
+    allow_paid_models: bool = False
     #: Phase 1 supports only ``host``. Any other value fails closed; container
     #: mount translation is a later-phase deliverable, not a configured path.
     access_mode: str = "host"
@@ -71,6 +74,10 @@ def settings_from_env() -> Settings:
         max_file_bytes=int(os.environ.get("EVALITH_MAX_FILE_BYTES", "512000")),
         max_files=int(os.environ.get("EVALITH_MAX_FILES", "400")),
         model_timeout_seconds=float(os.environ.get("EVALITH_MODEL_TIMEOUT", "60")),
+        allow_paid_models=os.environ.get(
+            "EVALITH_ALLOW_PAID_MODELS", ""
+        ).strip().lower()
+        in ("1", "true", "yes"),
         access_mode=os.environ.get("EVALITH_ACCESS_MODE", "host"),
         allowed_hosts=tuple(
             item.strip().lower()

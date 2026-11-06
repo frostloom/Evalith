@@ -1073,6 +1073,23 @@ def test_reanalysis_retires_facts_from_changed_files(
     assert "approval optional" not in echoed_texts
 
 
+def test_correction_preserves_colons_in_body(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    response = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "纠正：入口是 http://localhost:9000"},
+    )
+    assert response.status_code == 200, response.text
+    texts = {
+        item["text"] for item in response.json()["understanding"]["known"]
+    }
+    assert "用户纠正：入口是 http://localhost:9000" in texts
+    assert response.json()["understanding"]["summary"] == "入口是 http://localhost:9000"
+
+
 def test_correction_survives_long_conversation_reanalysis(
     client: TestClient, project_root: Path, recording_server
 ) -> None:
@@ -1285,19 +1302,27 @@ def test_chat_hides_newly_ignored_file(
     ).json()
     detail = import_project(client, root, model_config_id=model["id"]).json()
     (root / ".gitignore").write_text("policy.md\n", encoding="utf-8")
+    clean = {
+        "summary": "readme only",
+        "agent_or_flow": "",
+        "known": [],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
     _RecordingHandler.body_override = {
         "reply": "ok",
         "continue_requested": False,
-        "understanding": {
-            "summary": "readme only",
-            "agent_or_flow": "",
-            "known": [],
-            "inferred": [],
-            "unknowns": [],
-            "sufficient": False,
-            "sufficient_reason": "pending",
-        },
+        "understanding": clean,
     }
+    _RecordingHandler.fail = True
+    failed = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "补充"},
+    )
+    assert failed.status_code == 502, failed.text
+    _RecordingHandler.fail = False
     response = client.post(
         f"/api/projects/{detail['project']['id']}/messages",
         json={"content": "补充"},
@@ -1305,6 +1330,7 @@ def test_chat_hides_newly_ignored_file(
     assert response.status_code == 200, response.text
     body = _RecordingHandler.requests[-1]["body"]
     assert "policy secret" not in body
+    assert response.json()["understanding"]["sufficient"] is False
 
 
 def test_chat_retires_facts_from_changed_file(

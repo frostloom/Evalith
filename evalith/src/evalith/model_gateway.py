@@ -763,6 +763,13 @@ def _negates_sufficiency(text: str) -> bool:
     return "足够" in text and _has_negation(text)
 
 
+def correction_body(text: str) -> str:
+    for prefix in ("纠正：", "纠正:"):
+        if text.startswith(prefix):
+            return text[len(prefix) :].strip()
+    return ""
+
+
 def _stub_discuss(current: dict[str, Any], user_message: str) -> dict[str, Any]:
     text = user_message.strip()
     understanding = json.loads(json.dumps(current, ensure_ascii=False))
@@ -777,7 +784,7 @@ def _stub_discuss(current: dict[str, Any], user_message: str) -> dict[str, Any]:
             "用户明确表示依据仍不足；未知项保留，推进门保持关闭。"
         )
     if text.startswith("纠正：") or text.startswith("纠正:"):
-        corrected = text.split("：", 1)[-1].split(":", 1)[-1].strip()
+        corrected = correction_body(text)
         understanding["summary"] = corrected or understanding.get("summary", "")
         understanding["known"] = list(understanding.get("known") or []) + [
             {"text": f"用户纠正：{corrected}", "source": "会话"}

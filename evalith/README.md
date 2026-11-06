@@ -34,6 +34,10 @@ Open <http://127.0.0.1:8090>. Imports bind the validated root `(device, inode)` 
 scanning honors the root `.gitignore` (explicit selections may override it with a
 recorded reason; credential denylist rules never can).
 
+Paid OpenAI-compatible providers are disabled by default for phase 1 because
+no monetary budget control exists; set `EVALITH_ALLOW_PAID_MODELS=1` only when
+an operator has supplied the required authorization and budget boundary.
+
 The service refuses to bind a non-loopback
 address unless `EVALITH_ALLOW_REMOTE=1` is set: it can read local project paths
 and has no user authentication. It also rejects non-loopback `Host`/`Origin`

@@ -98,6 +98,12 @@ def test_credentials_do_not_reach_logs_or_errors(
     assert "sk-env-secret-123456" not in str(detail)
 
 
+def test_paid_models_are_disabled_by_default(tmp_path: Path) -> None:
+    from evalith.config import Settings
+
+    assert Settings(data_dir=tmp_path).allow_paid_models is False
+
+
 def test_aws_credential_assignments_are_redacted() -> None:
     from evalith.security import redact_text
 

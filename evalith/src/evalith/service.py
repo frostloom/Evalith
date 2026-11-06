@@ -10,7 +10,7 @@ from typing import Any
 
 from .config import Settings
 from .db import Database, loads, utc_now
-from .model_gateway import ModelConfig, ModelError, ModelGateway
+from .model_gateway import ModelConfig, ModelError, ModelGateway, correction_body
 from .project_access import (
     AccessError,
     ScanResult,
@@ -151,6 +151,12 @@ class WorkspaceService:
             raise WorkspaceError("模型配置名称不能为空")
         if provider not in ("stub", "openai_compatible"):
             raise WorkspaceError("不支持的模型提供方")
+        if provider != "stub" and not self.settings.allow_paid_models:
+            raise WorkspaceError(
+                "付费模型默认禁用；请由维护者显式启用预算控制后再使用",
+                status_code=422,
+                code="paid_models_disabled",
+            )
         if provider != "stub" and not base_url:
             raise WorkspaceError("非替身模型必须填写 OpenAI 兼容服务地址")
         if not model_name:
@@ -925,7 +931,7 @@ class WorkspaceService:
             if current is None:
                 raise ModelError("项目尚未完成初步分析，无法继续会话")
             if text.startswith(("纠正：", "纠正:")):
-                corrected = text.split("：", 1)[-1].split(":", 1)[-1].strip()
+                corrected = correction_body(text)
                 correction = {
                     "text": f"用户纠正：{corrected}",
                     "source": "会话",
@@ -1042,7 +1048,7 @@ class WorkspaceService:
                 and current.get("sufficient")
                 and not current.get("error")
             ):
-                invalidated = dict(current)
+                invalidated = dict(model_current)
                 invalidated["sufficient"] = False
                 invalidated["sufficient_reason"] = (
                     "资料快照已变化，需重新确认依据；未知项保留，推进门保持关闭。"
