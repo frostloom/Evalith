@@ -61,6 +61,10 @@ def project_root(tmp_path: Path) -> Path:
         '{"api_key": "sk-json-secret-value", "region": "eu-central"}\n',
         encoding="utf-8",
     )
+    (root / "config" / "database.py").write_text(
+        'DATABASE_URL = "postgresql://alice:synthetic-password@db/app"\n',
+        encoding="utf-8",
+    )
     (root / "binary.dat").write_bytes(b"\x00\x01secret-binary\x02")
     (root / ".git" / "config").write_text("url = https://example.invalid\n", encoding="utf-8")
 

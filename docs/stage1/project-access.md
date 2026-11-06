@@ -83,6 +83,7 @@
 - 带常见前缀的凭据名，例如 `OPENAI_API_KEY=...`、`DB_PASSWORD=...`、`STRIPE_SECRET=...`、`AWS_ACCESS_KEY_ID=...`、`AWS_SECRET_ACCESS_KEY=...`；
 - JSON/带引号的 `"api_key": "..."`、`"client_secret": "..."` 等键值；
 - `Bearer ...`；
+- 带凭据的连接字符串，例如 `postgresql://alice:password@db/app`、`redis://:password@cache:6379`；
 - PEM 私钥块。
 
 文件内容先对**完整解码文本**脱敏，再截断为 6,000 字符摘录；因此跨过截断边界的 PEM 块不会只留下头部和密钥字节。补充资料和聊天消息在保存前先脱敏，模型的最终请求体在发送前再脱敏一次（包括按配置的 API key 字面替换）；会话历史从已脱敏的存储读取。因此 `api_key=secret` 无论来自文件、补充资料还是用户消息，都不会进入模型上下文或普通消息记录。

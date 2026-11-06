@@ -64,6 +64,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "db-prefixed-secret" not in request["body"]
     assert "AKIAEXAMPLESECRET" not in request["body"]
     assert "synthetic-secret-value" not in request["body"]
+    assert "synthetic-password" not in request["body"]
     assert "eu-central" in request["body"]
     assert "RELEASE_POLICY" in request["body"]
     assert "[REDACTED]" in request["body"]
@@ -108,6 +109,46 @@ def test_aws_credential_assignments_are_redacted() -> None:
     assert "AKIAEXAMPLESECRET" not in redacted
     assert "synthetic-secret-value" not in redacted
     assert redacted.count("[REDACTED]") == 2
+
+
+def test_connection_uri_credentials_are_redacted_in_inputs(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "uri-redaction",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(
+        client,
+        project_root,
+        model_config_id=model["id"],
+        supplemental=[
+            {
+                "title": "database",
+                "content": "DATABASE_URL=redis://:supplement-password@cache:6379/0",
+            }
+        ],
+    )
+    assert detail.status_code == 201, detail.text
+    assert "supplement-password" not in detail.text
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "understanding": detail.json()["understanding"],
+    }
+    chat = client.post(
+        f"/api/projects/{detail.json()['project']['id']}/messages",
+        json={"content": "DATABASE_URL=mysql://root:chat-password@db/app"},
+    )
+    assert chat.status_code == 200, chat.text
+    for secret in ("supplement-password", "chat-password", "synthetic-password"):
+        assert all(secret not in item["body"] for item in _RecordingHandler.requests)
+        assert secret not in str(chat.json())
 
 
 def test_upstream_error_echoing_configured_key_is_scrubbed(
@@ -364,6 +405,10 @@ def test_questions_and_quoted_instructions_do_not_open_gate(
         "继续前需要补充哪些资料？",
         "为什么认为依据足够？",
         "用户说“依据足够”，但我不确定。",
+        "纠正：按钮文案应为“可以继续”。",
+        "纠正：按钮文案是“点击继续”。",
+        "请解释“继续”的含义。",
+        "我拒绝继续。",
     ):
         response = client.post(
             f"/api/projects/{project_id}/messages", json={"content": text}
@@ -371,6 +416,7 @@ def test_questions_and_quoted_instructions_do_not_open_gate(
         assert response.status_code == 200, response.text
         assert response.json()["readiness"]["generation_allowed"] is False
         assert response.json()["understanding"]["sufficient"] is False
+        assert response.json()["understanding"]["user_continued"] is False
 
 
 def test_child_loggers_redact_credentials(client: TestClient, caplog) -> None:

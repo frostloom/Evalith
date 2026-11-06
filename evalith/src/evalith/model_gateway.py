@@ -425,11 +425,10 @@ class ModelGateway:
             or not _keyword_outside_quotes(user_message, "继续")
         ):
             continue_requested = False
-        if understanding["sufficient"] and (
-            _negates_sufficiency(user_message)
-            or _is_non_affirmative(user_message)
-            or not _keyword_outside_quotes(user_message, "依据足够")
-        ):
+        # Preserve a validated model sufficiency judgement during ordinary
+        # discussion. Only an explicit retraction/contradiction revokes it;
+        # requiring the user to repeat "依据足够" would override the model.
+        if understanding["sufficient"] and _negates_sufficiency(user_message):
             understanding["sufficient"] = False
             understanding["sufficient_reason"] = (
                 "用户明确表示依据仍不足；未知项保留，推进门保持关闭。"
@@ -485,6 +484,14 @@ NEGATION_MARKERS = (
     "不足以",
     "不觉得",
     "没有足够",
+    "拒绝",
+    "不同意",
+    "反对",
+    "不答应",
+    "不愿意",
+    "不可以",
+    "不行",
+    "不肯",
 )
 
 

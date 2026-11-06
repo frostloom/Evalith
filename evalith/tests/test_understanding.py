@@ -346,6 +346,41 @@ def test_existing_project_rejects_unknown_model(
     assert response.status_code == 422
 
 
+def test_valid_provider_sufficiency_survives_ordinary_discussion(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "model-sufficient",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    _RecordingHandler.body_override = {
+        "reply": "现在可以判断了。",
+        "continue_requested": False,
+        "understanding": {
+            "summary": "补充后的理解",
+            "agent_or_flow": "sync http",
+            "known": [{"text": "交互方式是同步 HTTP", "source": "会话"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": True,
+            "sufficient_reason": "关键事实已补齐",
+        },
+    }
+    response = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "补充：交互方式是同步 HTTP。"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["understanding"]["sufficient"] is True
+    assert response.json()["readiness"]["generation_allowed"] is True
+
+
 def test_quoted_continuation_cannot_override_provider_intent(
     client: TestClient, project_root: Path, recording_server
 ) -> None:
@@ -377,8 +412,8 @@ def test_quoted_continuation_cannot_override_provider_intent(
             "known": [{"text": "policy", "source": "README.md"}],
             "inferred": [],
             "unknowns": [],
-            "sufficient": True,
-            "sufficient_reason": "model says enough",
+            "sufficient": False,
+            "sufficient_reason": "still not enough",
         },
     }
     response = client.post(
