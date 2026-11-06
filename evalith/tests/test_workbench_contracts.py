@@ -22,6 +22,12 @@ def test_workbench_frontend_build_disables_next_telemetry() -> None:
     assert "NEXT_TELEMETRY_DISABLED=1 npm run build" in readme
 
 
+def test_build_removes_email_branding() -> None:
+    build = (REPO / "workbench/build.py").read_text(encoding="utf-8")
+    assert "removed Rhesis lockup" in build
+    assert "email branding still references rhesis.ai" in build
+
+
 def test_workbench_frontend_start_is_loopback_only() -> None:
     script = (REPO / "workbench/run_local.sh").read_text(encoding="utf-8")
     assert "NEXT_TELEMETRY_DISABLED=1" in script

@@ -107,6 +107,7 @@ def _known_for_sources(
     old_hashes: dict[str, str],
     new_hashes: dict[str, str],
     stale_hashes: dict[tuple[str, str], str],
+    supported_text: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Keep session facts and file facts whose evidence version still matches."""
     retained: list[dict[str, Any]] = []
@@ -122,7 +123,10 @@ def _known_for_sources(
         key = (str(item.get("text", "")), source)
         old_hash = stale_hashes.get(key)
         if old_hash is not None and old_hash != new_hashes[source]:
-            continue
+            text = str(item.get("text", "")).casefold()
+            excerpt = (supported_text or {}).get(source, "").casefold()
+            if not excerpt or text not in excerpt:
+                continue
         retained.append(item)
     return retained
 
@@ -633,6 +637,11 @@ class WorkspaceService:
                 current.get("sources", []) if current else [], history
             )
             new_hashes = _source_hashes(sources)
+            supported_text = {
+                item.path: item.excerpt
+                for item in scan.files
+                if item.excerpt
+            }
             stale_hashes: dict[tuple[str, str], str] = {}
 
             def record_known(items, scope) -> None:
@@ -670,6 +679,7 @@ class WorkspaceService:
                     old_hashes,
                     new_hashes,
                     stale_hashes,
+                    supported_text,
                 )
                 provider_current["agent_or_flow"] = ""
                 provider_current["inferred"] = []
@@ -707,6 +717,7 @@ class WorkspaceService:
                 old_hashes,
                 new_hashes,
                 stale_hashes,
+                supported_text,
             )
             merged_texts = {
                 str(item.get("text")) for item in merged if isinstance(item, dict)
@@ -1003,6 +1014,11 @@ class WorkspaceService:
                 current.get("sources", []), history
             )
             new_hashes = _source_hashes(sources)
+            supported_text = {
+                item.path: item.excerpt
+                for item in scan.files
+                if item.excerpt
+            }
             stale_hashes: dict[tuple[str, str], str] = {}
 
             def record_known(items, scope) -> None:
@@ -1045,6 +1061,7 @@ class WorkspaceService:
                     old_hashes,
                     new_hashes,
                     stale_hashes,
+                    supported_text,
                 )
                 model_current["summary"] = ""
                 model_current["agent_or_flow"] = ""
@@ -1113,6 +1130,7 @@ class WorkspaceService:
                 old_hashes,
                 new_hashes,
                 stale_hashes,
+                supported_text,
             )
             for item in current.get("known", []):
                 if (

@@ -632,6 +632,7 @@ def patch_legal() -> list[str]:
         OUT
         / "apps/backend/src/rhesis/backend/notifications/email/templates/_imprint.html.jinja2"
     )
+    changed: list[str] = []
     if imprint.exists():
         write(
             imprint,
@@ -652,8 +653,52 @@ def patch_legal() -> list[str]:
 </table>
 """,
         )
-        return ["email imprint: replaced Rhesis GmbH legal details with internal-build notice"]
-    return []
+        changed.append("email imprint: replaced Rhesis GmbH legal details with internal-build notice")
+
+    email_dir = OUT / "apps/backend/src/rhesis/backend/notifications/email"
+    base_template = email_dir / "templates" / "_base.html.jinja2"
+    if base_template.exists():
+        lockup = """                            <a href="https://rhesis.ai" style="text-decoration: none;">
+                                <img src="{{ brand.logo_url }}" alt="Rhesis AI"
+                                     width="{{ brand.layout.logo_width }}" height="{{ brand.layout.logo_height }}"
+                                     style="display: block; width: {{ brand.layout.logo_width }}px; height: auto; border: 0;">
+                            </a>
+"""
+        if lockup in base_template.read_text(encoding="utf-8"):
+            replace_once(base_template, lockup, "")
+            changed.append("email base template: removed Rhesis lockup and link")
+
+    brand = email_dir / "brand.py"
+    if brand.exists():
+        if replace_optional(
+            brand,
+            'return f"{self.asset_base_url}/email/logo-lockup-v1.png"',
+            'return ""',
+        ):
+            changed.append("email brand: removed Rhesis lockup asset URL")
+
+    settings = OUT / "apps/backend/src/rhesis/backend/app/config/settings.py"
+    if settings.exists():
+        if replace_optional(
+            settings,
+            'asset_base_url: str = Field(default="https://rhesis.ai", alias="EMAIL_ASSET_BASE_URL")',
+            'asset_base_url: str = Field(default="http://127.0.0.1:8080", alias="EMAIL_ASSET_BASE_URL")',
+        ):
+            changed.append("email settings: local asset base")
+
+    email_service = email_dir / "service.py"
+    if email_service.exists():
+        text = email_service.read_text(encoding="utf-8")
+        text = text.replace('"Nicolai from Rhesis AI" <hello@rhesis.ai>', '"Evalith" <noreply@localhost>')
+        text = text.replace("hello@rhesis.ai", "noreply@localhost")
+        email_service.write_text(text, encoding="utf-8")
+        changed.append("email service: removed Rhesis sender identity")
+
+    welcome = email_dir / "templates" / "welcome.html.jinja2"
+    if welcome.exists():
+        replace_optional(welcome, "https://docs.rhesis.ai", "https://github.com/frostloom/Evalith/tree/main/docs")
+        changed.append("email welcome: Evalith documentation link")
+    return changed
 
 
 def verify_tree() -> None:
@@ -679,6 +724,12 @@ def verify_tree() -> None:
         for family in ("Sora", "Sometype Mono", "Geist", "Geist Mono"):
             if f"font-family: '{family}'" in css or f'font-family: "{family}"' in css:
                 problems.append(f"fonts.css still registers unlicensed family: {family}")
+    email_dir = OUT / "apps/backend/src/rhesis/backend/notifications/email"
+    for path in email_dir.rglob("*"):
+        if path.suffix not in (".py", ".jinja2"):
+            continue
+        if "rhesis.ai" in path.read_text(encoding="utf-8", errors="ignore"):
+            problems.append(f"email branding still references rhesis.ai: {path.name}")
     if problems:
         raise SystemExit("EE-free verification failed:\n- " + "\n- ".join(problems))
 

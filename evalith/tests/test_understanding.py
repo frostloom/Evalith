@@ -1019,6 +1019,47 @@ def test_supplemental_update_is_in_scope(client: TestClient, project_root: Path)
     assert "supplement:评审补充" in {item["path"] for item in scope["sources"]}
 
 
+def test_reanalysis_keeps_fresh_fact_supported_by_updated_file(
+    client: TestClient, tmp_path: Path, recording_server
+) -> None:
+    root = tmp_path / "fresh-fact"
+    root.mkdir()
+    (root / "README.md").write_text(
+        "This project is an approval agent.\n", encoding="utf-8"
+    )
+    _RecordingHandler.body_override = {
+        "summary": "approval agent",
+        "agent_or_flow": "",
+        "known": [
+            {"text": "This project is an approval agent", "source": "README.md"}
+        ],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "fresh-fact",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, root, model_config_id=model["id"]).json()
+    (root / "README.md").write_text(
+        "This project is an approval agent.\nIt also keeps an audit log.\n",
+        encoding="utf-8",
+    )
+    reanalysed = client.post(f"/api/projects/{detail['project']['id']}/reanalyse")
+    assert reanalysed.status_code == 200, reanalysed.text
+    texts = {
+        item["text"] for item in reanalysed.json()["understanding"]["known"]
+    }
+    assert "This project is an approval agent" in texts
+
+
 def test_reanalysis_retires_facts_from_changed_files(
     client: TestClient, tmp_path: Path, recording_server
 ) -> None:
