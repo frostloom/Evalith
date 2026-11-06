@@ -332,6 +332,7 @@ def test_existing_project_can_acquire_a_model_without_new_session(
     assert refreshed["session"]["id"] == session_id
     assert refreshed["understanding"]["model"] == "stub"
     assert refreshed["understanding"]["known"]
+    assert "项目理解失败" not in refreshed["understanding"]["summary"]
 
 
 def test_existing_project_rejects_unknown_model(

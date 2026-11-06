@@ -447,6 +447,9 @@ class WorkspaceService:
             gateway = self.gateway_for(project["model_config_id"])
             current_row = self.db.get_understanding(project["id"])
             current = self.parse_understanding(current_row)
+            usable_current = (
+                None if current is not None and current.get("error") else current
+            )
             session = self.db.ensure_main_session(project["id"])
             history = [
                 {"role": row["role"], "content": row["content"]}
@@ -458,7 +461,7 @@ class WorkspaceService:
                 context_text=context_text,
                 sources=sources,
                 supplemental=loads(project["supplemental"], []),
-                current=current,
+                current=usable_current,
                 history=history,
             )
             # A reanalysis must not silently drop corrections the user already
@@ -468,8 +471,8 @@ class WorkspaceService:
             merged_texts = {
                 str(item.get("text")) for item in merged if isinstance(item, dict)
             }
-            if current:
-                for item in current.get("known", []):
+            if usable_current:
+                for item in usable_current.get("known", []):
                     text = item.get("text") if isinstance(item, dict) else str(item)
                     source = item.get("source") if isinstance(item, dict) else None
                     if source == "会话" or str(text).startswith("用户纠正"):
