@@ -443,13 +443,49 @@ def test_provider_refusal_does_not_open_gate(
             "sufficient_reason": "still unknown",
         },
     }
+    for text in ("我拒绝继续。", "机器人会继续处理请求。"):
+        response = client.post(
+            f"/api/projects/{detail['project']['id']}/messages",
+            json={"content": text},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["readiness"]["generation_allowed"] is False
+        assert response.json()["understanding"]["user_continued"] is False
+
+
+def test_descriptive_sufficiency_cannot_override_provider(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "descriptive-sufficiency",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "understanding": {
+            "summary": "descriptive",
+            "agent_or_flow": "",
+            "known": [{"text": "policy", "source": "README.md"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": True,
+            "sufficient_reason": "model says enough",
+        },
+    }
     response = client.post(
         f"/api/projects/{detail['project']['id']}/messages",
-        json={"content": "我拒绝继续。"},
+        json={"content": "纠正：依据足够是一个状态名称。"},
     )
     assert response.status_code == 200, response.text
+    assert response.json()["understanding"]["sufficient"] is False
     assert response.json()["readiness"]["generation_allowed"] is False
-    assert response.json()["understanding"]["user_continued"] is False
 
 
 def test_quoted_continuation_cannot_override_provider_intent(

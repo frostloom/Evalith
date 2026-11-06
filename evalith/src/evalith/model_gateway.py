@@ -426,10 +426,16 @@ class ModelGateway:
         # Preserve a validated model sufficiency judgement during ordinary
         # discussion. Only an explicit retraction/contradiction revokes it;
         # requiring the user to repeat "依据足够" would override the model.
-        if understanding["sufficient"] and _negates_sufficiency(user_message):
+        if understanding["sufficient"] and (
+            _negates_sufficiency(user_message)
+            or (
+                "足够" in user_message
+                and _is_descriptive_statement(user_message)
+            )
+        ):
             understanding["sufficient"] = False
             understanding["sufficient_reason"] = (
-                "用户明确表示依据仍不足；未知项保留，推进门保持关闭。"
+                "用户明确表示依据仍不足或仅作描述；未知项保留，推进门保持关闭。"
             )
         return {
             "reply": reply.strip(),
@@ -533,7 +539,7 @@ def _is_non_affirmative(text: str) -> bool:
     return any(marker in text for marker in NON_AFFIRMATIVE_MARKERS)
 
 
-def _keyword_outside_quotes(text: str, keyword: str) -> bool:
+def _first_keyword_outside_quotes(text: str, keyword: str) -> int | None:
     spans: list[tuple[int, int]] = []
     for left, right in (("“", "”"), ("\"", "\""), ("「", "」"), ("『", "』")):
         start = 0
@@ -551,19 +557,35 @@ def _keyword_outside_quotes(text: str, keyword: str) -> bool:
     while True:
         found = text.find(keyword, position)
         if found < 0:
-            return False
+            return None
         if not any(start <= found and found + len(keyword) <= end for start, end in spans):
-            return True
+            return found
         position = found + 1
 
 
-def _is_affirmative_mention(text: str, keyword: str) -> bool:
-    if keyword not in text or _is_non_affirmative(text):
-        return False
-    return _keyword_outside_quotes(text, keyword)
+def _keyword_outside_quotes(text: str, keyword: str) -> bool:
+    return _first_keyword_outside_quotes(text, keyword) is not None
 
 
 CONTINUATION_PHRASES = ("继续", "进入下一步", "开始出题", "开始设计", "进入下一阶段")
+REQUEST_PREFIXES = (
+    "我",
+    "我会",
+    "我同意",
+    "我确认",
+    "请",
+    "可以",
+    "确认",
+    "同意",
+    "那就",
+    "我们",
+    "现在",
+    "好的",
+    "好",
+    "开始",
+    "进入",
+    "继续",
+)
 DESCRIPTIVE_MARKERS = (
     "按钮",
     "文案",
@@ -573,7 +595,22 @@ DESCRIPTIVE_MARKERS = (
     "描述",
     "示例",
     "引用",
+    "名称",
+    "定义",
+    "概念",
+    "术语",
+    "状态",
+    "含义",
+    "意思",
+    "代表",
+    "表示",
 )
+
+
+def _is_descriptive_statement(text: str) -> bool:
+    return text.startswith(("纠正：", "纠正:")) or any(
+        marker in text for marker in DESCRIPTIVE_MARKERS
+    )
 
 
 def _affirmative_continuation(text: str) -> bool:
@@ -583,11 +620,30 @@ def _affirmative_continuation(text: str) -> bool:
         return False
     if _has_negation(stripped) or _is_non_affirmative(stripped):
         return False
-    if stripped.startswith(("纠正：", "纠正:")):
+    if _is_descriptive_statement(stripped):
         return False
-    if any(marker in stripped for marker in DESCRIPTIVE_MARKERS):
+    for phrase in CONTINUATION_PHRASES:
+        index = _first_keyword_outside_quotes(stripped, phrase)
+        if index is None:
+            continue
+        prefix = stripped[:index].strip(" ，,。.！!；;：:")
+        suffix = stripped[index + len(phrase) :].strip(" ，,。.！!；;：:")
+        if not prefix and suffix in ("", "吧", "了", "好"):
+            return True
+        if prefix in REQUEST_PREFIXES:
+            return True
+        if prefix.startswith(("请", "可以", "确认", "同意", "那就", "我们", "现在", "好的", "我会", "我同意", "我确认")):
+            return True
+    return False
+
+
+def _affirmative_sufficiency(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped or _has_negation(stripped) or _is_non_affirmative(stripped):
         return False
-    return any(_keyword_outside_quotes(stripped, phrase) for phrase in CONTINUATION_PHRASES)
+    if _is_descriptive_statement(stripped):
+        return False
+    return _keyword_outside_quotes(stripped, "依据足够")
 
 
 def _negates_sufficiency(text: str) -> bool:
@@ -610,10 +666,9 @@ def _negates_sufficiency(text: str) -> bool:
 def _stub_discuss(current: dict[str, Any], user_message: str) -> dict[str, Any]:
     text = user_message.strip()
     understanding = json.loads(json.dumps(current, ensure_ascii=False))
-    negative = _has_negation(text)
     continue_requested = _affirmative_continuation(text)
     sufficient = bool(understanding.get("sufficient", False))
-    if _is_affirmative_mention(text, "依据足够") and not negative:
+    if _affirmative_sufficiency(text):
         sufficient = True
         understanding["sufficient_reason"] = "用户声明依据足够；未知项仍保留，等待后续阶段核对。"
     if _negates_sufficiency(text):
