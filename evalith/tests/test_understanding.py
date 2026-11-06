@@ -483,6 +483,54 @@ def test_sufficiency_withdrawal_survives_provider_failure(
     assert refreshed["readiness"]["generation_allowed"] is False
 
 
+def test_unchanged_rescan_preserves_sufficiency(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.body_override = {
+        "summary": "sufficient",
+        "agent_or_flow": "",
+        "known": [{"text": "policy", "source": "README.md"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": True,
+        "sufficient_reason": "enough",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "unchanged-rescan",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    rescanned = client.post(f"/api/projects/{detail['project']['id']}/rescan")
+    assert rescanned.status_code == 200, rescanned.text
+    assert rescanned.json()["understanding"]["sufficient"] is True
+    assert rescanned.json()["readiness"]["generation_allowed"] is True
+    assert rescanned.json()["snapshot"]["id"] == detail["snapshot"]["id"]
+
+
+def test_stub_changed_file_continuation_rebuilds_understanding(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    assert detail["understanding"]["unknowns"]
+    (project_root / "README.md").write_text("changed evidence\n", encoding="utf-8")
+    response = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "继续"},
+    )
+    assert response.status_code == 200, response.text
+    understanding = response.json()["understanding"]
+    assert understanding["summary"]
+    assert understanding["unknowns"]
+    assert understanding["known"]
+
+
 def test_rescan_invalidates_sufficiency_before_failure(
     client: TestClient, project_root: Path, recording_server
 ) -> None:
@@ -1071,6 +1119,16 @@ def test_correction_survives_long_conversation_reanalysis(
         )
         assert response.status_code == 200, response.text
 
+    _RecordingHandler.fail = True
+    failed_reanalysis = client.post(f"/api/projects/{project_id}/reanalyse")
+    assert failed_reanalysis.status_code == 200, failed_reanalysis.text
+    assert failed_reanalysis.json()["project"]["analysis_error"]
+    assert any(
+        "评测重点是审计记录" in item.get("text", "")
+        for item in failed_reanalysis.json()["understanding"]["known"]
+    )
+
+    _RecordingHandler.fail = False
     _RecordingHandler.body_override = clean
     reanalysed = client.post(f"/api/projects/{project_id}/reanalyse")
     assert reanalysed.status_code == 200, reanalysed.text

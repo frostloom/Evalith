@@ -576,6 +576,7 @@ class WorkspaceService:
         )
 
     def _analyse(self, project: Any, *, scan: ScanResult | None = None) -> None:
+        current = None
         try:
             if scan is None:
                 scan = self._rescan(project, store_new_snapshot=False)
@@ -632,10 +633,11 @@ class WorkspaceService:
                             scope_hashes[source],
                         )
 
-            if usable_current:
+            base_current = usable_current or current
+            if base_current:
                 record_known(
-                    usable_current.get("known", []),
-                    {"sources": usable_current.get("sources", [])},
+                    base_current.get("known", []),
+                    {"sources": base_current.get("sources", [])},
                 )
             for message in history:
                 record_known(message.get("known", []), message.get("sent_scope"))
@@ -644,11 +646,11 @@ class WorkspaceService:
                 history, new_scope, project["snapshot_id"]
             )
             scope["history_messages"] = len(model_history)
-            if usable_current is not None:
+            if base_current is not None:
                 retained = new_scope | {"会话", "snapshot"}
-                provider_current = dict(usable_current)
+                provider_current = dict(base_current)
                 provider_current["known"] = _known_for_sources(
-                    usable_current.get("known", []),
+                    base_current.get("known", []),
                     old_hashes,
                     new_hashes,
                     stale_hashes,
@@ -693,8 +695,9 @@ class WorkspaceService:
             merged_texts = {
                 str(item.get("text")) for item in merged if isinstance(item, dict)
             }
-            if usable_current:
-                for item in usable_current.get("known", []):
+            merge_current = usable_current or current
+            if merge_current:
+                for item in merge_current.get("known", []):
                     text = item.get("text") if isinstance(item, dict) else str(item)
                     source = item.get("source") if isinstance(item, dict) else None
                     if source in allowed_sources and (
@@ -741,12 +744,18 @@ class WorkspaceService:
             self.db.update_project_snapshot(project["id"], project["snapshot_id"], None)
         except (ModelError, AccessError, OSError) as exc:
             message = str(exc)
+            preserved = [
+                item
+                for item in (current.get("known", []) if current else [])
+                if isinstance(item, dict)
+                and str(item.get("source", "")) == "会话"
+            ]
             self._store_understanding(
                 project,
                 {
                     "summary": "项目理解失败。",
                     "agent_or_flow": "",
-                    "known": [],
+                    "known": preserved,
                     "inferred": [],
                     "unknowns": [],
                     "sources": [],
@@ -820,25 +829,27 @@ class WorkspaceService:
             raise WorkspaceError(str(exc), status_code=status, code=exc.code) from exc
         if store_new_snapshot:
             previous_snapshot = project["snapshot_id"]
+            existing = self.db.get_snapshot(previous_snapshot)
+            if existing is not None and existing["digest"] == scan.digest:
+                return scan
             snapshot_id = self._store_snapshot(project["id"], scan)
             self.db.update_project_snapshot(project["id"], snapshot_id, None)
             project = self.db.get_project(project["id"])
             assert project is not None
-            if snapshot_id != previous_snapshot:
-                current = self.parse_understanding(
-                    self.db.get_understanding(project["id"])
+            current = self.parse_understanding(
+                self.db.get_understanding(project["id"])
+            )
+            if (
+                current is not None
+                and current.get("sufficient")
+                and not current.get("error")
+            ):
+                invalidated = dict(current)
+                invalidated["sufficient"] = False
+                invalidated["sufficient_reason"] = (
+                    "资料快照已变化，需重新确认依据；未知项保留，推进门保持关闭。"
                 )
-                if (
-                    current is not None
-                    and current.get("sufficient")
-                    and not current.get("error")
-                ):
-                    invalidated = dict(current)
-                    invalidated["sufficient"] = False
-                    invalidated["sufficient_reason"] = (
-                        "资料快照已变化，需重新确认依据；未知项保留，推进门保持关闭。"
-                    )
-                    self._store_understanding(project, invalidated, error=None)
+                self._store_understanding(project, invalidated, error=None)
         return scan
 
     def post_message(self, project_id: str, content: str) -> dict[str, Any]:
@@ -925,6 +936,26 @@ class WorkspaceService:
                     self._store_understanding(
                         project, current, error=current.get("error")
                     )
+            stale_understanding = (
+                str(current.get("snapshot_id") or "") != str(project["snapshot_id"])
+            )
+            if (
+                (snapshot_changed or stale_understanding)
+                and gateway.config is not None
+                and gateway.config.provider == "stub"
+            ):
+                # The deterministic stub copies the current understanding; it
+                # cannot rebuild cleared fields from new context itself.
+                self._analyse(project, scan=scan)
+                project = self.db.get_project(project_id)
+                assert project is not None
+                current = self.parse_understanding(
+                    self.db.get_understanding(project_id)
+                )
+                if current is None:
+                    raise ModelError("项目理解在刷新后不可用")
+                snapshot_changed = False
+                stale_understanding = False
             history = []
             for row in self.db.list_messages(
                 project_id, self.db.ensure_main_session(project_id)["id"]
