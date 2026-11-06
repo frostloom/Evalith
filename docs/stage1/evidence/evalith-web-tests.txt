@@ -8,7 +8,7 @@ Result: exit 0
 > vitest run
 
 
- RUN  v5.1.0 /Users/a1/.dsh/state/superagent/work/open-source-base-stage1-08cb3653da88/evalith/web
+ RUN  v5.1.0 <worktree>/evalith/web
 
 
  Test Files  1 passed (1)
