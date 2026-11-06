@@ -413,6 +413,9 @@ def test_questions_and_quoted_instructions_do_not_open_gate(
         "纠正：继续按钮应位于右侧。",
         "纠正：依据足够是一个状态名称。",
         "机器人会继续处理请求。",
+        "请先等我确认再继续。",
+        "现在不应该继续。",
+        "等补充材料到齐后才算依据足够。",
     ):
         response = client.post(
             f"/api/projects/{project_id}/messages", json={"content": text}

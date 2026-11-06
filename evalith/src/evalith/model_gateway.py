@@ -428,6 +428,7 @@ class ModelGateway:
         # requiring the user to repeat "依据足够" would override the model.
         if understanding["sufficient"] and (
             _negates_sufficiency(user_message)
+            or _is_conditional_statement(user_message)
             or (
                 "足够" in user_message
                 and _is_descriptive_statement(user_message)
@@ -504,6 +505,10 @@ NEGATION_MARKERS = (
     "中止",
     "不许",
     "不准",
+    "不应该",
+    "不该",
+    "不应",
+    "不应当",
 )
 
 
@@ -607,6 +612,27 @@ DESCRIPTIVE_MARKERS = (
 )
 
 
+CONDITIONAL_MARKERS = (
+    "先",
+    "等",
+    "再",
+    "后",
+    "才",
+    "如果",
+    "假如",
+    "待",
+    "暂时",
+    "到时候",
+    "确认后",
+    "之前",
+    "以后",
+)
+
+
+def _is_conditional_statement(text: str) -> bool:
+    return any(marker in text for marker in CONDITIONAL_MARKERS)
+
+
 def _is_descriptive_statement(text: str) -> bool:
     return text.startswith(("纠正：", "纠正:")) or any(
         marker in text for marker in DESCRIPTIVE_MARKERS
@@ -620,7 +646,7 @@ def _affirmative_continuation(text: str) -> bool:
         return False
     if _has_negation(stripped) or _is_non_affirmative(stripped):
         return False
-    if _is_descriptive_statement(stripped):
+    if _is_descriptive_statement(stripped) or _is_conditional_statement(stripped):
         return False
     for phrase in CONTINUATION_PHRASES:
         index = _first_keyword_outside_quotes(stripped, phrase)
@@ -641,7 +667,7 @@ def _affirmative_sufficiency(text: str) -> bool:
     stripped = text.strip()
     if not stripped or _has_negation(stripped) or _is_non_affirmative(stripped):
         return False
-    if _is_descriptive_statement(stripped):
+    if _is_descriptive_statement(stripped) or _is_conditional_statement(stripped):
         return False
     return _keyword_outside_quotes(stripped, "依据足够")
 
