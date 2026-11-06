@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
@@ -254,9 +255,15 @@ def test_malformed_direction_cannot_smuggle_configured_key(
 
 
 def test_other_saved_credentials_are_redacted(
-    client: TestClient, project_root: Path
+    client: TestClient, tmp_path: Path, recording_server
 ) -> None:
-    other = "sk-other-config-secret"
+    other = "other/key+value"
+    encoded = "other%2Fkey%2Bvalue"
+    root = tmp_path / "cross-config-secret"
+    root.mkdir()
+    (root / "README.md").write_text(
+        "x" * 5_990 + other + "y" * 100, encoding="utf-8"
+    )
     client.post(
         "/api/model-configs",
         json={
@@ -267,23 +274,54 @@ def test_other_saved_credentials_are_redacted(
             "api_key": other,
         },
     )
-    selected = create_stub_model(client)
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "summary": "ok",
+        "agent_or_flow": "",
+        "known": [],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    selected = client.post(
+        "/api/model-configs",
+        json={
+            "name": "selected-config",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
     detail = import_project(
         client,
-        project_root,
+        root,
+        name=f"Project {other}",
         model_config_id=selected["id"],
-        supplemental=[{"title": "凭据", "content": f"please use {other} here"}],
+        supplemental=[{"title": "凭据", "content": f"please use {encoded} here"}],
     ).json()
-    assert other not in str(detail)
+    assert other not in json.dumps(detail["messages"], ensure_ascii=False)
+    assert encoded not in json.dumps(detail["messages"], ensure_ascii=False)
+    assert other not in json.dumps(
+        detail["understanding"], ensure_ascii=False
+    )
+    assert encoded not in _RecordingHandler.requests[-1]["body"]
     project_id = detail["project"]["id"]
     chat = client.post(
         f"/api/projects/{project_id}/messages",
-        json={"content": f"please use {other} here"},
+        json={"content": f"please use {encoded} here"},
     )
     assert chat.status_code == 200, chat.text
-    assert other not in chat.text
-    refreshed = client.get(f"/api/projects/{project_id}")
-    assert other not in refreshed.text
+    serialized = json.dumps(chat.json()["messages"], ensure_ascii=False)
+    assert other not in serialized
+    assert encoded not in serialized
+    assert other not in _RecordingHandler.requests[-1]["body"]
+    assert encoded not in _RecordingHandler.requests[-1]["body"]
+    refreshed = client.get(f"/api/projects/{project_id}").json()
+    serialized = json.dumps(refreshed["messages"], ensure_ascii=False)
+    assert other not in serialized
+    assert encoded not in serialized
 
 
 def test_signing_secret_is_redacted() -> None:

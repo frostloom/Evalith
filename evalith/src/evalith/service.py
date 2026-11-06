@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import threading
+import urllib.parse
 import uuid
 from pathlib import Path
 from typing import Any
@@ -244,18 +245,39 @@ class WorkspaceService:
         )
         return ModelGateway(config, timeout=self.settings.model_timeout_seconds)
 
-    def _scrub_saved_secrets(self, text: str) -> str:
-        secrets: list[str] = []
+    def _saved_secret_variants(self) -> list[str]:
+        variants: set[str] = set()
         for row in self.db.list_model_configs():
             try:
                 value = self.cipher.decrypt(row["api_key_encrypted"])
             except Exception:
                 continue
-            if value:
-                secrets.append(value)
-        for secret in sorted(set(secrets), key=len, reverse=True):
-            text = text.replace(secret, "[REDACTED]")
+            if not value:
+                continue
+            for variant in (
+                value,
+                value.strip(),
+                urllib.parse.quote(value, safe=""),
+            ):
+                if variant:
+                    variants.add(variant)
+        return sorted(variants, key=len, reverse=True)
+
+    def _scrub_saved_secrets(self, text: str) -> str:
+        for variant in self._saved_secret_variants():
+            text = text.replace(variant, "[REDACTED]")
         return text
+
+    def _combined_scrub(self, gateway: ModelGateway):
+        variants = self._saved_secret_variants()
+
+        def scrub(text: str) -> str:
+            text = gateway.scrub(text)
+            for variant in variants:
+                text = text.replace(variant, "[REDACTED]")
+            return text
+
+        return scrub
 
     def test_model_config(self, model_config_id: str) -> dict[str, Any]:
         gateway = self.gateway_for(model_config_id)
@@ -295,7 +317,7 @@ class WorkspaceService:
                 max_file_bytes=self.settings.max_file_bytes,
                 expected_dev=resolved.dev,
                 expected_ino=resolved.ino,
-                scrub=gateway.scrub,
+                scrub=self._combined_scrub(gateway),
             )
         except AccessError as exc:
             raise WorkspaceError(
@@ -729,7 +751,7 @@ class WorkspaceService:
                     scope["scope_changed"] = True
             attempted = gateway.config is not None
             result = gateway.analyze(
-                project_name=project["name"],
+                project_name=self._scrub_saved_secrets(project["name"]),
                 context_text=context_text,
                 sources=sources,
                 supplemental=loads(project["supplemental"], []),
@@ -898,7 +920,7 @@ class WorkspaceService:
                 max_file_bytes=self.settings.max_file_bytes,
                 expected_dev=project["root_dev"],
                 expected_ino=project["root_ino"],
-                scrub=gateway.scrub,
+                scrub=self._combined_scrub(gateway),
             )
         except AccessError as exc:
             status = 409 if exc.code == "root_changed" else 422
@@ -1139,7 +1161,7 @@ class WorkspaceService:
                 self._store_understanding(project, invalidated, error=None)
             attempted = gateway.config is not None
             result = gateway.discuss(
-                project_name=project["name"],
+                project_name=self._scrub_saved_secrets(project["name"]),
                 context_text=context_text,
                 current={
                     key: model_current[key]
@@ -1424,7 +1446,7 @@ class WorkspaceService:
                 max_file_bytes=self.settings.max_file_bytes,
                 expected_dev=project["root_dev"],
                 expected_ino=project["root_ino"],
-                scrub=gateway.scrub,
+                scrub=self._combined_scrub(gateway),
             )
         except AccessError as exc:
             raise WorkspaceError(str(exc), status_code=422, code=exc.code) from exc
