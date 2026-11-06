@@ -43,6 +43,36 @@ def _redact_value(value: Any) -> Any:
     return value
 
 
+def _history_for_scope(
+    history: list[dict[str, Any]], allowed_paths: set[str], snapshot_id: str
+) -> list[dict[str, str]]:
+    """Keep user instructions and assistant turns sent within this scope."""
+    scoped: list[dict[str, str]] = []
+    for message in history:
+        if message.get("role") == "user":
+            scoped.append(
+                {"role": "user", "content": str(message.get("content", ""))}
+            )
+            continue
+        if message.get("role") != "assistant":
+            continue
+        sent_scope = message.get("sent_scope") or {}
+        if sent_scope.get("scope_changed"):
+            continue
+        if snapshot_id and sent_scope.get("snapshot_id") != snapshot_id:
+            continue
+        source_paths = {
+            str(item.get("path"))
+            for item in sent_scope.get("sources", [])
+            if isinstance(item, dict) and item.get("path")
+        }
+        if source_paths and source_paths.issubset(allowed_paths):
+            scoped.append(
+                {"role": "assistant", "content": str(message.get("content", ""))}
+            )
+    return scoped
+
+
 class WorkspaceService:
     def __init__(self, db: Database, settings: Settings, cipher: CredentialCipher) -> None:
         self.db = db
@@ -496,6 +526,7 @@ class WorkspaceService:
             if scan is None:
                 scan = self._rescan(project, store_new_snapshot=False)
             sources, context_text, scope = self._context_for(project, scan)
+            scope["snapshot_id"] = project["snapshot_id"]
             gateway = self.gateway_for(project["model_config_id"])
             current_row = self.db.get_understanding(project["id"])
             current = self.parse_understanding(current_row)
@@ -503,11 +534,19 @@ class WorkspaceService:
                 None if current is not None and current.get("error") else current
             )
             session = self.db.ensure_main_session(project["id"])
-            history = [
-                {"role": row["role"], "content": row["content"]}
-                for row in self.db.list_messages(project["id"], session["id"])
-                if row["role"] in ("user", "assistant")
-            ][-10:]
+            history = []
+            for row in self.db.list_messages(project["id"], session["id"]):
+                if row["role"] not in ("user", "assistant"):
+                    continue
+                payload = loads(row["payload"], {}) or {}
+                history.append(
+                    {
+                        "role": row["role"],
+                        "content": row["content"],
+                        "sent_scope": payload.get("sent_scope"),
+                    }
+                )
+            history = history[-10:]
             current_scope = {
                 str(item.get("path"))
                 for item in (current.get("sources", []) if current else [])
@@ -517,8 +556,11 @@ class WorkspaceService:
                 str(item.get("path")) for item in sources if item.get("path")
             }
             provider_current = usable_current
-            model_history = history
-            if usable_current is not None and current_scope != new_scope:
+            model_history = _history_for_scope(
+                history, new_scope, project["snapshot_id"]
+            )
+            scope["history_messages"] = len(model_history)
+            if usable_current is not None:
                 retained = new_scope | {"会话", "snapshot"}
                 provider_current = dict(usable_current)
                 provider_current["known"] = [
@@ -535,14 +577,8 @@ class WorkspaceService:
                 provider_current["sufficient_reason"] = ""
                 provider_current["sources"] = sources
                 provider_current["snapshot_id"] = project["snapshot_id"]
-                # Only user instructions are safe historical context after a
-                # scope change; assistant summaries can contain excluded
-                # material without naming its file.
-                model_history = [
-                    message for message in history if message.get("role") == "user"
-                ]
-                scope["scope_changed"] = True
-                scope["history_messages"] = len(model_history)
+                if current_scope != new_scope:
+                    scope["scope_changed"] = True
             result = gateway.analyze(
                 project_name=project["name"],
                 context_text=context_text,
@@ -769,15 +805,32 @@ class WorkspaceService:
                 project = self.db.get_project(project["id"])
                 assert project is not None
             sources, context_text, scope = self._context_for(project, scan)
+            scope["snapshot_id"] = project["snapshot_id"]
             current_row = self.db.get_understanding(project_id)
             current = self.parse_understanding(current_row)
             if current is None:
                 raise ModelError("项目尚未完成初步分析，无法继续会话")
-            history = [
-                {"role": row["role"], "content": row["content"]}
-                for row in self.db.list_messages(project_id, self.db.ensure_main_session(project_id)["id"])
-                if row["role"] in ("user", "assistant")
-            ][-8:]
+            history = []
+            for row in self.db.list_messages(
+                project_id, self.db.ensure_main_session(project_id)["id"]
+            ):
+                if row["role"] not in ("user", "assistant"):
+                    continue
+                payload = loads(row["payload"], {}) or {}
+                history.append(
+                    {
+                        "role": row["role"],
+                        "content": row["content"],
+                        "sent_scope": payload.get("sent_scope"),
+                    }
+                )
+            allowed_paths = {
+                str(item.get("path")) for item in sources if item.get("path")
+            }
+            history = _history_for_scope(
+                history[-8:], allowed_paths, project["snapshot_id"]
+            )
+            scope["history_messages"] = len(history)
             result = gateway.discuss(
                 project_name=project["name"],
                 context_text=context_text,

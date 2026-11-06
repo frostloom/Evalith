@@ -984,6 +984,47 @@ def test_narrowed_reanalysis_does_not_send_removed_facts(
     assert "approval optional" not in body
     assert "RELEASE_POLICY" not in body
 
+    clean = {
+        "summary": "README only",
+        "agent_or_flow": "",
+        "known": [{"text": "readme present", "source": "README.md"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    _RecordingHandler.body_override = clean
+    again = client.post(f"/api/projects/{project_id}/reanalyse")
+    assert again.status_code == 200, again.text
+    assert "approval optional" not in _RecordingHandler.requests[-1]["body"]
+
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "understanding": clean,
+    }
+    chat = client.post(
+        f"/api/projects/{project_id}/messages", json={"content": "补充"}
+    )
+    assert chat.status_code == 200, chat.text
+    assert "approval optional" not in _RecordingHandler.requests[-1]["body"]
+
+    _RecordingHandler.fail = True
+    failed = client.post(f"/api/projects/{project_id}/reanalyse")
+    assert failed.status_code == 200, failed.text
+    assert failed.json()["project"]["analysis_error"]
+    _RecordingHandler.fail = False
+    _RecordingHandler.body_override = {
+        "reply": "recovered",
+        "continue_requested": False,
+        "understanding": clean,
+    }
+    recovered = client.post(
+        f"/api/projects/{project_id}/messages", json={"content": "补充"}
+    )
+    assert recovered.status_code == 200, recovered.text
+    assert "approval optional" not in _RecordingHandler.requests[-1]["body"]
+
 
 def test_chat_retires_facts_from_changed_file(
     client: TestClient, tmp_path: Path, recording_server
