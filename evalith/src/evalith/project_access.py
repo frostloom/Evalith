@@ -26,7 +26,7 @@ import os
 import stat
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, Callable
 
 from .security import redact_text
 
@@ -301,7 +301,13 @@ def _is_binary(data: bytes) -> bool:
     return non_text / len(sample) > 0.10
 
 
-def _record_from_fd(fd: int, relative: str, *, max_file_bytes: int) -> FileRecord:
+def _record_from_fd(
+    fd: int,
+    relative: str,
+    *,
+    max_file_bytes: int,
+    scrub: Callable[[str], str] | None = None,
+) -> FileRecord:
     stat_result = os.fstat(fd)
     if not stat.S_ISREG(stat_result.st_mode):
         raise AccessError(f"不是普通文件：{relative}", code="not_regular_file")
@@ -336,7 +342,10 @@ def _record_from_fd(fd: int, relative: str, *, max_file_bytes: int) -> FileRecor
         # whose closing marker lies beyond the excerpt boundary must still be
         # removed as a block; truncating first would leave its header and key
         # bytes behind.
-        redacted = redact_text(text)
+        # Literal-key scrubbing must see the complete text before truncation;
+        # otherwise a configured key crossing the excerpt boundary would
+        # survive as a prefix.
+        redacted = scrub(text) if scrub is not None else redact_text(text)
         redactions = _count_redactions(text, redacted)
         if len(redacted) > MAX_EXCERPT_CHARS:
             redacted = redacted[:MAX_EXCERPT_CHARS] + "\n…[truncated]"
@@ -361,6 +370,18 @@ def _count_redactions(before: str, after: str) -> int:
     return after.count(marker) if len(after) < len(before) else 0
 
 
+def _selection_exclusion(parts: tuple[str, ...], patterns: list[str]) -> str | None:
+    """Return the first matched pattern on the selected path or an ancestor."""
+    accumulated: list[str] = []
+    for part in parts:
+        accumulated.append(part)
+        relpath = "/".join(accumulated)
+        matched = _matches(part, relpath, patterns)
+        if matched:
+            return matched
+    return None
+
+
 def scan_project(
     root: Path,
     include_paths: list[str] | None,
@@ -370,6 +391,7 @@ def scan_project(
     max_file_bytes: int = 512_000,
     expected_dev: int | None = None,
     expected_ino: int | None = None,
+    scrub: Callable[[str], str] | None = None,
 ) -> ScanResult:
     """Scan an allowlisted project selection without writing anything.
 
@@ -386,7 +408,9 @@ def scan_project(
     result.root_dev = root_stat.st_dev
     result.root_ino = root_stat.st_ino
 
-    def add_file_from_fd(fd: int, relative: str, *, required: bool) -> None:
+    def add_file_from_fd(
+        fd: int, relative: str, *, required: bool, scrub_text: Callable[[str], str] | None
+    ) -> None:
         name = PurePosixPath(relative).name
         always = _always_excluded(name, relative)
         if always:
@@ -412,7 +436,14 @@ def scan_project(
             )
             return
         try:
-            result.files.append(_record_from_fd(fd, relative, max_file_bytes=max_file_bytes))
+            result.files.append(
+                _record_from_fd(
+                    fd,
+                    relative,
+                    max_file_bytes=max_file_bytes,
+                    scrub=scrub_text,
+                )
+            )
         except AccessError as exc:
             _safe_close(fd)
             if required:
@@ -495,7 +526,7 @@ def scan_project(
                         {"path": relative, "error": str(exc), "code": "read_error"}
                     )
                     continue
-                add_file_from_fd(fd, relative, required=False)
+                add_file_from_fd(fd, relative, required=False, scrub_text=scrub)
             else:
                 result.excluded.append(
                     {"path": relative, "reason": "not a regular file or directory"}
@@ -505,6 +536,12 @@ def scan_project(
         if includes:
             for relative in includes:
                 parts = _include_parts(relative)
+                matched = _selection_exclusion(parts, patterns)
+                if matched:
+                    result.excluded.append(
+                        {"path": relative, "reason": f"excluded: {matched}"}
+                    )
+                    continue
                 fd, entry_stat = _open_relative(root_fd, parts)
                 try:
                     if stat.S_ISDIR(entry_stat.st_mode):
@@ -514,7 +551,9 @@ def scan_project(
                         # the descriptor on success and on every error path.
                         owned_fd = fd
                         fd = -1
-                        add_file_from_fd(owned_fd, relative, required=True)
+                        add_file_from_fd(
+                            owned_fd, relative, required=True, scrub_text=scrub
+                        )
                     else:
                         raise AccessError(
                             f"选定的路径不是普通文件或目录：{relative}",

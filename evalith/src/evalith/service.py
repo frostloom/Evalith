@@ -155,6 +155,7 @@ class WorkspaceService:
                 exclude_patterns,
                 max_files=self.settings.max_files,
                 max_file_bytes=self.settings.max_file_bytes,
+                scrub=gateway.scrub,
             )
         except AccessError as exc:
             raise WorkspaceError(
@@ -587,6 +588,7 @@ class WorkspaceService:
                 code="root_identity_missing",
             )
         root = Path(project["root_path"])
+        gateway = self.gateway_for(project["model_config_id"])
         try:
             scan = scan_project(
                 root,
@@ -596,6 +598,7 @@ class WorkspaceService:
                 max_file_bytes=self.settings.max_file_bytes,
                 expected_dev=project["root_dev"],
                 expected_ino=project["root_ino"],
+                scrub=gateway.scrub,
             )
         except AccessError as exc:
             status = 409 if exc.code == "root_changed" else 422
@@ -666,6 +669,21 @@ class WorkspaceService:
                 history=history,
                 user_message=text,
             )
+            if current.get("error"):
+                replacement = result.get("understanding")
+                replacement_summary = (
+                    str(replacement.get("summary", ""))
+                    if isinstance(replacement, dict)
+                    else ""
+                )
+                if (
+                    not result.get("understanding_supplied")
+                    or not replacement_summary.strip()
+                    or replacement_summary.startswith("项目理解失败")
+                ):
+                    raise ModelError(
+                        "模型未返回可验证的替代理解；项目理解失败状态保留，请重新分析"
+                    )
             understanding = _redact_value(result["understanding"])
             understanding["model"] = result.get("model")
             understanding["sources"] = sources
@@ -675,6 +693,11 @@ class WorkspaceService:
                 current.get("user_continued") or result.get("continue_requested")
             )
             self._store_understanding(project, understanding, error=None)
+            # A validated replacement understanding resolves a previous
+            # provider failure; do not leave the project-level failure banner.
+            self.db.update_project_snapshot(
+                project["id"], project["snapshot_id"], None
+            )
             self._append_message(
                 project,
                 role="assistant",
@@ -849,6 +872,7 @@ class WorkspaceService:
                 max_file_bytes=self.settings.max_file_bytes,
                 expected_dev=project["root_dev"],
                 expected_ino=project["root_ino"],
+                scrub=gateway.scrub,
             )
         except AccessError as exc:
             raise WorkspaceError(str(exc), status_code=422, code=exc.code) from exc

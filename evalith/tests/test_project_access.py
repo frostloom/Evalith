@@ -33,7 +33,13 @@ def test_selected_scope_is_read_and_fingerprinted(
     detail = response.json()
     snapshot = detail["snapshot"]
     paths = {item["path"] for item in snapshot["files"]}
-    assert paths == {"README.md", "docs/RELEASE_POLICY.md", "src/agent.py", "notes.txt"}
+    assert paths == {
+        "README.md",
+        "docs/RELEASE_POLICY.md",
+        "docs/internal/plan.md",
+        "src/agent.py",
+        "notes.txt",
+    }
     assert snapshot["digest"] == detail["project"]["snapshot_digest"]
     for item in snapshot["files"]:
         assert item["sha256"] == sha256(project_root / item["path"])
@@ -250,6 +256,44 @@ def test_oversized_explicit_file_returns_structured_error(
     )
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "file_too_large"
+
+
+def test_explicit_nested_directory_respects_ancestor_exclusion(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    response = import_project(
+        client,
+        project_root,
+        model_config_id=model["id"],
+        include=["docs/internal"],
+        exclude=["docs/internal"],
+    )
+    assert response.status_code == 201, response.text
+    snapshot = response.json()["snapshot"]
+    assert not any(item["path"].startswith("docs/internal") for item in snapshot["files"])
+    assert any(
+        item["path"] == "docs/internal" for item in snapshot["excluded"]
+    )
+
+
+def test_explicit_nested_file_respects_ancestor_exclusion(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    response = import_project(
+        client,
+        project_root,
+        model_config_id=model["id"],
+        include=["docs/internal/plan.md"],
+        exclude=["docs/internal"],
+    )
+    assert response.status_code == 201, response.text
+    snapshot = response.json()["snapshot"]
+    assert not snapshot["files"]
+    assert any(
+        item["path"] == "docs/internal/plan.md" for item in snapshot["excluded"]
+    )
 
 
 def test_special_file_selection_is_rejected_without_blocking(

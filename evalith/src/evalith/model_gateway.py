@@ -280,6 +280,15 @@ class ModelGateway:
         """Remove pattern-shaped and literally configured credentials."""
         return self._scrub(text)
 
+    def _scrub_value(self, value: Any) -> Any:
+        if isinstance(value, str):
+            return self._scrub(value)
+        if isinstance(value, list):
+            return [self._scrub_value(item) for item in value]
+        if isinstance(value, dict):
+            return {key: self._scrub_value(item) for key, item in value.items()}
+        return value
+
     def _request_chat(self, messages: list[dict[str, str]]) -> dict[str, Any]:
         assert self.config is not None
         if not self.config.base_url:
@@ -310,7 +319,9 @@ class ModelGateway:
         except httpx.HTTPError as exc:
             raise ModelError(f"模型服务请求失败：{self._scrub(str(exc))}") from exc
         if response.status_code >= 400:
-            detail = self._scrub(response.text[:300])
+            # Scrub the complete body first; truncating first can leave a
+            # configured key's prefix in the persisted error.
+            detail = self._scrub(response.text)[:300]
             raise ModelError(f"模型服务返回 {response.status_code}：{detail}")
         try:
             payload = response.json()
@@ -319,7 +330,11 @@ class ModelGateway:
             raise ModelError("模型服务响应缺少 choices[0].message.content") from exc
         if not isinstance(content, str):
             raise ModelError("模型返回内容不是文本")
-        return _extract_json(content)
+        parsed = _extract_json(content)
+        # A successful provider response may echo a bare configured key in
+        # summary/reply/structured fields.  Scrub decoded strings recursively
+        # before returning them to the service for persistence.
+        return self._scrub_value(parsed)
 
     def analyze(
         self,
@@ -388,10 +403,13 @@ class ModelGateway:
         reply = value.get("reply")
         if not isinstance(reply, str) or not reply.strip():
             raise ModelError("模型回复缺少 reply")
-        understanding = value.get("understanding")
-        if not isinstance(understanding, dict):
-            understanding = current
-        understanding = _normalise_understanding(understanding, model_name=self.name)
+        raw_understanding = value.get("understanding")
+        understanding_supplied = isinstance(raw_understanding, dict)
+        understanding = (
+            _normalise_understanding(raw_understanding, model_name=self.name)
+            if understanding_supplied
+            else _normalise_understanding(current, model_name=self.name)
+        )
         continue_requested = _boolean_field(value, "continue_requested")
         if continue_requested and _has_negation(user_message):
             continue_requested = False
@@ -404,6 +422,7 @@ class ModelGateway:
             "reply": reply.strip(),
             "continue_requested": continue_requested,
             "understanding": understanding,
+            "understanding_supplied": understanding_supplied,
             "direction_update": str(value.get("direction_update", "") or "").strip(),
             "model": self.name,
         }
@@ -513,6 +532,7 @@ def _stub_discuss(current: dict[str, Any], user_message: str) -> dict[str, Any]:
         "reply": reply,
         "continue_requested": continue_requested,
         "understanding": understanding,
+        "understanding_supplied": True,
         "direction_update": "",
         "model": "stub",
     }

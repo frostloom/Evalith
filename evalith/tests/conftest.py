@@ -35,6 +35,11 @@ def project_root(tmp_path: Path) -> Path:
         "# Release policy\n\nA contributor may propose a release; only the release manager may publish.\n",
         encoding="utf-8",
     )
+    (root / "docs" / "internal").mkdir()
+    (root / "docs" / "internal" / "plan.md").write_text(
+        "# Internal plan\nDo not send this outside the approved scope.\n",
+        encoding="utf-8",
+    )
     (root / "src" / "agent.py").write_text(
         "def can_publish(actor_role: str) -> bool:\n"
         "    return actor_role == 'release_manager'\n",

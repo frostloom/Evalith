@@ -346,6 +346,57 @@ def test_existing_project_rejects_unknown_model(
     assert response.status_code == 422
 
 
+def test_failed_understanding_is_not_cleared_by_reply_only_response(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.fail = True
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "recover",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    assert detail["understanding"]["error"]
+
+    _RecordingHandler.fail = False
+    _RecordingHandler.body_override = {
+        "reply": "OK",
+        "continue_requested": False,
+    }
+    response = client.post(
+        f"/api/projects/{project_id}/messages", json={"content": "继续"}
+    )
+    assert response.status_code == 502, response.text
+    refreshed = client.get(f"/api/projects/{project_id}").json()
+    assert refreshed["understanding"]["error"]
+    assert client.post(f"/api/projects/{project_id}/continue").status_code == 409
+
+    _RecordingHandler.body_override = {
+        "reply": "recovered",
+        "continue_requested": False,
+        "understanding": {
+            "summary": "恢复后的项目理解",
+            "agent_or_flow": "",
+            "known": [{"text": "恢复的已知项", "source": "会话"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": False,
+            "sufficient_reason": "still unknown",
+        },
+    }
+    recovered = client.post(
+        f"/api/projects/{project_id}/messages", json={"content": "再试一次"}
+    )
+    assert recovered.status_code == 200, recovered.text
+    assert recovered.json()["understanding"]["error"] is None
+    assert recovered.json()["project"]["analysis_error"] is None
+
+
 def test_supplemental_update_keeps_chat_correction(
     client: TestClient, project_root: Path
 ) -> None:

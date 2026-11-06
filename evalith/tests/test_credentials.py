@@ -189,6 +189,109 @@ def test_literal_configured_key_is_scrubbed_from_content(
     assert SECRET_KEY not in str(rows) + str(project_row)
 
 
+def test_successful_response_echo_is_scrubbed(
+    client: TestClient,
+    project_root: Path,
+    recording_server,
+    settings,
+) -> None:
+    _RecordingHandler.body_override = {
+        "summary": f"Echoed credential {SECRET_KEY}",
+        "agent_or_flow": f"bare {SECRET_KEY}",
+        "known": [{"text": f"key {SECRET_KEY}", "source": "README.md"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": f"reason {SECRET_KEY}",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "response-echo",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+            "api_key": SECRET_KEY,
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    assert SECRET_KEY not in str(detail)
+    assert detail["understanding"]["summary"].startswith("Echoed credential")
+
+    _RecordingHandler.body_override = {
+        "reply": f"reply {SECRET_KEY}",
+        "continue_requested": False,
+        "understanding": {
+            "summary": f"summary {SECRET_KEY}",
+            "agent_or_flow": "",
+            "known": [],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": False,
+            "sufficient_reason": f"reason {SECRET_KEY}",
+        },
+    }
+    chat = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "continue"},
+    )
+    assert chat.status_code == 200, chat.text
+    assert SECRET_KEY not in chat.text
+    import sqlite3
+
+    connection = sqlite3.connect(settings.database_path)
+    try:
+        rows = connection.execute("SELECT content, payload FROM messages").fetchall()
+        project_row = connection.execute("SELECT supplemental FROM projects").fetchone()
+    finally:
+        connection.close()
+    assert SECRET_KEY not in str(rows) + str(project_row)
+
+
+def test_provider_error_secret_crossing_truncation_boundary(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    _RecordingHandler.fail = True
+    _RecordingHandler.fail_body = "x" * 295 + SECRET_KEY + " trailing"
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "error-boundary",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+            "api_key": SECRET_KEY,
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    assert SECRET_KEY[:8] not in detail["project"]["analysis_error"]
+    assert "REDA" in detail["project"]["analysis_error"]
+
+
+def test_file_secret_crossing_excerpt_boundary(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    from evalith.project_access import MAX_EXCERPT_CHARS
+
+    padding = "a" * (MAX_EXCERPT_CHARS - 5)
+    (project_root / "docs" / "long.md").write_text(
+        padding + SECRET_KEY + " trailing\n", encoding="utf-8"
+    )
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "excerpt-boundary",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+            "api_key": SECRET_KEY,
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    assert SECRET_KEY[:8] not in str(detail)
+    assert all(SECRET_KEY[:8] not in item["body"] for item in _RecordingHandler.requests)
+
+
 def test_child_loggers_redact_credentials(client: TestClient, caplog) -> None:
     logger = logging.getLogger("evalith.model")
     with caplog.at_level(logging.DEBUG, logger="evalith.model"):
