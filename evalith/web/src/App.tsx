@@ -92,7 +92,9 @@ export function App() {
 
   const startImport = () => {
     importGeneration.current += 1;
+    openSequence.current += 1;
     selectedProjectRef.current = null;
+    setBusy(false);
     setView("import");
   };
 

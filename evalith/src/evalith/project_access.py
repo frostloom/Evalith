@@ -548,6 +548,27 @@ def _gitignore_match(
     return ignored
 
 
+def _nested_gitignore_match(
+    relative: str,
+    is_dir: bool,
+    rulesets: list[tuple[str, list[tuple[str, bool]]]],
+) -> str | None:
+    for base, rules in reversed(rulesets):
+        if base:
+            if relative == base:
+                local = ""
+            elif relative.startswith(base + "/"):
+                local = relative[len(base) + 1 :]
+            else:
+                continue
+        else:
+            local = relative
+        matched = _gitignore_match(local, is_dir, rules)
+        if matched:
+            return matched
+    return None
+
+
 def scan_project(
     root: Path,
     include_paths: list[str] | None,
@@ -571,7 +592,6 @@ def scan_project(
     patterns = DEFAULT_EXCLUDE_PATTERNS + user_excludes
     result = ScanResult(root=str(root), digest="", selected_scope=includes or ["."])
     root_fd, root_stat = _open_root(root, expected_dev, expected_ino)
-    gitignore_rules: list[tuple[str, bool]] = []
     result.root_dev = root_stat.st_dev
     result.root_ino = root_stat.st_ino
 
@@ -581,6 +601,7 @@ def scan_project(
         *,
         required: bool,
         scrub_text: Callable[[str], str] | None,
+        rulesets: list[tuple[str, list[tuple[str, bool]]]] | None = None,
     ) -> None:
         name = PurePosixPath(relative).name
         always = _always_excluded(name, relative)
@@ -595,7 +616,9 @@ def scan_project(
                     code="sensitive_path_denied",
                 )
             return
-        ignored = _gitignore_match(relative, False, gitignore_rules)
+        ignored = _nested_gitignore_match(
+            relative, False, rulesets or []
+        )
         if ignored and not required:
             os.close(fd)
             result.excluded.append(
@@ -636,7 +659,13 @@ def scan_project(
 
     visited: set[tuple[int, int]] = set()
 
-    def walk(dir_fd: int, prefix: str, *, force: bool = False) -> None:
+    def walk(
+        dir_fd: int,
+        prefix: str,
+        rulesets: list[tuple[str, list[tuple[str, bool]]]],
+        *,
+        force: bool = False,
+    ) -> None:
         dir_stat = os.fstat(dir_fd)
         key = (dir_stat.st_dev, dir_stat.st_ino)
         if key in visited:
@@ -668,7 +697,7 @@ def scan_project(
                 )
                 continue
             if stat.S_ISDIR(entry_stat.st_mode):
-                ignored = _gitignore_match(relative, True, gitignore_rules)
+                ignored = _nested_gitignore_match(relative, True, rulesets)
                 if ignored and not force:
                     result.excluded.append(
                         {"path": relative + "/", "reason": f"gitignore: {ignored}"}
@@ -691,8 +720,13 @@ def scan_project(
                         {"path": relative, "error": str(exc), "code": "read_error"}
                     )
                     continue
+                child_rulesets = list(rulesets)
+                if not force:
+                    child_rulesets.append(
+                        (relative, _read_gitignore(child_fd))
+                    )
                 try:
-                    walk(child_fd, relative, force=force)
+                    walk(child_fd, relative, child_rulesets, force=force)
                 finally:
                     os.close(child_fd)
             elif stat.S_ISREG(entry_stat.st_mode):
@@ -710,7 +744,11 @@ def scan_project(
                     )
                     continue
                 add_file_from_fd(
-                    fd, relative, required=force, scrub_text=scrub
+                    fd,
+                    relative,
+                    required=force,
+                    scrub_text=scrub,
+                    rulesets=rulesets,
                 )
             else:
                 result.excluded.append(
@@ -718,7 +756,7 @@ def scan_project(
                 )
 
     try:
-        gitignore_rules = _read_gitignore(root_fd)
+        root_rulesets = [("", _read_gitignore(root_fd))]
         if includes:
             for relative in includes:
                 parts = _include_parts(relative)
@@ -731,14 +769,18 @@ def scan_project(
                 fd, entry_stat = _open_relative(root_fd, parts)
                 try:
                     if stat.S_ISDIR(entry_stat.st_mode):
-                        walk(fd, relative, force=True)
+                        walk(fd, relative, root_rulesets, force=True)
                     elif stat.S_ISREG(entry_stat.st_mode):
                         # Transfer ownership before the helper runs: it closes
                         # the descriptor on success and on every error path.
                         owned_fd = fd
                         fd = -1
                         add_file_from_fd(
-                            owned_fd, relative, required=True, scrub_text=scrub
+                            owned_fd,
+                            relative,
+                            required=True,
+                            scrub_text=scrub,
+                            rulesets=root_rulesets,
                         )
                     else:
                         raise AccessError(
@@ -749,7 +791,7 @@ def scan_project(
                     if fd >= 0:
                         os.close(fd)
         else:
-            walk(root_fd, "")
+            walk(root_fd, "", root_rulesets)
     finally:
         os.close(root_fd)
 

@@ -267,6 +267,37 @@ describe("project switching", () => {
     await screen.findByText("message after settings");
   });
 
+  it("keeps a successful import when an earlier switch fails", async () => {
+    let rejectB: ((reason?: unknown) => void) | undefined;
+    apiMock.enterProject.mockImplementation((id: string) => {
+      if (id === "b") {
+        return new Promise((_, reject) => {
+          rejectB = reject;
+        });
+      }
+      return Promise.resolve(detail("a", "Project A"));
+    });
+    apiMock.createProject.mockResolvedValue(detail("c", "Imported C"));
+    const user = userEvent.setup();
+    render(<App />);
+    const main = screen.getByRole("main");
+    await user.click(
+      await within(main).findByRole("button", { name: /Project A.*文件/ }),
+    );
+    await screen.findByRole("heading", { name: "Project A" });
+    await user.click(screen.getByRole("button", { name: /Project B.*文件/ }));
+    await user.click(screen.getAllByRole("button", { name: /导入本地项目/ })[0]);
+    await user.type(screen.getByLabelText("项目名称"), "Imported C");
+    await user.type(screen.getByLabelText(/本地目录/), "/tmp/c");
+    await user.click(
+      screen.getByRole("button", { name: "导入并生成初步理解" }),
+    );
+    await act(async () => {
+      rejectB?.(new Error("B failed"));
+    });
+    await screen.findByRole("heading", { name: "Imported C" });
+  });
+
   it("keeps model settings when project entry resolves late", async () => {
     let resolveA: ((value: unknown) => void) | undefined;
     apiMock.enterProject.mockImplementation((id: string) => {

@@ -185,6 +185,32 @@ def test_sensitive_directory_cannot_be_the_project_root(
     assert response.json()["code"] == "sensitive_path_denied"
 
 
+def test_nested_gitignore_excludes_by_default(tmp_path: Path) -> None:
+    root = tmp_path / "nested-ignore"
+    root.mkdir()
+    (root / "README.md").write_text("hello\n", encoding="utf-8")
+    sub = root / "sub"
+    sub.mkdir()
+    (sub / ".gitignore").write_text("customer-export.json\n", encoding="utf-8")
+    (sub / "customer-export.json").write_text(
+        '{"customer": "synthetic"}\n', encoding="utf-8"
+    )
+
+    default = scan_project(root, [], [])
+    assert "sub/customer-export.json" not in {
+        item.path for item in default.files
+    }
+    assert any(
+        item["path"] == "sub/customer-export.json"
+        and "gitignore" in item["reason"]
+        for item in default.excluded
+    )
+
+    selected = scan_project(root, ["sub/customer-export.json"], [])
+    records = {item.path: item for item in selected.files}
+    assert "sub/customer-export.json" in records
+
+
 def test_sensitive_names_are_casefolded_for_explicit_selection(tmp_path: Path) -> None:
     root = tmp_path / "casefold-project"
     root.mkdir()
