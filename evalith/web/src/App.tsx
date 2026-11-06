@@ -21,6 +21,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const selectedProjectRef = useRef<string | null>(null);
+  const displayedProjectRef = useRef<string | null>(null);
   const openSequence = useRef(0);
   const importGeneration = useRef(0);
 
@@ -50,7 +51,6 @@ export function App() {
   const openProject = async (project: Project) => {
     importGeneration.current += 1;
     const sequence = ++openSequence.current;
-    const previousProject = selectedProjectRef.current;
     selectedProjectRef.current = project.id;
     setBusy(true);
     setError(null);
@@ -58,11 +58,12 @@ export function App() {
       const next = await api.enterProject(project.id);
       if (sequence !== openSequence.current) return;
       if (next.project.id !== selectedProjectRef.current) return;
+      displayedProjectRef.current = next.project.id;
       setDetail(next);
       setView("project");
     } catch (err) {
       if (sequence === openSequence.current) {
-        selectedProjectRef.current = previousProject;
+        selectedProjectRef.current = displayedProjectRef.current;
         setError(err instanceof Error ? err.message : "无法进入项目");
       }
     } finally {
@@ -74,6 +75,7 @@ export function App() {
     if (token !== importGeneration.current) return;
     if (selectedProjectRef.current !== null) return;
     selectedProjectRef.current = next.project.id;
+    displayedProjectRef.current = next.project.id;
     setDetail(next);
     setView("project");
     setNotice("项目已导入，初步理解已生成。");

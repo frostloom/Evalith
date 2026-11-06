@@ -185,6 +185,21 @@ def test_sensitive_directory_cannot_be_the_project_root(
     assert response.json()["code"] == "sensitive_path_denied"
 
 
+def test_user_exclusion_matches_case_alias(tmp_path: Path) -> None:
+    root = tmp_path / "case-alias-exclusion"
+    root.mkdir()
+    private = root / "PRIVATE"
+    private.mkdir()
+    (private / "notes.txt").write_text("secret\n", encoding="utf-8")
+
+    for selection in (["PRIVATE/notes.txt"], ["PRIVATE"]):
+        scan = scan_project(root, selection, ["private"])
+        assert not scan.files
+        assert any(
+            item["reason"] == "excluded: private" for item in scan.excluded
+        )
+
+
 def test_nested_gitignore_negation_overrides_parent(tmp_path: Path) -> None:
     root = tmp_path / "nested-negation"
     root.mkdir()

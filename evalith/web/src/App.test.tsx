@@ -267,6 +267,55 @@ describe("project switching", () => {
     await screen.findByText("message after settings");
   });
 
+  it("restores the displayed project after overlapping switch failures", async () => {
+    apiMock.listProjects.mockResolvedValue({
+      items: [
+        project("a", "Project A"),
+        project("b", "Project B"),
+        project("c", "Project C"),
+      ],
+    });
+    const rejects: Record<string, (reason?: unknown) => void> = {};
+    apiMock.enterProject.mockImplementation((id: string) => {
+      if (id === "b" || id === "c") {
+        return new Promise((_, reject) => {
+          rejects[id] = reject;
+        });
+      }
+      return Promise.resolve(detail("a", "Project A"));
+    });
+    const updatedA = detail("a", "Project A");
+    updatedA.messages = [
+      {
+        id: "msg_overlap",
+        role: "assistant",
+        content: "A still updates",
+        payload: { kind: "chat" },
+        model: null,
+        sent_scope: null,
+        created_at: "2026-11-06T00:00:00Z",
+      },
+    ] as never;
+    apiMock.sendMessage.mockResolvedValue(updatedA);
+    const user = userEvent.setup();
+    render(<App />);
+    const main = screen.getByRole("main");
+    await user.click(
+      await within(main).findByRole("button", { name: /Project A.*文件/ }),
+    );
+    await screen.findByRole("heading", { name: "Project A" });
+    await user.click(screen.getByRole("button", { name: /Project B.*文件/ }));
+    await user.click(screen.getByRole("button", { name: /Project C.*文件/ }));
+    await act(async () => {
+      rejects.b?.(new Error("B failed"));
+      rejects.c?.(new Error("C failed"));
+    });
+    await screen.findByRole("heading", { name: "Project A" });
+    await user.type(screen.getByLabelText("给主会话发送消息"), "still A");
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await screen.findByText("A still updates");
+  });
+
   it("keeps a successful import when an earlier switch fails", async () => {
     let rejectB: ((reason?: unknown) => void) | undefined;
     apiMock.enterProject.mockImplementation((id: string) => {

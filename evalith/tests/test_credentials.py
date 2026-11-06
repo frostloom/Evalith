@@ -69,6 +69,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
     assert "ghp_syntheticGitToken" not in request["body"]
+    assert "abc/def+ghi==" not in request["body"]
     assert "sk-quoted-yaml-secret" not in request["body"]
     assert "sk-sequence-yaml-secret" not in request["body"]
     assert "eu-central" in request["body"]
@@ -133,6 +134,15 @@ def test_existing_paid_model_is_disabled_after_restart(
         response = other.post(f"/api/projects/{detail['project']['id']}/reanalyse")
         assert response.status_code == 502, response.text
         assert "付费模型默认禁用" in response.text
+
+
+def test_rfc6750_bearer_tokens_are_redacted() -> None:
+    from evalith.security import redact_text
+
+    for token in ("/private-token==", "abc/def+ghi==", "abc~def="):
+        redacted = redact_text(f"Authorization: Bearer {token}\n")
+        assert token not in redacted
+        assert "[REDACTED]" in redacted
 
 
 def test_git_token_url_is_redacted() -> None:

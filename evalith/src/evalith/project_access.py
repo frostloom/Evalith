@@ -139,12 +139,19 @@ class ScanResult:
 
 
 def _matches(name: str, relpath: str, patterns: list[str]) -> str | None:
+    # Case-insensitive filesystems resolve PRIVATE/ to private/; exclusion
+    # matching must use the same equivalence before anything is opened.
+    folded_name = name.casefold()
+    folded_relpath = relpath.casefold()
+    folded_parts = [part.casefold() for part in PurePosixPath(relpath).parts]
     for pattern in patterns:
-        if fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(relpath, pattern):
+        folded = pattern.casefold()
+        if (
+            fnmatch.fnmatchcase(folded_name, folded)
+            or fnmatch.fnmatchcase(folded_relpath, folded)
+            or any(fnmatch.fnmatchcase(part, folded) for part in folded_parts)
+        ):
             return pattern
-        for part in PurePosixPath(relpath).parts:
-            if fnmatch.fnmatch(part, pattern):
-                return pattern
     return None
 
 
