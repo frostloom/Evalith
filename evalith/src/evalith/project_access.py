@@ -511,11 +511,13 @@ def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
     return rules
 
 
-def _gitignore_match(
+def _gitignore_decision(
     relative: str, is_dir: bool, rules: list[tuple[str, bool]]
-) -> str | None:
-    """Small but deterministic subset of gitignore matching (root file only)."""
-    ignored: str | None = None
+) -> tuple[bool, bool, str | None]:
+    """Return (matched, ignored, pattern) for the last matching rule."""
+    matched_any = False
+    ignored = False
+    matched_pattern: str | None = None
     for pattern, negated in rules:
         candidate = pattern.replace("\\", "/")
         dir_only = candidate.endswith("/")
@@ -544,8 +546,21 @@ def _gitignore_match(
                     fnmatch.fnmatchcase(part, candidate) for part in parts[:-1]
                 )
         if matched:
-            ignored = None if negated else pattern
-    return ignored
+            matched_any = True
+            if negated:
+                ignored = False
+                matched_pattern = None
+            else:
+                ignored = True
+                matched_pattern = pattern
+    return matched_any, ignored, matched_pattern
+
+
+def _gitignore_match(
+    relative: str, is_dir: bool, rules: list[tuple[str, bool]]
+) -> str | None:
+    matched, ignored, pattern = _gitignore_decision(relative, is_dir, rules)
+    return pattern if matched and ignored else None
 
 
 def _nested_gitignore_match(
@@ -563,9 +578,9 @@ def _nested_gitignore_match(
                 continue
         else:
             local = relative
-        matched = _gitignore_match(local, is_dir, rules)
+        matched, ignored, pattern = _gitignore_decision(local, is_dir, rules)
         if matched:
-            return matched
+            return pattern if ignored else ""
     return None
 
 
@@ -720,12 +735,12 @@ def scan_project(
                         {"path": relative, "error": str(exc), "code": "read_error"}
                     )
                     continue
-                child_rulesets = list(rulesets)
-                if not force:
-                    child_rulesets.append(
-                        (relative, _read_gitignore(child_fd))
-                    )
                 try:
+                    child_rulesets = list(rulesets)
+                    if not force:
+                        child_rulesets.append(
+                            (relative, _read_gitignore(child_fd))
+                        )
                     walk(child_fd, relative, child_rulesets, force=force)
                 finally:
                     os.close(child_fd)

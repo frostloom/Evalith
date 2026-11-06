@@ -253,6 +253,9 @@ def test_model_failure_is_visible_not_silent(
     assert detail["readiness"]["generation_allowed"] is False
     errors = [item for item in detail["messages"] if item["payload"]["kind"] == "error"]
     assert errors and "模型服务返回 500" in errors[-1]["content"]
+    assert errors[-1]["payload"]["sent_scope"]
+    assert errors[-1]["payload"]["sent_scope"]["sources"]
+    assert detail["understanding"]["sources"]
     assert "sk-model-secret" not in str(detail)
 
     continue_attempt = client.post(f"/api/projects/{detail['project']['id']}/continue")

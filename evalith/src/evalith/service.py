@@ -597,6 +597,8 @@ class WorkspaceService:
 
     def _analyse(self, project: Any, *, scan: ScanResult | None = None) -> None:
         current = None
+        scope = None
+        gateway = None
         try:
             if scan is None:
                 scan = self._rescan(project, store_new_snapshot=False)
@@ -785,10 +787,10 @@ class WorkspaceService:
                     "known": preserved,
                     "inferred": [],
                     "unknowns": [],
-                    "sources": [],
+                    "sources": (scope or {}).get("sources", []),
                     "sufficient": False,
                     "sufficient_reason": "",
-                    "model": "error",
+                    "model": gateway.name if gateway is not None else "error",
                     "snapshot_id": project["snapshot_id"],
                     "user_continued": False,
                 },
@@ -799,7 +801,13 @@ class WorkspaceService:
                 project,
                 role="system",
                 content=f"项目理解失败：{message}",
-                payload={"kind": "error", "stage": "analysis", "message": message},
+                payload={
+                    "kind": "error",
+                    "stage": "analysis",
+                    "message": message,
+                    "sent_scope": scope,
+                    "model": gateway.name if gateway is not None else None,
+                },
             )
 
     def _store_understanding(
@@ -895,6 +903,7 @@ class WorkspaceService:
         gateway = self.gateway_for(
             project["model_config_id"], enforce_paid=False
         )
+        scope = None
         text = gateway.scrub(text)
         # Persist withdrawal before any fallible rescan/provider call. A
         # recorded refusal must close consent-only readiness even if the
@@ -1195,7 +1204,13 @@ class WorkspaceService:
                 project,
                 role="system",
                 content=f"模型调用失败：{message}",
-                payload={"kind": "error", "stage": "chat", "message": message},
+                payload={
+                    "kind": "error",
+                    "stage": "chat",
+                    "message": message,
+                    "sent_scope": scope,
+                    "model": gateway.name if gateway is not None else None,
+                },
             )
             raise WorkspaceError(
                 message, status_code=502, code="model_error"

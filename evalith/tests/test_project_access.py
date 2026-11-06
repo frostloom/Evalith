@@ -185,6 +185,55 @@ def test_sensitive_directory_cannot_be_the_project_root(
     assert response.json()["code"] == "sensitive_path_denied"
 
 
+def test_nested_gitignore_negation_overrides_parent(tmp_path: Path) -> None:
+    root = tmp_path / "nested-negation"
+    root.mkdir()
+    (root / ".gitignore").write_text("*.md\n", encoding="utf-8")
+    sub = root / "sub"
+    sub.mkdir()
+    (sub / ".gitignore").write_text("!README.md\n", encoding="utf-8")
+    (sub / "README.md").write_text("keep this\n", encoding="utf-8")
+
+    scan = scan_project(root, [], [])
+    assert "sub/README.md" in {item.path for item in scan.files}
+
+
+def test_nested_gitignore_failure_closes_child_descriptor(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import errno
+    import evalith.project_access as project_access
+
+    root = tmp_path / "nested-gitignore-failure"
+    root.mkdir()
+    (root / "README.md").write_text("hello\n", encoding="utf-8")
+    sub = root / "sub"
+    sub.mkdir()
+    (sub / "README.md").write_text("nested\n", encoding="utf-8")
+    os.mkfifo(sub / ".gitignore")
+
+    opened: list[int] = []
+    real_read = project_access._read_gitignore
+
+    def tracked(fd: int):
+        opened.append(fd)
+        return real_read(fd)
+
+    closed: list[int] = []
+    real_close = project_access.os.close
+    monkeypatch.setattr(project_access, "_read_gitignore", tracked)
+    monkeypatch.setattr(
+        project_access.os,
+        "close",
+        lambda fd: (closed.append(fd), real_close(fd)),
+    )
+    with pytest.raises(AccessError) as excinfo:
+        project_access.scan_project(root, [], [])
+    assert excinfo.value.code == "gitignore_not_regular"
+    assert len(opened) >= 2
+    assert opened[1] in closed
+
+
 def test_nested_gitignore_excludes_by_default(tmp_path: Path) -> None:
     root = tmp_path / "nested-ignore"
     root.mkdir()
