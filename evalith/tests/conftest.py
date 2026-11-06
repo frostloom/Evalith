@@ -57,6 +57,9 @@ def project_root(tmp_path: Path) -> Path:
         "The agent approves releases.\n",
         encoding="utf-8",
     )
+    (root / ".git-credentials").write_text(
+        "https://ghp_syntheticGitToken@github.com\n", encoding="utf-8"
+    )
     (root / ".yarnrc.yml").write_text(
         'npmAuthToken: "registry-secret-value"\n', encoding="utf-8"
     )

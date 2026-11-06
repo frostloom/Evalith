@@ -49,6 +49,7 @@ ALWAYS_EXCLUDED = [
     "id_ecdsa*",
     "credentials*",
     "secrets*",
+    ".git-credentials",
     ".npmrc",
     ".yarnrc",
     ".yarnrc.yml",

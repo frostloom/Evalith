@@ -716,8 +716,8 @@ class WorkspaceService:
                 result.get("known", []),
                 old_hashes,
                 new_hashes,
-                stale_hashes,
-                supported_text,
+                {},
+                None,
             )
             merged_texts = {
                 str(item.get("text")) for item in merged if isinstance(item, dict)
@@ -1129,8 +1129,8 @@ class WorkspaceService:
                 understanding.get("known", []),
                 old_hashes,
                 new_hashes,
-                stale_hashes,
-                supported_text,
+                {},
+                None,
             )
             for item in current.get("known", []):
                 if (

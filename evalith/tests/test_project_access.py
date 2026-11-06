@@ -80,6 +80,7 @@ def test_default_scope_excludes_secrets_and_symlinks(
     assert "escape.txt" in excluded_paths
     assert "docs/leak.txt" in excluded_paths
     assert ".yarnrc.yml" in excluded_paths
+    assert ".git-credentials" in excluded_paths
     files = {item["path"] for item in snapshot["files"]}
     assert ".env" not in files
     assert "secrets/credentials.txt" not in files

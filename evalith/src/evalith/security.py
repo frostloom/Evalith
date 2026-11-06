@@ -38,9 +38,10 @@ _SECRET_PATTERNS = [
         r"(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|[^\n,}]+)"
     ),
     re.compile(r"(?i)\bbearer\s+[a-z0-9._\-]+"),
-    # Connection strings with userinfo, e.g. postgresql://alice:password@db/app.
+    # Connection strings with userinfo, including token-only forms such as
+    # https://ghp_token@github.com and user:password@ forms.
     re.compile(
-        r"(?i)\b[a-z][a-z0-9+.-]*://[^@\s/:]*:[^@\s/]+@[^\s,}\"']+"
+        r"(?i)\b[a-z][a-z0-9+.-]*://[^@\s/]+@[^\s,}\"']+"
     ),
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),
 ]

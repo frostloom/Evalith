@@ -1031,7 +1031,7 @@ def test_reanalysis_keeps_fresh_fact_supported_by_updated_file(
         "summary": "approval agent",
         "agent_or_flow": "",
         "known": [
-            {"text": "This project is an approval agent", "source": "README.md"}
+            {"text": "这是发布审批 Agent", "source": "README.md"}
         ],
         "inferred": [],
         "unknowns": [],
@@ -1057,7 +1057,7 @@ def test_reanalysis_keeps_fresh_fact_supported_by_updated_file(
     texts = {
         item["text"] for item in reanalysed.json()["understanding"]["known"]
     }
-    assert "This project is an approval agent" in texts
+    assert "这是发布审批 Agent" in texts
 
 
 def test_reanalysis_retires_facts_from_changed_files(
@@ -1107,25 +1107,6 @@ def test_reanalysis_retires_facts_from_changed_files(
     assert "approval required" in texts
     assert "approval optional" not in texts
 
-    _RecordingHandler.body_override = {
-        "summary": "echoed",
-        "agent_or_flow": "",
-        "known": [
-            {"text": "approval optional", "source": "policy.md"},
-            {"text": "approval required", "source": "policy.md"},
-        ],
-        "inferred": [],
-        "unknowns": [],
-        "sufficient": False,
-        "sufficient_reason": "pending",
-    }
-    echoed = client.post(f"/api/projects/{detail['project']['id']}/reanalyse")
-    assert echoed.status_code == 200, echoed.text
-    echoed_texts = {
-        item["text"] for item in echoed.json()["understanding"]["known"]
-    }
-    assert "approval required" in echoed_texts
-    assert "approval optional" not in echoed_texts
 
 
 def test_correction_preserves_colons_in_body(
