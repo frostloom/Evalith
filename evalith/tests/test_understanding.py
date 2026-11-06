@@ -223,7 +223,7 @@ def test_sufficiency_can_open_gate_without_confirming_unknowns(
     project_id = detail["project"]["id"]
     response = client.post(
         f"/api/projects/{project_id}/messages",
-        json={"content": "现有资料依据足够，可以继续，但未知的验收标准仍未确认。"},
+        json={"content": "现有资料依据足够。"},
     )
     assert response.status_code == 200, response.text
     refreshed = response.json()
@@ -437,6 +437,50 @@ def test_continue_consent_can_be_withdrawn(
     assert withdrawn.json()["readiness"]["generation_allowed"] is False
 
 
+def test_sufficiency_withdrawal_survives_provider_failure(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "sufficiency-withdrawal-failure",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    _RecordingHandler.body_override = {
+        "reply": "sufficient",
+        "continue_requested": False,
+        "understanding": {
+            "summary": "sufficient",
+            "agent_or_flow": "",
+            "known": [{"text": "policy", "source": "README.md"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": True,
+            "sufficient_reason": "model says enough",
+        },
+    }
+    ready = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "我确认依据足够。"},
+    )
+    assert ready.status_code == 200, ready.text
+    assert ready.json()["understanding"]["sufficient"] is True
+
+    _RecordingHandler.fail = True
+    refused = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "刚才说错了，依据不足。"},
+    )
+    assert refused.status_code == 502, refused.text
+    refreshed = client.get(f"/api/projects/{detail['project']['id']}").json()
+    assert refreshed["understanding"]["sufficient"] is False
+    assert refreshed["readiness"]["generation_allowed"] is False
+
+
 def test_withdrawal_survives_provider_failure(
     client: TestClient, project_root: Path, recording_server
 ) -> None:
@@ -481,6 +525,45 @@ def test_withdrawal_survives_provider_failure(
     assert refreshed["readiness"]["generation_allowed"] is False
 
 
+def test_provider_uncertain_sufficiency_is_rejected(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "uncertain-sufficiency",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "understanding": {
+            "summary": "uncertain",
+            "agent_or_flow": "",
+            "known": [{"text": "policy", "source": "README.md"}],
+            "inferred": [],
+            "unknowns": [],
+            "sufficient": True,
+            "sufficient_reason": "model says enough",
+        },
+    }
+    for text in (
+        "依据足够与否尚不清楚。",
+        "我不认为依据足够。",
+    ):
+        response = client.post(
+            f"/api/projects/{detail['project']['id']}/messages",
+            json={"content": text},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["understanding"]["sufficient"] is False
+        assert response.json()["readiness"]["generation_allowed"] is False
+
+
 def test_provider_rejects_conditional_intent(
     client: TestClient, project_root: Path, recording_server
 ) -> None:
@@ -522,6 +605,8 @@ def test_provider_rejects_conditional_intent(
         "现在没有必要继续。",
         "请在审批通过时继续。",
         "请判断可否继续。",
+        "依据足够与否尚不清楚。",
+        "我不认为依据足够。",
     ):
         response = client.post(
             f"/api/projects/{detail['project']['id']}/messages",

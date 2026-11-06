@@ -663,16 +663,28 @@ class WorkspaceService:
         current_before = self.parse_understanding(
             self.db.get_understanding(project_id)
         )
-        if (
-            gateway.withdraws_continuation(text)
-            and current_before is not None
-            and current_before.get("user_continued")
-        ):
+        if current_before is not None:
             withdrawn = dict(current_before)
-            withdrawn["user_continued"] = False
-            self._store_understanding(
-                project, withdrawn, error=current_before.get("error")
-            )
+            changed = False
+            if (
+                gateway.withdraws_continuation(text)
+                and withdrawn.get("user_continued")
+            ):
+                withdrawn["user_continued"] = False
+                changed = True
+            if (
+                gateway.withdraws_sufficiency(text)
+                and withdrawn.get("sufficient")
+            ):
+                withdrawn["sufficient"] = False
+                withdrawn["sufficient_reason"] = (
+                    "用户明确表示依据不足或尚不确定；未知项保留，推进门保持关闭。"
+                )
+                changed = True
+            if changed:
+                self._store_understanding(
+                    project, withdrawn, error=current_before.get("error")
+                )
         self._append_message(project, role="user", content=text, payload={"kind": "chat"})
         try:
             try:

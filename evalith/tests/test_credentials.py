@@ -427,6 +427,8 @@ def test_questions_and_quoted_instructions_do_not_open_gate(
         "现在没有必要继续。",
         "请在审批通过时继续。",
         "请判断可否继续。",
+        "依据足够与否尚不清楚。",
+        "我不认为依据足够。",
     ):
         response = client.post(
             f"/api/projects/{project_id}/messages", json={"content": text}

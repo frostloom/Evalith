@@ -291,6 +291,9 @@ class ModelGateway:
     def withdraws_continuation(self, text: str) -> bool:
         return any(marker in text for marker in WITHDRAWAL_MARKERS)
 
+    def withdraws_sufficiency(self, text: str) -> bool:
+        return _negates_sufficiency(text) or _is_uncertain_sufficiency(text)
+
     def _scrub_value(self, value: Any) -> Any:
         if isinstance(value, str):
             return self._scrub(value)
@@ -432,6 +435,7 @@ class ModelGateway:
         if understanding["sufficient"] and (
             _negates_sufficiency(user_message)
             or _is_conditional_statement(user_message)
+            or _is_uncertain_sufficiency(user_message)
             or (
                 "足够" in user_message
                 and _is_descriptive_statement(user_message)
@@ -494,6 +498,8 @@ NEGATION_MARKERS = (
     "没有足够",
     "拒绝",
     "不同意",
+    "不认为",
+    "没认为",
     "反对",
     "不答应",
     "不愿意",
@@ -541,6 +547,14 @@ NON_AFFIRMATIVE_MARKERS = (
     "好不好",
     "是否会",
     "是否要",
+    "与否",
+    "尚不清楚",
+    "不清楚",
+    "不确定",
+    "未知",
+    "存疑",
+    "有待确认",
+    "未必",
     "吗",
     "多少",
     "何时",
@@ -706,13 +720,27 @@ def _affirmative_continuation(text: str) -> bool:
     return bool(_AFFIRMATIVE_CONTINUATION.fullmatch(stripped))
 
 
+_AFFIRMATIVE_SUFFICIENCY = re.compile(
+    r"^(?:我认为|我觉得|我确认|我同意|确认|同意|可以说|可以认为|现在|目前|"
+    r"现有资料|现有材料|当前资料|当前材料|材料|资料|证据|事实)?"
+    r"[，,\s]*依据足够(?:了|吧)?[。！!]?$"
+)
+
+
+def _is_uncertain_sufficiency(text: str) -> bool:
+    return "足够" in text and any(
+        marker in text
+        for marker in ("与否", "尚不清楚", "不清楚", "不确定", "未知", "存疑", "有待")
+    )
+
+
 def _affirmative_sufficiency(text: str) -> bool:
     stripped = text.strip()
     if not stripped or _has_negation(stripped) or _is_non_affirmative(stripped):
         return False
     if _is_descriptive_statement(stripped) or _is_conditional_statement(stripped):
         return False
-    return _keyword_outside_quotes(stripped, "依据足够")
+    return bool(_AFFIRMATIVE_SUFFICIENCY.fullmatch(stripped))
 
 
 def _negates_sufficiency(text: str) -> bool:
