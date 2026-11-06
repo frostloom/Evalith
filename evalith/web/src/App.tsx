@@ -88,6 +88,12 @@ export function App() {
     );
   };
 
+  const startImport = () => {
+    importGeneration.current += 1;
+    selectedProjectRef.current = null;
+    setView("import");
+  };
+
   const goHome = () => {
     importGeneration.current += 1;
     openSequence.current += 1;
@@ -128,7 +134,7 @@ export function App() {
             ))}
           </nav>
 
-          <button className="rail-action" onClick={() => setView("import")}>
+          <button className="rail-action" onClick={startImport}>
             <span aria-hidden="true">＋</span> 导入本地项目
           </button>
         </div>
@@ -158,10 +164,7 @@ export function App() {
           <Home
             projects={projects}
             onOpen={(project) => void openProject(project)}
-            onImport={() => {
-              importGeneration.current += 1;
-              setView("import");
-            }}
+            onImport={startImport}
             onModels={() => setView("models")}
             models={models}
           />
@@ -170,11 +173,12 @@ export function App() {
         {view === "import" && (
           <ImportSheet
             models={models}
+            token={importGeneration.current}
             onCancel={() => {
               importGeneration.current += 1;
               setView("home");
             }}
-            onCreated={(next) => handleCreated(next, importGeneration.current)}
+            onCreated={handleCreated}
             onNeedModel={() => {
               importGeneration.current += 1;
               setView("models");

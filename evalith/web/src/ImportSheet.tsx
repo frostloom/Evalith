@@ -4,14 +4,16 @@ import type { ModelConfig, ProjectDetail } from "./types";
 
 export function ImportSheet({
   models,
+  token,
   onCancel,
   onCreated,
   onNeedModel,
   onError,
 }: {
   models: ModelConfig[];
+  token: number;
   onCancel: () => void;
-  onCreated: (detail: ProjectDetail) => void;
+  onCreated: (detail: ProjectDetail, token: number) => void;
   onNeedModel: () => void;
   onError: (message: string) => void;
 }) {
@@ -75,7 +77,7 @@ export function ImportSheet({
           .filter(Boolean),
         supplemental,
       });
-      onCreated(detail);
+      onCreated(detail, token);
     } catch (err) {
       const message = err instanceof Error ? err.message : "导入失败";
       setLocalError(message);

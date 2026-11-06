@@ -104,6 +104,57 @@ beforeEach(() => {
   );
 });
 
+describe("import navigation", () => {
+  it("accepts an import started from an existing workspace", async () => {
+    const user = userEvent.setup();
+    apiMock.createProject.mockResolvedValue(detail("c", "Imported C"));
+    render(<App />);
+    const main = screen.getByRole("main");
+    await user.click(
+      await within(main).findByRole("button", { name: /Project A.*文件/ }),
+    );
+    await screen.findByRole("heading", { name: "Project A" });
+    await user.click(screen.getAllByRole("button", { name: /导入本地项目/ })[0]);
+    await user.type(screen.getByLabelText("项目名称"), "Imported C");
+    await user.type(
+      screen.getByLabelText(/本地目录/),
+      "/tmp/c",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "导入并生成初步理解" }),
+    );
+    await screen.findByRole("heading", { name: "Imported C" });
+    expect(apiMock.createProject).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a late import response after cancellation", async () => {
+    let resolveImport: ((value: unknown) => void) | undefined;
+    apiMock.createProject.mockReturnValue(
+      new Promise((resolve) => {
+        resolveImport = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getAllByRole("button", { name: /导入本地项目/ })[0]);
+    await user.type(screen.getByLabelText("项目名称"), "Late C");
+    await user.type(
+      screen.getByLabelText(/本地目录/),
+      "/tmp/c",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "导入并生成初步理解" }),
+    );
+    await user.click(screen.getByRole("button", { name: "取消" }));
+    await act(async () => {
+      resolveImport?.(detail("c", "Late C"));
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Late C" })).toBeNull(),
+    );
+  });
+});
+
 describe("project switching", () => {
   it("resets the message draft when the user switches projects", async () => {
     const user = userEvent.setup();
