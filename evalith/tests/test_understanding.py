@@ -271,6 +271,46 @@ def test_provider_can_cite_canonical_supplement_source(
     assert source_id in _RecordingHandler.requests[-1]["body"]
 
 
+def test_missing_model_records_zero_transmitted_scope(
+    client: TestClient, project_root: Path
+) -> None:
+    response = import_project(client, project_root, model_config_id=None)
+    assert response.status_code == 201, response.text
+    detail = response.json()
+    errors = [
+        item
+        for item in detail["messages"]
+        if item["payload"]["kind"] == "error"
+        and item["payload"]["stage"] == "analysis"
+    ]
+    assert errors
+    assert errors[-1]["sent_scope"]["files_sent"] == 0
+    assert errors[-1]["sent_scope"]["bytes_sent"] == 0
+    assert all(
+        item["sent"] is False for item in errors[-1]["sent_scope"]["sources"]
+    )
+    assert errors[-1]["payload"]["prepared_scope"]["files_sent"] > 0
+
+    chat = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "项目里有什么？"},
+    )
+    assert chat.status_code == 502, chat.text
+    refreshed = client.get(f"/api/projects/{detail['project']['id']}").json()
+    chat_errors = [
+        item
+        for item in refreshed["messages"]
+        if item["payload"]["kind"] == "error"
+        and item["payload"]["stage"] == "chat"
+    ]
+    assert chat_errors
+    assert chat_errors[-1]["sent_scope"]["files_sent"] == 0
+    assert all(
+        item["sent"] is False
+        for item in chat_errors[-1]["sent_scope"]["sources"]
+    )
+
+
 def test_model_failure_is_visible_not_silent(
     client: TestClient, project_root: Path, recording_server
 ) -> None:

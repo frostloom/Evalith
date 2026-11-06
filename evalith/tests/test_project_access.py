@@ -344,6 +344,24 @@ def test_oversized_gitignore_is_rejected(tmp_path: Path) -> None:
     assert excinfo.value.code == "gitignore_too_large"
 
 
+def test_leading_whitespace_in_gitignore_is_literal(tmp_path: Path) -> None:
+    root = tmp_path / "leading-space-ignore"
+    root.mkdir()
+    (root / ".gitignore").write_text(" private.csv\n", encoding="utf-8")
+    (root / " private.csv").write_text("synthetic\n", encoding="utf-8")
+    sub = root / "sub"
+    sub.mkdir()
+    (sub / ".gitignore").write_text("! private.csv\n", encoding="utf-8")
+    (sub / " private.csv").write_text("kept\n", encoding="utf-8")
+    scan = scan_project(root, [], [])
+    assert " private.csv" not in {item.path for item in scan.files}
+    assert "sub/ private.csv" in {item.path for item in scan.files}
+    assert any(
+        item["path"] == " private.csv" and "gitignore" in item["reason"]
+        for item in scan.excluded
+    )
+
+
 def test_escaped_gitignore_metacharacters_are_literal(tmp_path: Path) -> None:
     root = tmp_path / "escaped-metacharacters"
     root.mkdir()

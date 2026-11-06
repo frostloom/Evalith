@@ -507,7 +507,6 @@ def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
         os.close(fd)
     rules: list[tuple[str, bool]] = []
     for line in raw.decode("utf-8", "replace").splitlines():
-        line = line.lstrip(" \t")
         while line and line[-1] in " \t":
             slashes = 0
             cursor = len(line) - 2
@@ -521,7 +520,7 @@ def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
             continue
         negated = line.startswith("!")
         if negated:
-            line = line[1:].lstrip(" \t")
+            line = line[1:]
         if line:
             rules.append((line, negated))
     return rules

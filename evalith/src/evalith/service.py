@@ -711,7 +711,7 @@ class WorkspaceService:
                 provider_current["snapshot_id"] = project["snapshot_id"]
                 if current_scope != new_scope:
                     scope["scope_changed"] = True
-            attempted = True
+            attempted = gateway.config is not None
             result = gateway.analyze(
                 project_name=project["name"],
                 context_text=context_text,
@@ -1121,7 +1121,7 @@ class WorkspaceService:
                 invalidated["sources"] = sources
                 invalidated["snapshot_id"] = project["snapshot_id"]
                 self._store_understanding(project, invalidated, error=None)
-            attempted = True
+            attempted = gateway.config is not None
             result = gateway.discuss(
                 project_name=project["name"],
                 context_text=context_text,
