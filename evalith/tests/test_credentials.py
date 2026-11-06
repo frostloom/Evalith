@@ -418,6 +418,8 @@ def test_questions_and_quoted_instructions_do_not_open_gate(
         "等补充材料到齐后才算依据足够。",
         "请勿继续。",
         "切勿继续。",
+        "我会考虑继续。",
+        "请检查继续读取文件的逻辑。",
     ):
         response = client.post(
             f"/api/projects/{project_id}/messages", json={"content": text}

@@ -40,6 +40,10 @@ class Settings:
     #: mount translation is a later-phase deliverable, not a configured path.
     access_mode: str = "host"
     static_dir: Path | None = None
+    #: Host header allowlist for the loopback-only local service.  DNS
+    #: rebinding sends the attacker hostname as Host/Origin, so rejecting
+    #: non-loopback hosts is required even without authentication.
+    allowed_hosts: tuple[str, ...] = ("127.0.0.1", "localhost", "::1", "testserver")
 
     def __post_init__(self) -> None:
         self.data_dir = Path(self.data_dir).expanduser().resolve()
@@ -68,4 +72,10 @@ def settings_from_env() -> Settings:
         max_files=int(os.environ.get("EVALITH_MAX_FILES", "400")),
         model_timeout_seconds=float(os.environ.get("EVALITH_MODEL_TIMEOUT", "60")),
         access_mode=os.environ.get("EVALITH_ACCESS_MODE", "host"),
+        allowed_hosts=tuple(
+            item.strip().lower()
+            for item in os.environ.get("EVALITH_ALLOWED_HOSTS", "").split(",")
+            if item.strip()
+        )
+        or ("127.0.0.1", "localhost", "::1", "testserver"),
     )

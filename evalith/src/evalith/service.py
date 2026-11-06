@@ -728,8 +728,10 @@ class WorkspaceService:
             understanding["sources"] = sources
             result["reply"] = redact_text(result["reply"])
             understanding["snapshot_id"] = project["snapshot_id"]
-            understanding["user_continued"] = bool(
-                current.get("user_continued") or result.get("continue_requested")
+            understanding["user_continued"] = (
+                False
+                if gateway.withdraws_continuation(text)
+                else bool(current.get("user_continued") or result.get("continue_requested"))
             )
             self._store_understanding(project, understanding, error=None)
             # A validated replacement understanding resolves a previous

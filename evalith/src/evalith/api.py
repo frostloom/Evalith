@@ -5,11 +5,13 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from fastapi import Body, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from .config import Settings, settings_from_env
 from .db import Database
@@ -17,6 +19,45 @@ from .security import CredentialCipher, install_log_redaction
 from .service import WorkspaceError, WorkspaceService
 
 logger = logging.getLogger("evalith.api")
+
+
+class LocalHostMiddleware(BaseHTTPMiddleware):
+    """Reject non-loopback Host/Origin values before any project API runs.
+
+    CORS does not protect same-origin DNS-rebinding requests: a page served
+    from an attacker-controlled hostname can resolve it to 127.0.0.1 and send
+    a matching Host/Origin.  This unauthenticated local service therefore
+    accepts only its configured loopback hostnames.
+    """
+
+    def __init__(self, app, allowed_hosts: tuple[str, ...]) -> None:
+        super().__init__(app)
+        self.allowed_hosts = {host.lower() for host in allowed_hosts}
+
+    @staticmethod
+    def _hostname(value: str | None) -> str:
+        if not value:
+            return ""
+        try:
+            parsed = urlsplit(value if "://" in value else f"//{value}")
+            return (parsed.hostname or "").lower()
+        except ValueError:
+            return ""
+
+    async def dispatch(self, request, call_next):
+        host = self._hostname(request.headers.get("host"))
+        if host not in self.allowed_hosts:
+            return JSONResponse(
+                status_code=403,
+                content={"error": "untrusted request host", "code": "untrusted_host"},
+            )
+        origin = request.headers.get("origin")
+        if origin and self._hostname(origin) not in self.allowed_hosts:
+            return JSONResponse(
+                status_code=403,
+                content={"error": "untrusted request origin", "code": "untrusted_origin"},
+            )
+        return await call_next(request)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -32,6 +73,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.db = database
     app.state.service = service
 
+    app.add_middleware(LocalHostMiddleware, allowed_hosts=settings.allowed_hosts)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[

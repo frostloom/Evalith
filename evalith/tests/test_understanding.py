@@ -365,7 +365,7 @@ def test_valid_provider_sufficiency_survives_ordinary_discussion(
         "understanding": {
             "summary": "补充后的理解",
             "agent_or_flow": "sync http",
-            "known": [{"text": "交互方式是同步 HTTP", "source": "会话"}],
+            "known": [{"text": "后端是 FastAPI", "source": "会话"}],
             "inferred": [],
             "unknowns": [],
             "sufficient": True,
@@ -374,7 +374,7 @@ def test_valid_provider_sufficiency_survives_ordinary_discussion(
     }
     response = client.post(
         f"/api/projects/{detail['project']['id']}/messages",
-        json={"content": "补充：交互方式是同步 HTTP。"},
+        json={"content": "补充：项目后端是 FastAPI。"},
     )
     assert response.status_code == 200, response.text
     assert response.json()["understanding"]["sufficient"] is True
@@ -417,6 +417,26 @@ def test_provider_accepts_explicit_continuation_phrases(
         assert response.json()["understanding"]["user_continued"] is True
 
 
+def test_continue_consent_can_be_withdrawn(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    continued = client.post(
+        f"/api/projects/{project_id}/messages", json={"content": "继续"}
+    )
+    assert continued.status_code == 200, continued.text
+    assert continued.json()["understanding"]["user_continued"] is True
+
+    withdrawn = client.post(
+        f"/api/projects/{project_id}/messages", json={"content": "我拒绝继续。"}
+    )
+    assert withdrawn.status_code == 200, withdrawn.text
+    assert withdrawn.json()["understanding"]["user_continued"] is False
+    assert withdrawn.json()["readiness"]["generation_allowed"] is False
+
+
 def test_provider_rejects_conditional_intent(
     client: TestClient, project_root: Path, recording_server
 ) -> None:
@@ -449,6 +469,8 @@ def test_provider_rejects_conditional_intent(
         "等补充材料到齐后才算依据足够。",
         "请勿继续。",
         "切勿继续。",
+        "我会考虑继续。",
+        "请检查继续读取文件的逻辑。",
     ):
         response = client.post(
             f"/api/projects/{detail['project']['id']}/messages",

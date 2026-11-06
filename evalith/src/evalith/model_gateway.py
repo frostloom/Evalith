@@ -288,6 +288,9 @@ class ModelGateway:
         """Remove pattern-shaped and literally configured credentials."""
         return self._scrub(text)
 
+    def withdraws_continuation(self, text: str) -> bool:
+        return any(marker in text for marker in WITHDRAWAL_MARKERS)
+
     def _scrub_value(self, value: Any) -> Any:
         if isinstance(value, str):
             return self._scrub(value)
@@ -618,19 +621,53 @@ DESCRIPTIVE_MARKERS = (
 
 
 CONDITIONAL_MARKERS = (
-    "先",
     "等",
-    "再",
-    "后",
     "才",
+    "再",
     "如果",
     "假如",
+    "若",
     "待",
     "暂时",
     "到时候",
     "确认后",
     "之前",
     "以后",
+    "之后",
+)
+
+HESITATION_MARKERS = (
+    "考虑",
+    "想想",
+    "研究",
+    "决定",
+    "评估",
+    "再想想",
+    "商量",
+    "或许",
+    "可能",
+    "也许",
+    "不确定",
+    "尚未决定",
+)
+
+WITHDRAWAL_MARKERS = (
+    "拒绝继续",
+    "不继续",
+    "不要继续",
+    "不想继续",
+    "不打算继续",
+    "不准备继续",
+    "停止继续",
+    "取消继续",
+    "撤回继续",
+    "请勿继续",
+    "切勿继续",
+    "不应该继续",
+    "不该继续",
+    "不应继续",
+    "不应当继续",
+    "别继续",
 )
 
 
@@ -653,13 +690,17 @@ def _affirmative_continuation(text: str) -> bool:
         return False
     if _is_descriptive_statement(stripped) or _is_conditional_statement(stripped):
         return False
+    if any(marker in stripped for marker in HESITATION_MARKERS):
+        return False
     for phrase in CONTINUATION_PHRASES:
         index = _first_keyword_outside_quotes(stripped, phrase)
         if index is None:
             continue
         prefix = stripped[:index].strip(" ，,。.！!；;：:")
         suffix = stripped[index + len(phrase) :].strip(" ，,。.！!；;：:")
-        if not prefix and suffix in ("", "吧", "了", "好"):
+        if suffix not in ("", "吧", "了", "好"):
+            continue
+        if not prefix:
             return True
         if prefix in REQUEST_PREFIXES:
             return True
