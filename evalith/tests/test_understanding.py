@@ -255,6 +255,8 @@ def test_model_failure_is_visible_not_silent(
     assert errors and "模型服务返回 500" in errors[-1]["content"]
     assert errors[-1]["payload"]["sent_scope"]
     assert errors[-1]["payload"]["sent_scope"]["sources"]
+    assert errors[-1]["sent_scope"]
+    assert errors[-1]["sent_scope"]["sources"]
     assert detail["understanding"]["sources"]
     assert "sk-model-secret" not in str(detail)
 
@@ -1019,7 +1021,10 @@ def test_supplemental_update_is_in_scope(client: TestClient, project_root: Path)
     files = {item["path"] for item in updated.json()["snapshot"]["files"]}
     assert files == {"README.md"}
     scope = updated.json()["messages"][-1]["sent_scope"]
-    assert "supplement:评审补充" in {item["path"] for item in scope["sources"]}
+    assert any(
+        item["path"].startswith("supplement:评审补充")
+        for item in scope["sources"]
+    )
 
 
 def test_reanalysis_keeps_fresh_fact_supported_by_updated_file(

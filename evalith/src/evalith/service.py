@@ -808,6 +808,8 @@ class WorkspaceService:
                     "sent_scope": scope,
                     "model": gateway.name if gateway is not None else None,
                 },
+                model=gateway.name if gateway is not None else None,
+                sent_scope=scope,
             )
 
     def _store_understanding(
@@ -1211,6 +1213,8 @@ class WorkspaceService:
                     "sent_scope": scope,
                     "model": gateway.name if gateway is not None else None,
                 },
+                model=gateway.name if gateway is not None else None,
+                sent_scope=scope,
             )
             raise WorkspaceError(
                 message, status_code=502, code="model_error"

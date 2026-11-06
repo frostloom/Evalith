@@ -899,6 +899,8 @@ def build_model_context(
         raw_content = str(doc.get("content", ""))
         title = redact_text(raw_title)
         content = redact_text(raw_content)
+        content_digest = hashlib.sha256(raw_content.encode("utf-8")).hexdigest()[:12]
+        source_id = f"supplement:{title} [{content_digest}]"
         redaction_count += _count_redactions(raw_title + raw_content, title + content)
         prefix = "### SUPPLEMENT "
         footer = "\n```text\n\n```\n"
@@ -907,7 +909,7 @@ def build_model_context(
         if title_budget <= 1:
             sources.append(
                 {
-                    "path": f"supplement:{title}",
+                    "path": source_id,
                     "sha256": hashlib.sha256(raw_content.encode("utf-8")).hexdigest(),
                     "size": len(raw_content.encode("utf-8")),
                     "sent": False,
@@ -934,7 +936,7 @@ def build_model_context(
         sent_bytes += len(content.encode("utf-8"))
         sources.append(
             {
-                "path": f"supplement:{title}",
+                "path": source_id,
                 "sha256": hashlib.sha256(raw_content.encode("utf-8")).hexdigest(),
                 "size": len(raw_content.encode("utf-8")),
                 "sent": True,

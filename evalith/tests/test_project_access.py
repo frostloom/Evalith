@@ -56,7 +56,9 @@ def test_selected_scope_is_read_and_fingerprinted(
     scope = message["sent_scope"]
     sent_paths = {item["path"] for item in scope["sources"] if item.get("sent")}
     assert "docs/RELEASE_POLICY.md" in sent_paths
-    assert "supplement:业务补充" in sent_paths
+    assert any(
+        item.startswith("supplement:业务补充") for item in sent_paths
+    )
     assert scope["snapshot_digest"] == snapshot["digest"]
     assert scope["redactions"] >= 1
 
@@ -247,6 +249,26 @@ def test_nested_gitignore_failure_closes_child_descriptor(
     assert excinfo.value.code == "gitignore_not_regular"
     assert len(opened) >= 2
     assert opened[1] in closed
+
+
+def test_duplicate_supplement_titles_get_unique_sources(tmp_path: Path) -> None:
+    root = tmp_path / "duplicate-supplements"
+    root.mkdir()
+    (root / "README.md").write_text("hello\n", encoding="utf-8")
+    scan = scan_project(root, ["README.md"], [])
+    _, _, scope = build_model_context(
+        scan,
+        [
+            {"title": "同名补充", "content": "first body"},
+            {"title": "同名补充", "content": "second body"},
+        ],
+        budget_chars=20_000,
+    )
+    sources = [
+        item["path"] for item in scope["sources"] if item.get("supplemental")
+    ]
+    assert len(sources) == 2
+    assert len(set(sources)) == 2
 
 
 def test_nested_gitignore_excludes_by_default(tmp_path: Path) -> None:

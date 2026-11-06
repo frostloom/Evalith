@@ -195,8 +195,9 @@ def _stub_understanding(
         if line.startswith("### FILE "):
             rest = line[len("### FILE ") :]
             files.append(rest.split(" (sha256", 1)[0])
-        elif line.startswith("### SUPPLEMENT "):
-            supplements.append(line[len("### SUPPLEMENT ") :])
+    supplements = [
+        str(item["path"]) for item in sources if item.get("supplemental")
+    ]
     known = []
     for path in files[:5]:
         known.append(
@@ -205,11 +206,11 @@ def _stub_understanding(
                 "source": path,
             }
         )
-    for title in supplements[:3]:
+    for source in supplements[:3]:
         known.append(
             {
-                "text": f"补充资料「{title}」已纳入本次分析；内容指纹已记录。",
-                "source": f"supplement:{title}",
+                "text": f"补充资料「{source}」已纳入本次分析；内容指纹已记录。",
+                "source": source,
             }
         )
     if not known:
