@@ -587,52 +587,6 @@ def _keyword_outside_quotes(text: str, keyword: str) -> bool:
     return _first_keyword_outside_quotes(text, keyword) is not None
 
 
-CONTINUATION_PHRASES = ("继续", "进入下一步", "开始出题", "开始设计", "进入下一阶段")
-REQUEST_PREFIXES = (
-    "我",
-    "我会",
-    "我同意",
-    "我确认",
-    "请",
-    "可以",
-    "确认",
-    "同意",
-    "那就",
-    "我们",
-    "现在",
-    "好的",
-    "好",
-    "开始",
-    "进入",
-    "继续",
-)
-DESCRIPTIVE_MARKERS = (
-    "按钮",
-    "文案",
-    "应为",
-    "改为",
-    "位于",
-    "描述",
-    "示例",
-    "引用",
-    "名称",
-    "定义",
-    "概念",
-    "术语",
-    "状态",
-    "含义",
-    "意思",
-    "代表",
-    "表示",
-    "翻译",
-    "英文",
-    "中文",
-    "转成",
-    "复述",
-    "改写",
-)
-
-
 CONDITIONAL_MARKERS = (
     "等",
     "才",
@@ -691,6 +645,32 @@ WITHDRAWAL_MARKERS = (
     "别继续",
 )
 
+DESCRIPTIVE_MARKERS = (
+    "按钮",
+    "文案",
+    "应为",
+    "改为",
+    "位于",
+    "描述",
+    "示例",
+    "引用",
+    "名称",
+    "定义",
+    "概念",
+    "术语",
+    "状态",
+    "含义",
+    "意思",
+    "代表",
+    "表示",
+    "翻译",
+    "英文",
+    "中文",
+    "转成",
+    "复述",
+    "改写",
+)
+
 
 def _is_conditional_statement(text: str) -> bool:
     return any(marker in text for marker in CONDITIONAL_MARKERS)
@@ -702,8 +682,18 @@ def _is_descriptive_statement(text: str) -> bool:
     )
 
 
+# A closed affirmative grammar is deliberate: accepting arbitrary text after a
+# prefix such as "请" or "现在" also accepts conditions and rhetorical questions.
+_AFFIRMATIVE_CONTINUATION = re.compile(
+    r"^(?:好的?|好|可以|确认|同意|那就|我们|现在|请|我会|我同意|我确认)?"
+    r"[，,\s]*"
+    r"(?:继续|进入下一步|开始出题|开始设计|进入下一阶段)"
+    r"(?:吧|了|好)?[。！!]?$"
+)
+
+
 def _affirmative_continuation(text: str) -> bool:
-    """Return True only for an explicit, non-descriptive continuation request."""
+    """Return True only for an explicit, complete continuation request."""
     stripped = text.strip()
     if not stripped:
         return False
@@ -713,21 +703,7 @@ def _affirmative_continuation(text: str) -> bool:
         return False
     if any(marker in stripped for marker in HESITATION_MARKERS):
         return False
-    for phrase in CONTINUATION_PHRASES:
-        index = _first_keyword_outside_quotes(stripped, phrase)
-        if index is None:
-            continue
-        prefix = stripped[:index].strip(" ，,。.！!；;：:")
-        suffix = stripped[index + len(phrase) :].strip(" ，,。.！!；;：:")
-        if suffix not in ("", "吧", "了", "好"):
-            continue
-        if not prefix:
-            return True
-        if prefix in REQUEST_PREFIXES:
-            return True
-        if prefix.startswith(("请", "可以", "确认", "同意", "那就", "我们", "现在", "好的", "我会", "我同意", "我确认")):
-            return True
-    return False
+    return bool(_AFFIRMATIVE_CONTINUATION.fullmatch(stripped))
 
 
 def _affirmative_sufficiency(text: str) -> bool:

@@ -424,6 +424,9 @@ def test_questions_and_quoted_instructions_do_not_open_gate(
         "请在材料齐全后继续。",
         "请翻译成英文：继续。",
         "请将依据足够翻译成英文。",
+        "现在没有必要继续。",
+        "请在审批通过时继续。",
+        "请判断可否继续。",
     ):
         response = client.post(
             f"/api/projects/{project_id}/messages", json={"content": text}

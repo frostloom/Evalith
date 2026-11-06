@@ -31,7 +31,11 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_NO_DEV=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/apps/backend/src \
-    PATH="/app/apps/backend/.venv/bin:$PATH"
+    PATH="/app/apps/backend/.venv/bin:$PATH" \
+    OTEL_RHESIS_TELEMETRY_ENABLED=false \
+    OTEL_SDK_DISABLED=true \
+    ENABLE_RHESIS_KEY=false \
+    RHESIS_CONNECTOR_DISABLED=true
 
 RUN uv sync --extra all --extra cpu --no-install-package torch
 

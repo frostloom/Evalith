@@ -61,8 +61,8 @@ requests/logs plus literal key scrubbing from upstream errors and outgoing
 content, full-content PEM redaction before excerpt truncation, literal-key scrubbing of
 successful responses, strict boolean/sufficiency/affirmative-intent handling,
 sourced known facts, malformed understanding arrays, quoted/descriptive/refusal
-intent handling (including descriptive corrections, interrogative/narrative/
-conditional/translation statements and explicit provider phrases), sensitive-root rejection, AWS and connection-URI
+intent handling (closed affirmative grammar; descriptive, interrogative,
+narrative, conditional and translation statements are rejected), sensitive-root rejection, AWS and connection-URI
 credential redaction, preservation of validated model sufficiency,
 FIFO rejection, oversized and read-error descriptor ownership, ancestor
 exclusions for explicit selections, preservation of failed analysis until a

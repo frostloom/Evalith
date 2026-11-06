@@ -51,7 +51,8 @@ This generates `workbench/.workbench/rhesis.env` with disposable local secrets,
 starts PostgreSQL/Redis from `compose.deps.yaml`, runs migrations, and starts
 the backend on `127.0.0.1:8080` and the frontend on `127.0.0.1:3000`
 (`npm start -- --hostname 127.0.0.1`; Next's default listener is not loopback-only).
-It sets:
+The backend image sets the same telemetry/platform-key/connector disables as the
+host launcher. It sets:
 
 ```text
 QUICK_START=true

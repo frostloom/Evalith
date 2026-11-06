@@ -519,6 +519,9 @@ def test_provider_rejects_conditional_intent(
         "请在材料齐全后继续。",
         "请翻译成英文：继续。",
         "请将依据足够翻译成英文。",
+        "现在没有必要继续。",
+        "请在审批通过时继续。",
+        "请判断可否继续。",
     ):
         response = client.post(
             f"/api/projects/{detail['project']['id']}/messages",
