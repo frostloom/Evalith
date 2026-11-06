@@ -332,10 +332,14 @@ def _record_from_fd(fd: int, relative: str, *, max_file_bytes: int) -> FileRecor
         reason = f"file larger than model-context cap ({max_file_bytes} bytes)"
     else:
         text = data.decode("utf-8", errors="replace")
-        if len(text) > MAX_EXCERPT_CHARS:
-            text = text[:MAX_EXCERPT_CHARS] + "\n…[truncated]"
+        # Redact the complete decoded content before truncating.  A PEM block
+        # whose closing marker lies beyond the excerpt boundary must still be
+        # removed as a block; truncating first would leave its header and key
+        # bytes behind.
         redacted = redact_text(text)
         redactions = _count_redactions(text, redacted)
+        if len(redacted) > MAX_EXCERPT_CHARS:
+            redacted = redacted[:MAX_EXCERPT_CHARS] + "\n…[truncated]"
         excerpt = redacted
     return FileRecord(
         path=relative,
@@ -506,8 +510,11 @@ def scan_project(
                     if stat.S_ISDIR(entry_stat.st_mode):
                         walk(fd, relative)
                     elif stat.S_ISREG(entry_stat.st_mode):
-                        add_file_from_fd(fd, relative, required=True)
-                        fd = -1  # ownership transferred to _record_from_fd
+                        # Transfer ownership before the helper runs: it closes
+                        # the descriptor on success and on every error path.
+                        owned_fd = fd
+                        fd = -1
+                        add_file_from_fd(owned_fd, relative, required=True)
                     else:
                         raise AccessError(
                             f"选定的路径不是普通文件或目录：{relative}",

@@ -129,6 +129,66 @@ def test_upstream_error_echoing_configured_key_is_scrubbed(
     assert SECRET_KEY not in str(rows) + str(errors)
 
 
+def test_literal_configured_key_is_scrubbed_from_content(
+    client: TestClient,
+    project_root: Path,
+    recording_server,
+    settings,
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "literal-key",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+            "api_key": SECRET_KEY,
+        },
+    ).json()
+    detail = import_project(
+        client,
+        project_root,
+        model_config_id=model["id"],
+        supplemental=[
+            {"title": "note", "content": f"the configured value is {SECRET_KEY}"}
+        ],
+    )
+    assert detail.status_code == 201, detail.text
+    assert SECRET_KEY not in detail.text
+
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "understanding": {
+            "summary": detail.json()["understanding"]["summary"],
+            "agent_or_flow": detail.json()["understanding"]["agent_or_flow"],
+            "known": detail.json()["understanding"]["known"],
+            "inferred": detail.json()["understanding"]["inferred"],
+            "unknowns": detail.json()["understanding"]["unknowns"],
+            "sufficient": False,
+            "sufficient_reason": detail.json()["understanding"]["sufficient_reason"],
+        },
+    }
+    chat = client.post(
+        f"/api/projects/{detail.json()['project']['id']}/messages",
+        json={"content": f"please use {SECRET_KEY} here"},
+    )
+    assert chat.status_code == 200, chat.text
+    assert SECRET_KEY not in chat.text
+    for recorded in _RecordingHandler.requests:
+        assert SECRET_KEY not in recorded["body"]
+
+    import sqlite3
+
+    connection = sqlite3.connect(settings.database_path)
+    try:
+        rows = connection.execute("SELECT content, payload FROM messages").fetchall()
+        project_row = connection.execute("SELECT supplemental FROM projects").fetchone()
+    finally:
+        connection.close()
+    assert SECRET_KEY not in str(rows) + str(project_row)
+
+
 def test_child_loggers_redact_credentials(client: TestClient, caplog) -> None:
     logger = logging.getLogger("evalith.model")
     with caplog.at_level(logging.DEBUG, logger="evalith.model"):

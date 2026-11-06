@@ -9,7 +9,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from conftest import create_stub_model, import_project, sha256
-from evalith.project_access import AccessError, resolve_root
+from evalith.project_access import (
+    AccessError,
+    MAX_EXCERPT_CHARS,
+    MAX_HASH_BYTES,
+    resolve_root,
+    scan_project,
+)
 
 
 def test_selected_scope_is_read_and_fingerprinted(
@@ -215,6 +221,35 @@ def test_replaced_project_root_is_rejected_on_reanalyse(
     response = client.post(f"/api/projects/{project_id}/reanalyse")
     assert response.status_code == 409, response.text
     assert response.json()["code"] == "root_changed"
+
+
+def test_pem_block_crossing_excerpt_boundary_is_redacted(project_root: Path) -> None:
+    prefix = "a" * (MAX_EXCERPT_CHARS - 10)
+    pem = (
+        "-----BEGIN PRIVATE KEY-----\n"
+        + "secret-key-material\n" * 20
+        + "-----END PRIVATE KEY-----\n"
+    )
+    path = project_root / "README_PEM.md"
+    path.write_text(prefix + "\n" + pem, encoding="utf-8")
+    result = scan_project(project_root, ["README_PEM.md"], [], max_file_bytes=512_000)
+    assert result.files
+    excerpt = result.files[0].excerpt
+    assert "BEGIN PRIVATE KEY" not in excerpt
+    assert "secret-key-material" not in excerpt
+    assert result.files[0].redactions >= 1
+
+
+def test_oversized_explicit_file_returns_structured_error(
+    client: TestClient, project_root: Path
+) -> None:
+    (project_root / "oversized.bin").write_bytes(b"x" * (MAX_HASH_BYTES + 1))
+    model = create_stub_model(client)
+    response = import_project(
+        client, project_root, model_config_id=model["id"], include=["oversized.bin"]
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "file_too_large"
 
 
 def test_special_file_selection_is_rejected_without_blocking(

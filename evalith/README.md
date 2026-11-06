@@ -55,10 +55,12 @@ The Python suite covers descriptor-anchored traversal, replaced/symlinked root
 rejection, scope enforcement, secret denylist, read-only behaviour, source
 fingerprints, session uniqueness under concurrency, reopen restoration,
 cross-project isolation, credential redaction in supplemental/chat/model
-requests/logs plus literal key scrubbing from upstream errors, strict boolean
+requests/logs plus literal key scrubbing from upstream errors and outgoing
+content, full-content PEM redaction before excerpt truncation, strict boolean
 and sufficiency-retraction handling, malformed understanding arrays, FIFO
-rejection, project model repair, reanalysis history/correction preservation,
-model-failure visibility, and the question-generation gate. The frontend tests cover project-switch draft reset
+rejection, oversized-file descriptor ownership, project model repair,
+reanalysis history/correction preservation, model-failure visibility, and the
+question-generation gate. The frontend tests cover project-switch draft reset
 and stale-response rejection.
 
 ## Project access

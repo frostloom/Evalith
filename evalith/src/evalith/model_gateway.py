@@ -276,6 +276,10 @@ class ModelGateway:
             text, self.config.api_key if self.config is not None else None
         )
 
+    def scrub(self, text: str) -> str:
+        """Remove pattern-shaped and literally configured credentials."""
+        return self._scrub(text)
+
     def _request_chat(self, messages: list[dict[str, str]]) -> dict[str, Any]:
         assert self.config is not None
         if not self.config.base_url:
@@ -287,7 +291,7 @@ class ModelGateway:
         # Every model-input route is redacted again here, independent of the
         # caller, so a new caller cannot bypass the credential boundary.
         safe_messages = [
-            {"role": item["role"], "content": redact_text(item["content"])}
+            {"role": item["role"], "content": self._scrub(item["content"])}
             for item in messages
         ]
         body = {

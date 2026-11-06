@@ -140,6 +140,14 @@ class WorkspaceService:
         include_paths = self._string_list(payload.get("include_paths"))
         exclude_patterns = self._string_list(payload.get("exclude_patterns"))
         supplemental = self._supplemental(payload.get("supplemental"))
+        gateway = self.gateway_for(model_config_id)
+        supplemental = [
+            {
+                "title": gateway.scrub(item["title"]),
+                "content": gateway.scrub(item["content"]),
+            }
+            for item in supplemental
+        ]
         try:
             scan = scan_project(
                 root,
@@ -608,6 +616,8 @@ class WorkspaceService:
             raise WorkspaceError("消息不能为空")
         if len(text) > 8_000:
             raise WorkspaceError("消息过长")
+        gateway = self.gateway_for(project["model_config_id"])
+        text = gateway.scrub(text)
         self._append_message(project, role="user", content=text, payload={"kind": "chat"})
         try:
             try:
@@ -629,7 +639,6 @@ class WorkspaceService:
                 project = self.db.get_project(project["id"])
                 assert project is not None
             sources, context_text, scope = self._context_for(project, scan)
-            gateway = self.gateway_for(project["model_config_id"])
             current_row = self.db.get_understanding(project_id)
             current = self.parse_understanding(current_row)
             if current is None:
@@ -815,6 +824,14 @@ class WorkspaceService:
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
         supplemental = self._supplemental(payload.get("supplemental"))
+        gateway = self.gateway_for(project["model_config_id"])
+        supplemental = [
+            {
+                "title": gateway.scrub(item["title"]),
+                "content": gateway.scrub(item["content"]),
+            }
+            for item in supplemental
+        ]
         include_paths = self._string_list(payload.get("include_paths"))
         exclude_patterns = self._string_list(payload.get("exclude_patterns"))
         if project["root_dev"] is None or project["root_ino"] is None:
