@@ -386,9 +386,13 @@ class ModelGateway:
                 model_name="stub",
             )
         current_payload = (
-            json.dumps(current, ensure_ascii=False) if current is not None else "无"
+            json.dumps(self._scrub_value(current), ensure_ascii=False)
+            if current is not None
+            else "无"
         )
-        history_payload = json.dumps((history or [])[-10:], ensure_ascii=False)
+        history_payload = json.dumps(
+            self._scrub_value((history or [])[-10:]), ensure_ascii=False
+        )
         prompt = (
             f"项目名称：{redact_text(project_name)}\n"
             f"资料范围：{len(sources)} 项，内容指纹已随资料给出。\n\n"
@@ -420,11 +424,11 @@ class ModelGateway:
         if self.config.provider == "stub":
             return _stub_discuss(current, user_message)
         prompt = (
-            f"项目名称：{redact_text(project_name)}\n\n当前理解（JSON）：\n"
-            f"{json.dumps(current, ensure_ascii=False)}\n\n"
+            f"项目名称：{self._scrub(project_name)}\n\n当前理解（JSON）：\n"
+            f"{json.dumps(self._scrub_value(current), ensure_ascii=False)}\n\n"
             f"资料摘要：\n{context_text}\n\n"
-            f"最近对话：\n{json.dumps(history[-6:], ensure_ascii=False)}\n\n"
-            f"用户最新消息：{user_message}\n\n请输出 JSON。"
+            f"最近对话：\n{json.dumps(self._scrub_value(history[-6:]), ensure_ascii=False)}\n\n"
+            f"用户最新消息：{self._scrub(user_message)}\n\n请输出 JSON。"
         )
         value = self._request_chat(
             [

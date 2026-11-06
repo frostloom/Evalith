@@ -281,7 +281,7 @@ def test_late_saved_credential_is_scrubbed_from_history(
         client, project_root, model_config_id=selected["id"]
     ).json()
     project_id = detail["project"]["id"]
-    other = "other/key+value"
+    other = 'other"key\\value'
     first = client.post(
         f"/api/projects/{project_id}/messages",
         json={"content": f"remember {other} temporarily"},
@@ -302,8 +302,8 @@ def test_late_saved_credential_is_scrubbed_from_history(
     )
     assert second.status_code == 200, second.text
     body = _RecordingHandler.requests[-1]["body"]
-    assert other not in body
-    assert "other%2Fkey%2Bvalue" not in body
+    assert "other" not in body
+    assert "other%22key%5Cvalue" not in body
 
 
 def test_other_saved_credentials_are_redacted(

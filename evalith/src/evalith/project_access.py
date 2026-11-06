@@ -596,7 +596,8 @@ def _git_segment_regex(segment: str) -> re.Pattern[str]:
                 body.append(re.escape(segment[cursor]))
                 cursor += 1
             if cursor < len(segment) and segment[cursor] == "]":
-                out.append("[" + ("^" if negated else "") + "".join(body) + "]")
+                body_text = "".join(body).replace("\\-", "-")
+                out.append("[" + ("^" if negated else "") + body_text + "]")
                 index = cursor + 1
                 continue
             out.append(re.escape(char))
