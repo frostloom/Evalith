@@ -625,6 +625,24 @@ def _git_segment_match(path_part: str, pattern_part: str) -> bool:
         return bool(_git_segment_regex(pattern_part).match(path_part))
     return fnmatch.fnmatchcase(path_part, pattern_part)
 
+def _normalize_class_negation(pattern: str) -> str:
+    out: list[str] = []
+    index = 0
+    while index < len(pattern):
+        if pattern[index] == "\\" and index + 1 < len(pattern):
+            out.append(pattern[index])
+            out.append(pattern[index + 1])
+            index += 2
+            continue
+        if pattern.startswith("[^", index):
+            out.append("[!")
+            index += 2
+            continue
+        out.append(pattern[index])
+        index += 1
+    return "".join(out)
+
+
 def _git_glob_match(path: str, pattern: str) -> bool:
     """Component-aware glob where a single * does not cross '/'."""
     path_parts = path.split("/")
@@ -659,7 +677,9 @@ def _gitignore_decision(
     ignored = False
     matched_pattern: str | None = None
     for pattern, negated in rules:
-        candidate = _unescape_gitignore_pattern(pattern).replace("[^", "[!")
+        candidate = _normalize_class_negation(
+            _unescape_gitignore_pattern(pattern)
+        )
         dir_only = candidate.endswith("/")
         candidate = candidate.rstrip("/")
         if not candidate:

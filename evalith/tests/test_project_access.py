@@ -344,6 +344,23 @@ def test_oversized_gitignore_is_rejected(tmp_path: Path) -> None:
     assert excinfo.value.code == "gitignore_too_large"
 
 
+def test_gitignore_escaped_literal_negation_brackets(tmp_path: Path) -> None:
+    root = tmp_path / "escaped-negation-brackets"
+    root.mkdir()
+    (root / ".gitignore").write_text(
+        "private\\[^a].txt\n", encoding="utf-8"
+    )
+    (root / "private[^a].txt").write_text("synthetic\n", encoding="utf-8")
+    default = scan_project(root, [], [])
+    assert "private[^a].txt" not in {item.path for item in default.files}
+    assert any(
+        item["path"] == "private[^a].txt" and "gitignore" in item["reason"]
+        for item in default.excluded
+    )
+    selected = scan_project(root, ["private[^a].txt"], [])
+    assert "private[^a].txt" in {item.path for item in selected.files}
+
+
 def test_gitignore_escaped_metacharacter_inside_posix_class(
     tmp_path: Path,
 ) -> None:
