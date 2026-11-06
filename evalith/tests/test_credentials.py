@@ -66,6 +66,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "AKIAEXAMPLESECRET" not in request["body"]
     assert "synthetic-secret-value" not in request["body"]
     assert "synthetic-password" not in request["body"]
+    assert "synthetic-db-pass" not in request["body"]
+    assert "synthetic-app-db-pass" not in request["body"]
+    assert "synthetic-db-pwd" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -383,6 +386,19 @@ def test_signing_secret_is_redacted() -> None:
     redacted = redact_text(text)
     assert "synthetic-signing-secret" not in redacted
     assert "[REDACTED]" in redacted
+
+
+def test_password_aliases_are_redacted() -> None:
+    from evalith.security import redact_text
+
+    for line, secret in (
+        ('DB_PASS = "synthetic-db-pass"', "synthetic-db-pass"),
+        ('APP_DB_PASS = "synthetic-app-db-pass"', "synthetic-app-db-pass"),
+        ('DB_PWD = "synthetic-db-pwd"', "synthetic-db-pwd"),
+    ):
+        redacted = redact_text(line)
+        assert secret not in redacted
+        assert "[REDACTED]" in redacted
 
 
 def test_withdrawal_persists_when_paid_models_are_disabled(
@@ -788,6 +804,9 @@ def test_child_loggers_redact_credentials(client: TestClient, caplog) -> None:
     with caplog.at_level(logging.DEBUG, logger="evalith.model"):
         logger.error("upstream said OPENAI_API_KEY=%s", SECRET_KEY)
         logger.error("AWS_SECRET_ACCESS_KEY=%s", SECRET_KEY)
+        logger.error("DB_PASS=%s", "synthetic-db-pass")
+        logger.error("APP_DB_PASS=%s", "synthetic-app-db-pass")
+        logger.error("DB_PWD=%s", "synthetic-db-pwd")
     assert SECRET_KEY not in caplog.text
     assert "[REDACTED]" in caplog.text
 

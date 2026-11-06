@@ -50,6 +50,16 @@ export function Workspace({
   onError: (message: string) => void;
   onNotice: (message: string) => void;
 }) {
+  const mountedRef = useRef(true);
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    [],
+  );
+  const applyDetail = (next: ProjectDetail) => {
+    if (mountedRef.current) onDetail(next);
+  };
   const { project, understanding, readiness, snapshot, messages } = detail;
   const [message, setMessage] = useState("");
   const [composing, setComposing] = useState(false);
@@ -75,7 +85,7 @@ export function Workspace({
     try {
       const next = await action();
       if (projectIdRef.current !== origin || next.project.id !== origin) return;
-      onDetail(next);
+      applyDetail(next);
       if (success) onNotice(success);
     } catch (err) {
       if (projectIdRef.current === origin) {
@@ -94,7 +104,7 @@ export function Workspace({
     try {
       const next = await api.sendMessage(project.id, content);
       if (projectIdRef.current !== origin || next.project.id !== origin) return;
-      onDetail(next);
+      applyDetail(next);
       setMessage("");
     } catch (err) {
       if (projectIdRef.current === origin) {
@@ -104,7 +114,7 @@ export function Workspace({
         try {
           const latest = await api.getProject(origin);
           if (projectIdRef.current === origin && latest.project.id === origin) {
-            onDetail(latest);
+            applyDetail(latest);
           }
         } catch {
           // Keep the original request error; the next open will refresh.
@@ -365,7 +375,7 @@ export function Workspace({
           models={models}
           onClose={() => setEditingModel(false)}
           onSaved={(next) => {
-            onDetail(next);
+            applyDetail(next);
             setEditingModel(false);
             onNotice("模型配置已保存，项目主会话保持不变。");
           }}
@@ -378,7 +388,7 @@ export function Workspace({
           detail={detail}
           onClose={() => setEditingSources(false)}
           onSaved={(next) => {
-            onDetail(next);
+            applyDetail(next);
             setEditingSources(false);
             onNotice("资料范围已保存并重新分析。");
           }}

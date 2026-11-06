@@ -34,7 +34,7 @@ _SECRET_PATTERNS = [
         r"(?:secret[_-]?access[_-]?key|secret[_-]?key|signing[_-]?key|"
         r"npm[_-]?auth[_-]?token|npmAuthToken|access[_-]?key[_-]?id|"
         r"api[_-]?key|access[_-]?token|client[_-]?secret|token|secret|"
-        r"password|authorization)[\"']?\s*[:=]\s*"
+        r"password|passwd|pwd|pass|authorization)[\"']?\s*[:=]\s*"
         r"(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|[^\n,}]+)"
     ),
     re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=-]+"),

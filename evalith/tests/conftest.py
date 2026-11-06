@@ -72,7 +72,10 @@ def project_root(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (root / "config" / "database.py").write_text(
-        'DATABASE_URL = "postgresql://alice:synthetic-password@db/app"\n',
+        'DATABASE_URL = "postgresql://alice:synthetic-password@db/app"\n'
+        'DB_PASS = "synthetic-db-pass"\n'
+        'APP_DB_PASS = "synthetic-app-db-pass"\n'
+        'DB_PWD = "synthetic-db-pwd"\n',
         encoding="utf-8",
     )
     (root / "config" / "application.yaml").write_text(

@@ -267,6 +267,46 @@ describe("project switching", () => {
     await screen.findByText("message after settings");
   });
 
+  it("ignores a delayed response from an abandoned A workspace", async () => {
+    let resolveSend: ((value: unknown) => void) | undefined;
+    apiMock.sendMessage.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSend = resolve;
+      }),
+    );
+    const staleA = detail("a", "Project A");
+    staleA.messages = [
+      {
+        id: "msg_stale",
+        role: "assistant",
+        content: "stale abandoned A response",
+        payload: { kind: "chat" },
+        model: null,
+        sent_scope: null,
+        created_at: "2026-11-06T00:00:00Z",
+      },
+    ] as never;
+    const user = userEvent.setup();
+    render(<App />);
+    const main = screen.getByRole("main");
+    await user.click(
+      await within(main).findByRole("button", { name: /Project A.*文件/ }),
+    );
+    await screen.findByRole("heading", { name: "Project A" });
+    await user.type(screen.getByLabelText("给主会话发送消息"), "old request");
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await user.click(screen.getByRole("button", { name: /Project B.*文件/ }));
+    await screen.findByRole("heading", { name: "Project B" });
+    await user.click(screen.getByRole("button", { name: /Project A.*文件/ }));
+    await screen.findByRole("heading", { name: "Project A" });
+    await act(async () => {
+      resolveSend?.(staleA);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText("stale abandoned A response")).toBeNull(),
+    );
+  });
+
   it("restores the displayed project after overlapping switch failures", async () => {
     apiMock.listProjects.mockResolvedValue({
       items: [
