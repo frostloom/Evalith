@@ -201,6 +201,42 @@ describe("project switching", () => {
     expect(screen.getByLabelText("给主会话发送消息")).toHaveValue("");
   });
 
+  it("keeps the visible project when switching to another fails", async () => {
+    apiMock.enterProject.mockImplementation((id: string) => {
+      if (id === "b") return Promise.reject(new Error("cannot open B"));
+      return Promise.resolve(detail("a", "Project A"));
+    });
+    const updatedA = detail("a", "Project A");
+    updatedA.messages = [
+      {
+        id: "msg_1",
+        role: "assistant",
+        content: "recovered after failure",
+        payload: { kind: "chat" },
+        model: null,
+        sent_scope: null,
+        created_at: "2026-11-06T00:00:00Z",
+      },
+    ] as never;
+    apiMock.sendMessage.mockResolvedValue(updatedA);
+
+    const user = userEvent.setup();
+    render(<App />);
+    const main = screen.getByRole("main");
+    await user.click(
+      await within(main).findByRole("button", { name: /Project A.*文件/ }),
+    );
+    await screen.findByRole("heading", { name: "Project A" });
+    await user.click(screen.getByRole("button", { name: /Project B.*文件/ }));
+    await screen.findByText("cannot open B");
+    await screen.findByRole("heading", { name: "Project A" });
+
+    const composer = screen.getByLabelText("给主会话发送消息");
+    await user.type(composer, "still A");
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await screen.findByText("recovered after failure");
+  });
+
   it("ignores a late response from the project the user left", async () => {
     let resolveA: ((value: unknown) => void) | undefined;
     apiMock.enterProject.mockImplementation((id: string) => {

@@ -67,7 +67,10 @@ def project_root(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (root / "config" / "application.yaml").write_text(
-        "api_key: |\n  sk-yaml-project-secret\n", encoding="utf-8"
+        'api_key: |\n  sk-yaml-project-secret\n'
+        '"quoted_key": |\n  sk-quoted-yaml-secret\n'
+        "tokens:\n  - secret_key: |\n      sk-sequence-yaml-secret\n",
+        encoding="utf-8",
     )
     (root / "binary.dat").write_bytes(b"\x00\x01secret-binary\x02")
     (root / ".git" / "config").write_text("url = https://example.invalid\n", encoding="utf-8")

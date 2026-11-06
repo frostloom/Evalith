@@ -67,6 +67,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-password" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
+    assert "sk-quoted-yaml-secret" not in request["body"]
+    assert "sk-sequence-yaml-secret" not in request["body"]
     assert "eu-central" in request["body"]
     assert "RELEASE_POLICY" in request["body"]
     assert "[REDACTED]" in request["body"]
@@ -134,9 +136,18 @@ def test_existing_paid_model_is_disabled_after_restart(
 def test_yaml_block_scalar_secret_is_redacted() -> None:
     from evalith.security import redact_text
 
-    text = "api_key: |\n  sk-yaml-project-secret\n"
+    text = (
+        "api_key: |\n  sk-yaml-project-secret\n"
+        '"quoted_key": |\n  sk-quoted-yaml-secret\n'
+        "tokens:\n  - secret_key: |\n      sk-sequence-yaml-secret\n"
+    )
     redacted = redact_text(text)
-    assert "sk-yaml-project-secret" not in redacted
+    for secret in (
+        "sk-yaml-project-secret",
+        "sk-quoted-yaml-secret",
+        "sk-sequence-yaml-secret",
+    ):
+        assert secret not in redacted
     assert "[REDACTED]" in redacted
 
 

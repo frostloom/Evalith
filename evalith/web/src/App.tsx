@@ -50,6 +50,7 @@ export function App() {
   const openProject = async (project: Project) => {
     importGeneration.current += 1;
     const sequence = ++openSequence.current;
+    const previousProject = selectedProjectRef.current;
     selectedProjectRef.current = project.id;
     setBusy(true);
     setError(null);
@@ -61,6 +62,7 @@ export function App() {
       setView("project");
     } catch (err) {
       if (sequence === openSequence.current) {
+        selectedProjectRef.current = previousProject;
         setError(err instanceof Error ? err.message : "无法进入项目");
       }
     } finally {
