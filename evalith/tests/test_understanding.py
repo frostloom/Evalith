@@ -999,9 +999,86 @@ def test_reanalysis_retires_facts_from_changed_files(
     }
     updated = client.post(f"/api/projects/{detail['project']['id']}/reanalyse")
     assert updated.status_code == 200, updated.text
+    assert "approval optional" not in _RecordingHandler.requests[-1]["body"]
     texts = {item["text"] for item in updated.json()["understanding"]["known"]}
     assert "approval required" in texts
     assert "approval optional" not in texts
+
+    _RecordingHandler.body_override = {
+        "summary": "echoed",
+        "agent_or_flow": "",
+        "known": [
+            {"text": "approval optional", "source": "policy.md"},
+            {"text": "approval required", "source": "policy.md"},
+        ],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    echoed = client.post(f"/api/projects/{detail['project']['id']}/reanalyse")
+    assert echoed.status_code == 200, echoed.text
+    echoed_texts = {
+        item["text"] for item in echoed.json()["understanding"]["known"]
+    }
+    assert "approval required" in echoed_texts
+    assert "approval optional" not in echoed_texts
+
+
+def test_correction_survives_long_conversation_reanalysis(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    clean = {
+        "summary": "kept",
+        "agent_or_flow": "",
+        "known": [],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    _RecordingHandler.body_override = {
+        "reply": "ok",
+        "continue_requested": False,
+        "understanding": clean,
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "long-correction",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    correction = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "纠正：评测重点是审计记录。"},
+    )
+    assert correction.status_code == 200, correction.text
+
+    for index in range(11):
+        _RecordingHandler.body_override = {
+            "reply": f"ok {index}",
+            "continue_requested": False,
+            "understanding": clean,
+        }
+        response = client.post(
+            f"/api/projects/{project_id}/messages",
+            json={"content": f"补充 {index}"},
+        )
+        assert response.status_code == 200, response.text
+
+    _RecordingHandler.body_override = clean
+    reanalysed = client.post(f"/api/projects/{project_id}/reanalyse")
+    assert reanalysed.status_code == 200, reanalysed.text
+    assert "评测重点是审计记录" in _RecordingHandler.requests[-1]["body"]
+    texts = {
+        item["text"] for item in reanalysed.json()["understanding"]["known"]
+    }
+    assert any("评测重点是审计记录" in text for text in texts)
 
 
 def test_chat_unknown_source_is_a_visible_error(

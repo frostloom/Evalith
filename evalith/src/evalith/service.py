@@ -73,6 +73,60 @@ def _history_for_scope(
     return scoped
 
 
+def _old_source_hashes(
+    current_sources: list[dict[str, Any]], history: list[dict[str, Any]]
+) -> dict[str, str]:
+    """Prefer the oldest recorded hash for stale-evidence comparisons."""
+    hashes: dict[str, str] = {}
+    for message in history:
+        sent_scope = message.get("sent_scope") or {}
+        for item in sent_scope.get("sources", []):
+            if not isinstance(item, dict) or not item.get("path"):
+                continue
+            hashes.setdefault(
+                str(item["path"]), str(item.get("sha256", ""))
+            )
+    for item in current_sources:
+        if item.get("path"):
+            hashes.setdefault(
+                str(item["path"]), str(item.get("sha256", ""))
+            )
+    return hashes
+
+
+def _source_hashes(sources: list[dict[str, Any]]) -> dict[str, str]:
+    return {
+        str(item.get("path")): str(item.get("sha256", ""))
+        for item in sources
+        if item.get("path")
+    }
+
+
+def _known_for_sources(
+    known: list[Any],
+    old_hashes: dict[str, str],
+    new_hashes: dict[str, str],
+    stale_hashes: dict[tuple[str, str], str],
+) -> list[dict[str, Any]]:
+    """Keep session facts and file facts whose evidence version still matches."""
+    retained: list[dict[str, Any]] = []
+    for item in known:
+        if not isinstance(item, dict):
+            continue
+        source = str(item.get("source", ""))
+        if source in ("会话", "snapshot"):
+            retained.append(item)
+            continue
+        if source not in new_hashes:
+            continue
+        key = (str(item.get("text", "")), source)
+        old_hash = stale_hashes.get(key)
+        if old_hash is not None and old_hash != new_hashes[source]:
+            continue
+        retained.append(item)
+    return retained
+
+
 class WorkspaceService:
     def __init__(self, db: Database, settings: Settings, cipher: CredentialCipher) -> None:
         self.db = db
@@ -544,6 +598,9 @@ class WorkspaceService:
                         "role": row["role"],
                         "content": row["content"],
                         "sent_scope": payload.get("sent_scope"),
+                        "known": (payload.get("understanding") or {}).get(
+                            "known", []
+                        ),
                     }
                 )
             history = history[-10:]
@@ -555,6 +612,33 @@ class WorkspaceService:
             new_scope = {
                 str(item.get("path")) for item in sources if item.get("path")
             }
+            old_hashes = _old_source_hashes(
+                current.get("sources", []) if current else [], history
+            )
+            new_hashes = _source_hashes(sources)
+            stale_hashes: dict[tuple[str, str], str] = {}
+
+            def record_known(items, scope) -> None:
+                scope_hashes = _source_hashes(
+                    (scope or {}).get("sources", [])
+                )
+                for item in items or []:
+                    if not isinstance(item, dict):
+                        continue
+                    source = str(item.get("source", ""))
+                    if source in scope_hashes:
+                        stale_hashes.setdefault(
+                            (str(item.get("text", "")), source),
+                            scope_hashes[source],
+                        )
+
+            if usable_current:
+                record_known(
+                    usable_current.get("known", []),
+                    {"sources": usable_current.get("sources", [])},
+                )
+            for message in history:
+                record_known(message.get("known", []), message.get("sent_scope"))
             provider_current = usable_current
             model_history = _history_for_scope(
                 history, new_scope, project["snapshot_id"]
@@ -563,12 +647,12 @@ class WorkspaceService:
             if usable_current is not None:
                 retained = new_scope | {"会话", "snapshot"}
                 provider_current = dict(usable_current)
-                provider_current["known"] = [
-                    item
-                    for item in usable_current.get("known", [])
-                    if isinstance(item, dict)
-                    and str(item.get("source", "")) in retained
-                ]
+                provider_current["known"] = _known_for_sources(
+                    usable_current.get("known", []),
+                    old_hashes,
+                    new_hashes,
+                    stale_hashes,
+                )
                 provider_current["agent_or_flow"] = ""
                 provider_current["inferred"] = []
                 provider_current["unknowns"] = []
@@ -600,12 +684,12 @@ class WorkspaceService:
             } | {"会话", "snapshot"}
             # Retire facts whose source was removed from the new scope rather
             # than carrying a provenance that can no longer be resolved.
-            merged = [
-                item
-                for item in result.get("known", [])
-                if isinstance(item, dict)
-                and str(item.get("source", "")) in allowed_sources
-            ]
+            merged = _known_for_sources(
+                result.get("known", []),
+                old_hashes,
+                new_hashes,
+                stale_hashes,
+            )
             merged_texts = {
                 str(item.get("text")) for item in merged if isinstance(item, dict)
             }
@@ -829,6 +913,18 @@ class WorkspaceService:
             current = self.parse_understanding(current_row)
             if current is None:
                 raise ModelError("项目尚未完成初步分析，无法继续会话")
+            if text.startswith(("纠正：", "纠正:")):
+                corrected = text.split("：", 1)[-1].split(":", 1)[-1].strip()
+                correction = {
+                    "text": f"用户纠正：{corrected}",
+                    "source": "会话",
+                }
+                if correction not in current.get("known", []):
+                    current = dict(current)
+                    current["known"] = list(current.get("known", [])) + [correction]
+                    self._store_understanding(
+                        project, current, error=current.get("error")
+                    )
             history = []
             for row in self.db.list_messages(
                 project_id, self.db.ensure_main_session(project_id)["id"]
@@ -841,6 +937,9 @@ class WorkspaceService:
                         "role": row["role"],
                         "content": row["content"],
                         "sent_scope": payload.get("sent_scope"),
+                        "known": (payload.get("understanding") or {}).get(
+                            "known", []
+                        ),
                     }
                 )
             allowed_paths = {
@@ -850,6 +949,32 @@ class WorkspaceService:
                 history[-8:], allowed_paths, project["snapshot_id"]
             )
             scope["history_messages"] = len(history)
+            old_hashes = _old_source_hashes(
+                current.get("sources", []), history
+            )
+            new_hashes = _source_hashes(sources)
+            stale_hashes: dict[tuple[str, str], str] = {}
+
+            def record_known(items, scope) -> None:
+                scope_hashes = _source_hashes(
+                    (scope or {}).get("sources", [])
+                )
+                for item in items or []:
+                    if not isinstance(item, dict):
+                        continue
+                    source = str(item.get("source", ""))
+                    if source in scope_hashes:
+                        stale_hashes.setdefault(
+                            (str(item.get("text", "")), source),
+                            scope_hashes[source],
+                        )
+
+            record_known(
+                current.get("known", []),
+                {"sources": current.get("sources", [])},
+            )
+            for message in history:
+                record_known(message.get("known", []), message.get("sent_scope"))
             current_paths = {
                 str(item.get("path"))
                 for item in current.get("sources", [])
@@ -864,14 +989,13 @@ class WorkspaceService:
                 or understanding_stale
                 or current_paths != allowed_paths
             ):
-                retained = allowed_paths | {"会话", "snapshot"}
                 model_current = dict(current)
-                model_current["known"] = [
-                    item
-                    for item in current.get("known", [])
-                    if isinstance(item, dict)
-                    and str(item.get("source", "")) in retained
-                ]
+                model_current["known"] = _known_for_sources(
+                    current.get("known", []),
+                    old_hashes,
+                    new_hashes,
+                    stale_hashes,
+                )
                 model_current["summary"] = ""
                 model_current["agent_or_flow"] = ""
                 model_current["inferred"] = []
@@ -934,42 +1058,27 @@ class WorkspaceService:
             self._validate_known_sources(
                 understanding, sources, current.get("sources", [])
             )
-            old_hashes = {
-                str(item.get("path")): str(item.get("sha256", ""))
-                for item in current.get("sources", [])
-                if item.get("path")
-            }
-            new_hashes = {
-                str(item.get("path")): str(item.get("sha256", ""))
-                for item in sources
-                if item.get("path")
-            }
-
-            old_known_keys = {
-                (str(item.get("text", "")), str(item.get("source", "")))
-                for item in current.get("known", [])
-                if isinstance(item, dict)
-            }
-
-            def known_is_current(item: dict[str, Any]) -> bool:
-                source = str(item.get("source", ""))
-                if source in ("会话", "snapshot"):
-                    return True
-                if source not in new_hashes:
-                    return False
-                key = (str(item.get("text", "")), source)
-                # A carried-over fact tied to a file version that changed is
-                # stale.  A fresh provider fact with new text is valid against
-                # the snapshot that was just supplied.
-                if key in old_known_keys and old_hashes.get(source) != new_hashes[source]:
-                    return False
-                return True
-
-            understanding["known"] = [
-                item
-                for item in understanding.get("known", [])
-                if isinstance(item, dict) and known_is_current(item)
-            ]
+            understanding["known"] = _known_for_sources(
+                understanding.get("known", []),
+                old_hashes,
+                new_hashes,
+                stale_hashes,
+            )
+            for item in current.get("known", []):
+                if (
+                    isinstance(item, dict)
+                    and str(item.get("source", "")) == "会话"
+                    and item not in understanding["known"]
+                ):
+                    understanding["known"].append(item)
+            direction = str(result.get("direction_update", "") or "").strip()
+            if direction:
+                direction_item = {
+                    "text": f"用户方向：{direction}",
+                    "source": "会话",
+                }
+                if direction_item not in understanding["known"]:
+                    understanding["known"].append(direction_item)
             understanding["model"] = result.get("model")
             understanding["sources"] = sources
             result["reply"] = redact_text(result["reply"])
