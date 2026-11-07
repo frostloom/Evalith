@@ -60,6 +60,12 @@ export function Workspace({
   const applyDetail = (next: ProjectDetail) => {
     if (mountedRef.current) onDetail(next);
   };
+  const reportError = (message: string) => {
+    if (mountedRef.current) onError(message);
+  };
+  const reportNotice = (message: string) => {
+    if (mountedRef.current) onNotice(message);
+  };
   const { project, understanding, readiness, snapshot, messages } = detail;
   const [message, setMessage] = useState("");
   const [composing, setComposing] = useState(false);
@@ -84,15 +90,23 @@ export function Workspace({
     setWorking(true);
     try {
       const next = await action();
-      if (projectIdRef.current !== origin || next.project.id !== origin) return;
+      if (
+        !mountedRef.current ||
+        projectIdRef.current !== origin ||
+        next.project.id !== origin
+      ) {
+        return;
+      }
       applyDetail(next);
-      if (success) onNotice(success);
+      if (success) reportNotice(success);
     } catch (err) {
-      if (projectIdRef.current === origin) {
-        onError(err instanceof Error ? err.message : "操作失败");
+      if (mountedRef.current && projectIdRef.current === origin) {
+        reportError(err instanceof Error ? err.message : "操作失败");
       }
     } finally {
-      if (projectIdRef.current === origin) setWorking(false);
+      if (mountedRef.current && projectIdRef.current === origin) {
+        setWorking(false);
+      }
     }
   };
 
@@ -103,17 +117,27 @@ export function Workspace({
     setWorking(true);
     try {
       const next = await api.sendMessage(project.id, content);
-      if (projectIdRef.current !== origin || next.project.id !== origin) return;
+      if (
+        !mountedRef.current ||
+        projectIdRef.current !== origin ||
+        next.project.id !== origin
+      ) {
+        return;
+      }
       applyDetail(next);
       setMessage("");
     } catch (err) {
-      if (projectIdRef.current === origin) {
-        onError(err instanceof Error ? err.message : "发送失败");
+      if (mountedRef.current && projectIdRef.current === origin) {
+        reportError(err instanceof Error ? err.message : "发送失败");
         // The server persists an explicit withdrawal before a failing model
         // call. Re-read detail so readiness and the conversation reflect it.
         try {
           const latest = await api.getProject(origin);
-          if (projectIdRef.current === origin && latest.project.id === origin) {
+          if (
+            mountedRef.current &&
+            projectIdRef.current === origin &&
+            latest.project.id === origin
+          ) {
             applyDetail(latest);
           }
         } catch {
@@ -121,7 +145,9 @@ export function Workspace({
         }
       }
     } finally {
-      if (projectIdRef.current === origin) setWorking(false);
+      if (mountedRef.current && projectIdRef.current === origin) {
+        setWorking(false);
+      }
     }
   };
 
@@ -375,11 +401,12 @@ export function Workspace({
           models={models}
           onClose={() => setEditingModel(false)}
           onSaved={(next) => {
+            if (!mountedRef.current) return;
             applyDetail(next);
             setEditingModel(false);
-            onNotice("模型配置已保存，项目主会话保持不变。");
+            reportNotice("模型配置已保存，项目主会话保持不变。");
           }}
-          onError={onError}
+          onError={reportError}
         />
       )}
 
@@ -388,11 +415,12 @@ export function Workspace({
           detail={detail}
           onClose={() => setEditingSources(false)}
           onSaved={(next) => {
+            if (!mountedRef.current) return;
             applyDetail(next);
             setEditingSources(false);
-            onNotice("资料范围已保存并重新分析。");
+            reportNotice("资料范围已保存并重新分析。");
           }}
-          onError={onError}
+          onError={reportError}
         />
       )}
     </div>

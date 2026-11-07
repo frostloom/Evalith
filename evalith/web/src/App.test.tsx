@@ -298,6 +298,62 @@ describe("project switching", () => {
     await screen.findByText("message after settings");
   });
 
+  it("does not publish a delayed rejection from an abandoned workspace", async () => {
+    let rejectSend: ((reason?: unknown) => void) | undefined;
+    apiMock.sendMessage.mockReturnValue(
+      new Promise((_, reject) => {
+        rejectSend = reject;
+      }),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    const main = screen.getByRole("main");
+    await user.click(
+      await within(main).findByRole("button", { name: /Project A.*文件/ }),
+    );
+    await screen.findByRole("heading", { name: "Project A" });
+    await user.type(screen.getByLabelText("给主会话发送消息"), "old failure");
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    await user.click(screen.getByRole("button", { name: /Project B.*文件/ }));
+    await screen.findByRole("heading", { name: "Project B" });
+    await act(async () => {
+      rejectSend?.(new Error("A request failed"));
+    });
+    await waitFor(() =>
+      expect(screen.queryByText("A request failed")).toBeNull(),
+    );
+  });
+
+  it("does not publish editor completion from an abandoned workspace", async () => {
+    let resolveSources: ((value: unknown) => void) | undefined;
+    apiMock.updateSources.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSources = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    const main = screen.getByRole("main");
+    await user.click(
+      await within(main).findByRole("button", { name: /Project A.*文件/ }),
+    );
+    await screen.findByRole("heading", { name: "Project A" });
+    await user.click(screen.getByRole("button", { name: "资料与范围" }));
+    await user.click(
+      screen.getByRole("button", { name: "保存并重新分析" }),
+    );
+    await user.click(screen.getByRole("button", { name: /Project B.*文件/ }));
+    await screen.findByRole("heading", { name: "Project B" });
+    await act(async () => {
+      resolveSources?.(detail("a", "Project A"));
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByText("资料范围已保存并重新分析。"),
+      ).toBeNull(),
+    );
+  });
+
   it("ignores a delayed response from an abandoned A workspace", async () => {
     let resolveSend: ((value: unknown) => void) | undefined;
     apiMock.sendMessage.mockReturnValue(
