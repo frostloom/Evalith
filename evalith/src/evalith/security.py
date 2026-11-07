@@ -22,7 +22,7 @@ _SECRET_PATTERNS = [
     #   sk-project-secret
     re.compile(
         r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?"
-        r"(?:[A-Za-z0-9_-]*(?:secret|token|key|password)[A-Za-z0-9_-]*)"
+        r"(?:[A-Za-z0-9_-]*(?:secret|token|key|password|passwd|pwd|pass)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*[|>][-+0-9]*[ \t]*\n(?:[ \t]+.*(?:\n|$))*"
     ),
     # key=value / "key": "value" forms, including JSON and quoted values.

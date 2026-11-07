@@ -69,6 +69,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-db-pass" not in request["body"]
     assert "synthetic-app-db-pass" not in request["body"]
     assert "synthetic-db-pwd" not in request["body"]
+    assert "synthetic-yaml-db-pass" not in request["body"]
+    assert "synthetic-yaml-db-pwd" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -205,6 +207,8 @@ def test_yaml_block_scalar_secret_is_redacted() -> None:
         "sk-yaml-project-secret",
         "sk-quoted-yaml-secret",
         "sk-sequence-yaml-secret",
+        "synthetic-yaml-db-pass",
+        "synthetic-yaml-db-pwd",
     ):
         assert secret not in redacted
     assert "[REDACTED]" in redacted
@@ -807,6 +811,10 @@ def test_child_loggers_redact_credentials(client: TestClient, caplog) -> None:
         logger.error("DB_PASS=%s", "synthetic-db-pass")
         logger.error("APP_DB_PASS=%s", "synthetic-app-db-pass")
         logger.error("DB_PWD=%s", "synthetic-db-pwd")
+        logger.error("DB_PASS: |")
+        logger.error("  synthetic-yaml-db-pass")
+        logger.error("DB_PWD: >")
+        logger.error("  synthetic-yaml-db-pwd")
     assert SECRET_KEY not in caplog.text
     assert "[REDACTED]" in caplog.text
 
