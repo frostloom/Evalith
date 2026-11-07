@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: mirror.gcr.io/pgvector/pgvector:pg16
+    container_name: evalith-workbench-postgres
+    environment:
+      POSTGRES_DB: rhesis-db
+      POSTGRES_USER: rhesis-user
+      POSTGRES_PASSWORD: rhesis-password
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - evalith-workbench-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rhesis-user -d rhesis-db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: evalith-workbench-redis
+    command: redis-server --requirepass rhesis-redis-pass
+    ports:
+      - "127.0.0.1:56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "rhesis-redis-pass", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  evalith-workbench-postgres:

@@ -1,0 +1,81 @@
+{
+  "generated_at": "2026-11-06T03:26:05.809233+00:00",
+  "backend_url": "http://127.0.0.1:8080",
+  "frontend_url": "http://127.0.0.1:3000",
+  "source_build": "uv sync from workbench/.workbench/ee-free (no published image)",
+  "upstream_commit": "ce24bb1993fc545bb0ccb0d8b3951683ac14fff1",
+  "model": "deterministic local OpenAI-compatible stub; not a real model",
+  "checks": {
+    "backend_health": {
+      "status": "ok",
+      "redis_replay_store": "ok"
+    },
+    "auth_quick_start": true,
+    "features": {
+      "license": {
+        "edition": "community",
+        "licensed": false,
+        "is_paid": false
+      },
+      "plan": {
+        "name": "Free",
+        "is_paid": false,
+        "is_active": false
+      },
+      "enabled": [],
+      "warnings": {},
+      "limits": {
+        "test_executions": null,
+        "tracing_spans": null,
+        "test_generation": null,
+        "model_tokens": null,
+        "seats": null,
+        "projects": null,
+        "endpoints": null
+      },
+      "is_local": true,
+      "rhesis_key_enabled": false,
+      "models_ready": true,
+      "embedding_model_ready": false
+    },
+    "community_edition": true,
+    "rhesis_platform_key_disabled": true,
+    "project_created": true,
+    "project_read": true,
+    "model_connection": {
+      "success": true,
+      "message": "Successfully connected to litellm_proxy. Model is responding correctly."
+    },
+    "model_connection_ok": true,
+    "architect_session_detail": true,
+    "architect_session_messages_visible": true,
+    "frontend_http_status": 200,
+    "frontend_title": true,
+    "frontend_uses_evalith_mark": true,
+    "artifact": {
+      "ee_directory_absent": true,
+      "frontend_ee_bootstrap_noop": true,
+      "backend_pyproject_no_ee": true,
+      "frontend_package_no_ee": true,
+      "brand_logo_dir_absent": true,
+      "unlicensed_font_families_absent": true,
+      "fonts_css_only_licensed_family": true,
+      "ee_package_not_importable": true,
+      "ee_package_not_installed": true,
+      "build_info_pinned": true
+    },
+    "all_artifact_checks": true,
+    "passed": true
+  },
+  "ids": {
+    "project_id": "a22528e3-3f5f-4020-9a06-0cf61cabe7cc",
+    "model_id": "df370b2a-d1e8-4d36-9471-f47a2db34aa1",
+    "architect_session_id": "c2f798d6-41d2-4a4d-a4ad-8c228dd85a6c"
+  },
+  "errors": [],
+  "limitations": [
+    "No real model or real business data is used.",
+    "The Architect Celery/model tool loop is not exercised unless a worker is started.",
+    "Frontend verification is HTTP/HTML level in this script; screenshots are in docs/stage1/evidence."
+  ]
+}

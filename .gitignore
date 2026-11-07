@@ -1,0 +1,26 @@
+# Generated workbench tree and local runtime state
+workbench/.workbench/
+workbench/.workbench/*.env
+
+# Evalith local state
+.evalith/
+evalith/.demo-data*/
+evalith/.venv/
+evalith/web/node_modules/
+evalith/web/dist/
+evalith/web/.vite/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+
+# Local evidence that should not be committed by accident
+docs/stage1/evidence/*.log
+docs/stage1/evidence/*.pid
