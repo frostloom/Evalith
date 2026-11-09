@@ -125,6 +125,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-flow-alias-secret" not in request["body"]
     assert "synthetic-escaped-kind-secret" not in request["body"]
     assert "synthetic-spaced-key-secret" not in request["body"]
+    assert "synthetic-tagged-env" not in request["body"]
+    assert "synthetic-tagged-escaped" not in request["body"]
     assert "c2VjcmV0" not in request["body"]
     assert "arbitrary-secret" not in request["body"]
     assert "synthetic-multiline-env" not in request["body"]
@@ -151,6 +153,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-flow-alias-secret" not in request["body"]
     assert "synthetic-escaped-kind-secret" not in request["body"]
     assert "synthetic-spaced-key-secret" not in request["body"]
+    assert "synthetic-tagged-env" not in request["body"]
+    assert "synthetic-tagged-escaped" not in request["body"]
     assert "c2VjcmV0" not in request["body"]
     assert "synthetic-value-first" not in request["body"]
     assert "synthetic-comment-name" not in request["body"]
@@ -872,6 +876,12 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "spaced-key" not in redact_text(
         "kind: Secret\nstringData :\n  foo: spaced-key\n"
+    )
+    assert "tagged-env" not in redact_text(
+        "- name: !!str PASSWORD\n  value: tagged-env\n"
+    )
+    assert "tagged-escaped" not in redact_text(
+        'kind: !!str "Se\\u0063ret"\nstringData:\n  foo: tagged-escaped\n'
     )
     env_text = (
         "env:\n- value: value-first\n  name: PASSWORD\n"

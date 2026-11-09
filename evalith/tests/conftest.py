@@ -103,6 +103,14 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "tagged-env.yaml").write_text(
+        "- name: !!str PASSWORD\n  value: synthetic-tagged-env\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "tagged-escaped-secret.yaml").write_text(
+        'kind: !!str "Se\\u0063ret"\nstringData:\n  foo: synthetic-tagged-escaped\n',
+        encoding="utf-8",
+    )
     (root / "config" / "spaced-key-secret.yaml").write_text(
         "kind: Secret\nstringData :\n  foo: synthetic-spaced-key-secret\n",
         encoding="utf-8",

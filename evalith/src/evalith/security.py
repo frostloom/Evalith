@@ -409,7 +409,7 @@ def _redact_kubernetes_flow_env(text: str) -> str:
         value_field = fields.get("value")
         if name_field is None or value_field is None:
             return block
-        name = name_field.group(2).strip(" \t\"'")
+        name = _yaml_key_name(name_field.group(2))
         if not is_credential_key(name):
             return block
         return (
@@ -423,7 +423,7 @@ def _redact_kubernetes_flow_env(text: str) -> str:
 
 def _redact_kubernetes_env_values(text: str) -> str:
     def replace(match: re.Match[str]) -> str:
-        name = match.group("name").strip(" \t\"'")
+        name = _yaml_key_name(match.group("name"))
         if not is_credential_key(name):
             return match.group(0)
         return text[match.start() : match.start("body")] + match.group("body") + _REDACTED
@@ -435,7 +435,7 @@ def _redact_kubernetes_env_values(text: str) -> str:
         name_match = _K8S_ITEM_NAME.search(block)
         if name_match is None:
             return block
-        name = name_match.group("name").strip(" \t\"'")
+        name = _yaml_key_name(name_match.group("name"))
         if not is_credential_key(name):
             return block
         value_match = _K8S_ITEM_VALUE.search(block)
@@ -508,9 +508,15 @@ _K8S_SECRET_FLOW_DATA_ALIAS = re.compile(
     r"\*([A-Za-z0-9_-]+)"
 )
 _ESCAPED_SECRET_KIND = re.compile(
-    r"(?im)^(?P<prefix>[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*)"
+    r"(?im)^(?P<prefix>[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
+    r"(?:(?:![^\s]+|&[^\s]+)[ \t]+)*)"
     r"(?P<value>\"[^\"\r\n]*\"|'[^'\r\n]*')"
 )
+_YAML_NAME_PREFIX = re.compile(r"^(?:(?:![^\s]+|&[^\s]+)[ \t]+)+")
+
+
+def _yaml_key_name(value: str) -> str:
+    return _YAML_NAME_PREFIX.sub("", value.strip()).strip(" \t\"'")
 
 
 def _normalize_escaped_secret_kind(text: str) -> str:
