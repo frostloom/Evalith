@@ -125,6 +125,13 @@ def project_root(tmp_path: Path) -> Path:
         '{"sensitive": true, "value": "synthetic-tf-password"}\n',
         encoding="utf-8",
     )
+    (root / ".azure").mkdir()
+    (root / ".azure" / "accessTokens.json").write_text(
+        '{"accessToken": "synthetic-azure-token"}\n', encoding="utf-8"
+    )
+    (root / "application_default_credentials.json").write_text(
+        '{"client_secret": "synthetic-gcloud-secret"}\n', encoding="utf-8"
+    )
     (root / ".envrc").write_text(
         "export SERVICE_CRED=opaquevalue\n", encoding="utf-8"
     )

@@ -128,6 +128,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "$apr1$synthetic$hashvalue" not in request["body"]
     assert "synthetic-pg-password" not in request["body"]
     assert "opaquevalue" not in request["body"]
+    assert "synthetic-azure-token" not in request["body"]
+    assert "synthetic-gcloud-secret" not in request["body"]
     assert "synthetic-tf-password" not in request["body"]
     assert "synthetic-azure-account-key" not in request["body"]
     assert "SYNTHETIC-SAS-VALUE" not in request["body"]

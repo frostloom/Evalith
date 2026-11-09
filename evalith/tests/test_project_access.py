@@ -922,6 +922,9 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
         "localhost:5432:app:alice:password\n", encoding="utf-8"
     )
     (root / ".envrc").write_text("export X=y\n", encoding="utf-8")
+    (root / ".azure").mkdir()
+    (root / ".azure" / "accessTokens.json").write_text("{}", encoding="utf-8")
+    (root / "application_default_credentials.json").write_text("{}", encoding="utf-8")
     (root / "auth.p8").write_text("synthetic-p8", encoding="utf-8")
     (root / "id_dsa").write_text("synthetic-dsa", encoding="utf-8")
     (root / "key.ppk").write_text("synthetic-ppk", encoding="utf-8")
@@ -945,6 +948,10 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
         scan_project(root, ["key.ppk"], [])
     with pytest.raises(AccessError):
         scan_project(root, [".envrc"], [])
+    with pytest.raises(AccessError):
+        scan_project(root, [".azure/accessTokens.json"], [])
+    with pytest.raises(AccessError):
+        scan_project(root, ["application_default_credentials.json"], [])
 
 
 def test_relative_project_root_is_rejected() -> None:
