@@ -117,6 +117,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-flow-brace" not in request["body"]
     assert "synthetic-flow-env" not in request["body"]
     assert "synthetic-json-env" not in request["body"]
+    assert "synthetic-quoted-flow-env" not in request["body"]
+    assert "synthetic-alias-secret" not in request["body"]
     assert "arbitrary-secret" not in request["body"]
     assert "synthetic-multiline-env" not in request["body"]
     assert "synthetic-secret-data" not in request["body"]
@@ -134,6 +136,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-flow-brace" not in request["body"]
     assert "synthetic-flow-env" not in request["body"]
     assert "synthetic-json-env" not in request["body"]
+    assert "synthetic-quoted-flow-env" not in request["body"]
+    assert "synthetic-alias-secret" not in request["body"]
     assert "synthetic-value-first" not in request["body"]
     assert "synthetic-comment-name" not in request["body"]
     assert "hunter2" not in request["body"]
@@ -826,6 +830,12 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "json-env" not in redact_text(
         '{"env": [{"name": "PASSWORD", "value": "json-env"}]}'
+    )
+    assert "quoted-flow-env" not in redact_text(
+        'env: [{"name": "API_KEY", "value": "quoted-flow-env"}]'
+    )
+    assert "alias-secret" not in redact_text(
+        "x-kind: &k Secret\nkind: *k\ndata:\n  value: alias-secret\n"
     )
     env_text = (
         "env:\n- value: value-first\n  name: PASSWORD\n"

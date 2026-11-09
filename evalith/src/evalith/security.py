@@ -394,7 +394,7 @@ _K8S_ITEM_VALUE = re.compile(
 
 _K8S_FLOW_MAP = re.compile(r"\{[^{}]*\}")
 _K8S_FLOW_FIELD = re.compile(
-    r"(?:^|[{,])[ \t]*([A-Za-z0-9_-]+)[ \t]*:[ \t]*"
+    r"(?:^|[{,])[ \t]*[\"']?([A-Za-z0-9_-]+)[\"']?[ \t]*:[ \t]*"
     r"(\"[^\"]*\"|'[^']*'|[^,}]*)"
 )
 
@@ -487,6 +487,13 @@ def _flow_mapping_end(text: str, start: int) -> int:
             if depth == 0:
                 return index + 1
     return len(text)
+_K8S_SECRET_ANCHOR = re.compile(
+    r"(?i)&([A-Za-z0-9_-]+)[ \t]+[\"']?Secret\b"
+)
+_K8S_SECRET_ALIAS_KIND = re.compile(
+    r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
+    r"\*([A-Za-z0-9_-]+)"
+)
 _K8S_SECRET_DATA = re.compile(
     r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
     r"(?P<key>data|stringData)[\"']?:[ \t]*"
@@ -496,11 +503,16 @@ _K8S_SECRET_DATA = re.compile(
 
 
 def _redact_kubernetes_secret_data(text: str) -> str:
+    anchors = {match.group(1) for match in _K8S_SECRET_ANCHOR.finditer(text)}
+    alias_kind = any(
+        match.group(1) in anchors
+        for match in _K8S_SECRET_ALIAS_KIND.finditer(text)
+    )
     flow = bool(
         _K8S_SECRET_FLOW_KIND.search(text)
         or _K8S_SECRET_FLOW_OPEN.search(text)
     )
-    if not flow and not _K8S_SECRET_KIND.search(text):
+    if not flow and not alias_kind and not _K8S_SECRET_KIND.search(text):
         return text
 
     def replace(match: re.Match[str]) -> str:

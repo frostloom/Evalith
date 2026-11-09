@@ -94,6 +94,14 @@ def project_root(tmp_path: Path) -> Path:
         '{"env": [{"name": "PASSWORD", "value": "synthetic-json-env"}]}\n',
         encoding="utf-8",
     )
+    (root / "config" / "quoted-flow-env.yaml").write_text(
+        'env: [{"name": "API_KEY", "value": "synthetic-quoted-flow-env"}]\n',
+        encoding="utf-8",
+    )
+    (root / "config" / "alias-secret.yaml").write_text(
+        "x-kind: &k Secret\nkind: *k\ndata:\n  value: synthetic-alias-secret\n",
+        encoding="utf-8",
+    )
     (root / "config" / "flow-env.yaml").write_text(
         "env: [{name: API_KEY, value: synthetic-flow-env}]\n",
         encoding="utf-8",
