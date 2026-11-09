@@ -98,6 +98,15 @@ def project_root(tmp_path: Path) -> Path:
         'env: [{"name": "API_KEY", "value": "synthetic-quoted-flow-env"}]\n',
         encoding="utf-8",
     )
+    (root / "config" / "flow-alias-secret.yaml").write_text(
+        "shared: &values {foo: synthetic-flow-alias-secret}\n"
+        "secret: {kind: Secret, data: *values}\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "escaped-kind-secret.yaml").write_text(
+        'kind: "\\u0053ecret"\ndata: {config: synthetic-escaped-kind-secret}\n',
+        encoding="utf-8",
+    )
     (root / "config" / "block-anchor-secret.yaml").write_text(
         "shared: &creds\n  neutral: synthetic-block-anchor-secret\n"
         "kind: Secret\ndata: *creds\n"

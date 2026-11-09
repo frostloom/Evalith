@@ -122,6 +122,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-block-kind-secret" not in request["body"]
     assert "synthetic-block-anchor-secret" not in request["body"]
     assert "synthetic-block-stringdata" not in request["body"]
+    assert "synthetic-flow-alias-secret" not in request["body"]
+    assert "synthetic-escaped-kind-secret" not in request["body"]
     assert "c2VjcmV0" not in request["body"]
     assert "arbitrary-secret" not in request["body"]
     assert "synthetic-multiline-env" not in request["body"]
@@ -145,6 +147,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-block-kind-secret" not in request["body"]
     assert "synthetic-block-anchor-secret" not in request["body"]
     assert "synthetic-block-stringdata" not in request["body"]
+    assert "synthetic-flow-alias-secret" not in request["body"]
+    assert "synthetic-escaped-kind-secret" not in request["body"]
     assert "c2VjcmV0" not in request["body"]
     assert "synthetic-value-first" not in request["body"]
     assert "synthetic-comment-name" not in request["body"]
@@ -857,6 +861,13 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
         "kind: Secret\ndata: *creds\n"
     )
     assert "block-anchor" not in redact_text(block_alias)
+    assert "flow-alias" not in redact_text(
+        "shared: &values {foo: flow-alias}\n"
+        "secret: {kind: Secret, data: *values}\n"
+    )
+    assert "escaped-kind" not in redact_text(
+        'kind: "\\u0053ecret"\ndata: {config: escaped-kind}\n'
+    )
     env_text = (
         "env:\n- value: value-first\n  name: PASSWORD\n"
         "- name: API_KEY # comment\n  value: comment-name\n"

@@ -503,6 +503,32 @@ _K8S_SECRET_DATA_ALIAS = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?(?:data|stringData)[\"']?[ \t]*:[ \t]*"
     r"\*([A-Za-z0-9_-]+)"
 )
+_K8S_SECRET_FLOW_DATA_ALIAS = re.compile(
+    r"(?i)[{,][ \t]*[\"']?(?:data|stringData)[\"']?[ \t]*:[ \t]*"
+    r"\*([A-Za-z0-9_-]+)"
+)
+_ESCAPED_SECRET_KIND = re.compile(
+    r"(?im)^(?P<prefix>[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*)"
+    r"(?P<value>\"[^\"\r\n]*\"|'[^'\r\n]*')"
+)
+
+
+def _normalize_escaped_secret_kind(text: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        raw = match.group("value")
+        try:
+            value = (
+                json.loads(raw)
+                if raw.startswith('"')
+                else raw[1:-1].replace("''", "'")
+            )
+        except ValueError:
+            return match.group(0)
+        if value.casefold() == "secret":
+            return f"{match.group('prefix')}\"Secret\""
+        return match.group(0)
+
+    return _ESCAPED_SECRET_KIND.sub(replace, text)
 _K8S_SECRET_DATA = re.compile(
     r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
     r"(?P<key>data|stringData)[\"']?:[ \t]*"
@@ -541,6 +567,7 @@ def _redact_anchored_secret_data(text: str, anchor: str) -> str:
 
 
 def _redact_kubernetes_secret_data(text: str) -> str:
+    text = _normalize_escaped_secret_kind(text)
     anchors = {match.group(1) for match in _K8S_SECRET_ANCHOR.finditer(text)}
     alias_kind = any(
         match.group(1) in anchors
@@ -554,8 +581,10 @@ def _redact_kubernetes_secret_data(text: str) -> str:
     if not flow and not alias_kind and not block_kind and not _K8S_SECRET_KIND.search(text):
         return text
 
-    for alias_match in _K8S_SECRET_DATA_ALIAS.finditer(text):
-        text = _redact_anchored_secret_data(text, alias_match.group(1))
+    data_aliases = set(_K8S_SECRET_DATA_ALIAS.findall(text))
+    data_aliases.update(_K8S_SECRET_FLOW_DATA_ALIAS.findall(text))
+    for alias in data_aliases:
+        text = _redact_anchored_secret_data(text, alias)
 
     def replace(match: re.Match[str]) -> str:
         return f"{match.group('indent')}{match.group('key')}: {_REDACTED}\n"
