@@ -418,10 +418,10 @@ _K8S_SECRET_KIND = re.compile(
     r"[\"']?Secret[\"']?[ \t]*(?:#[^\r\n]*)?$"
 )
 _K8S_SECRET_FLOW_KIND = re.compile(
-    r"(?i)[{,][ \t]*kind[ \t]*:[ \t]*[\"']?Secret\b"
+    r"(?i)[{,][ \t]*[\"']?kind[\"']?[ \t]*:[ \t]*[\"']?Secret\b"
 )
 _K8S_SECRET_FLOW_DATA = re.compile(
-    r"(?i)\b(?P<key>data|stringData)[ \t]*:[ \t]*"
+    r"(?i)\b[\"']?(?P<key>data|stringData)[\"']?[ \t]*:[ \t]*"
     r"\{(?:[^{}]|\{[^{}]*\})*\}"
 )
 _K8S_SECRET_DATA = re.compile(

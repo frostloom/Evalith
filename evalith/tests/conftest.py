@@ -87,7 +87,8 @@ def project_root(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (root / "config" / "flow-secret.yaml").write_text(
-        "{kind: Secret, stringData: {foo: synthetic-flow-secret}}\n",
+        "{kind: Secret, stringData: {foo: synthetic-flow-secret}}\n"
+        '{"kind": Secret, "data": {foo: synthetic-quoted-flow-secret}}\n',
         encoding="utf-8",
     )
     (root / "config" / "value-first-env.yaml").write_text(
