@@ -74,7 +74,8 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "tagged.yaml").write_text(
         "api_key: !vault |\n  synthetic-tagged-secret\n"
         "password: !!str |\n  synthetic-multibang-secret\n"
-        "authorization: |\n  synthetic-authorization-token\n",
+        "authorization: |\n  synthetic-authorization-token\n"
+        "password: !!str\n  synthetic-tagged-plain\n",
         encoding="utf-8",
     )
     (root / "config" / "multiline.toml").write_text(

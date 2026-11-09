@@ -18,6 +18,15 @@ from pathlib import Path
 from cryptography.fernet import Fernet, InvalidToken
 
 _SECRET_PATTERNS = [
+    # Tagged YAML plain scalars continued on indented lines, e.g. password: !!str
+    #   secret
+    re.compile(
+        r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
+        r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|"
+        r"password|passwd|pwd|pass|authorization)[A-Za-z0-9_-]*)"
+        r"[\"']?[ \t]*:\s*![^ \t\n]+[ \t]*\r?\n"
+        r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
+    ),
     # YAML literal/folded block scalars, e.g. api_key: |
     #   sk-project-secret
     re.compile(
