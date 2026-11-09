@@ -103,6 +103,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-cdata-xml" not in request["body"]
     assert "ghp_exampleclassictoken" not in request["body"]
     assert "escaped-secret-value" not in request["body"]
+    assert "xoxb-example-slack-token" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -564,6 +565,14 @@ def test_structured_credential_values_are_redacted() -> None:
         "nested-second",
     ):
         assert secret not in redacted
+
+
+def test_slack_token_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text('{"slack": "xoxb-example-slack-token"}')
+    assert "xoxb-example-slack-token" not in redacted
+    assert "[REDACTED]" in redacted
 
 
 def test_escaped_json_credential_keys_are_redacted() -> None:

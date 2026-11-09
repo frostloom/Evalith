@@ -108,7 +108,7 @@ _SECRET_PATTERNS.insert(
     3,
     re.compile(
         r"\b(?:sk-[A-Za-z0-9_-]{8,}|github_pat_[A-Za-z0-9_]{8,}|"
-        r"gh[pousr]_[A-Za-z0-9]{8,})\b"
+        r"gh[pousr]_[A-Za-z0-9]{8,}|xox[abposr]-[A-Za-z0-9-]{8,})\b"
     ),
 )
 
