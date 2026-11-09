@@ -384,6 +384,35 @@ _K8S_ITEM_VALUE = re.compile(
 )
 
 
+_K8S_FLOW_MAP = re.compile(r"\{[^{}]*\}")
+_K8S_FLOW_FIELD = re.compile(
+    r"(?:^|[{,])[ \t]*([A-Za-z0-9_-]+)[ \t]*:[ \t]*"
+    r"(\"[^\"]*\"|'[^']*'|[^,}]*)"
+)
+
+
+def _redact_kubernetes_flow_env(text: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        block = match.group(0)
+        fields = {
+            field.group(1): field for field in _K8S_FLOW_FIELD.finditer(block)
+        }
+        name_field = fields.get("name")
+        value_field = fields.get("value")
+        if name_field is None or value_field is None:
+            return block
+        name = name_field.group(2).strip(" \t\"'")
+        if not is_credential_key(name):
+            return block
+        return (
+            block[: value_field.start(2)]
+            + _REDACTED
+            + block[value_field.end(2) :]
+        )
+
+    return _K8S_FLOW_MAP.sub(replace, text)
+
+
 def _redact_kubernetes_env_values(text: str) -> str:
     def replace(match: re.Match[str]) -> str:
         name = match.group("name").strip(" \t\"'")
@@ -410,7 +439,7 @@ def _redact_kubernetes_env_values(text: str) -> str:
             + block[value_match.end("value") :]
         )
 
-    return _K8S_ITEM.sub(replace_item, text)
+    return _redact_kubernetes_flow_env(_K8S_ITEM.sub(replace_item, text))
 
 
 _K8S_SECRET_KIND = re.compile(
@@ -422,20 +451,47 @@ _K8S_SECRET_FLOW_KIND = re.compile(
     r"(?i)[{,][ \t]*[\"']?kind[\"']?[ \t]*:[ \t]*"
     r"(?:(?:![^\s,}]+|&[^\s,}]+)[ \t]+)*[\"']?Secret\b"
 )
-_K8S_SECRET_FLOW_DATA = re.compile(
-    r"(?i)\b[\"']?(?P<key>data|stringData)[\"']?[ \t]*:[ \t]*"
-    r"\{(?:[^{}]|\{[^{}]*\})*\}"
+_K8S_SECRET_FLOW_OPEN = re.compile(
+    r"(?im)(?:^|[{,])[ \t]*[\"']?(?P<key>data|stringData)[\"']?[ \t]*:[ \t]*\{"
 )
+
+
+def _flow_mapping_end(text: str, start: int) -> int:
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in "\"'":
+            quote = char
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    return len(text)
 _K8S_SECRET_DATA = re.compile(
     r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
     r"(?P<key>data|stringData)[\"']?:[ \t]*"
-    r"(?:\{[^}]*\}|[^\r\n]*\r?\n"
-    r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+[^\r\n]*(?:\r?\n|$))*)"
+    r"[^\r\n]*\r?\n"
+    r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+[^\r\n]*(?:\r?\n|$))*"
 )
 
 
 def _redact_kubernetes_secret_data(text: str) -> str:
-    flow = bool(_K8S_SECRET_FLOW_KIND.search(text))
+    flow = bool(
+        _K8S_SECRET_FLOW_KIND.search(text)
+        or _K8S_SECRET_FLOW_OPEN.search(text)
+    )
     if not flow and not _K8S_SECRET_KIND.search(text):
         return text
 
@@ -444,9 +500,18 @@ def _redact_kubernetes_secret_data(text: str) -> str:
 
     text = _K8S_SECRET_DATA.sub(replace, text)
     if flow:
-        text = _K8S_SECRET_FLOW_DATA.sub(
-            lambda match: f"{match.group('key')}: {_REDACTED}", text
-        )
+        out: list[str] = []
+        cursor = 0
+        for match in _K8S_SECRET_FLOW_OPEN.finditer(text):
+            if match.start() < cursor:
+                continue
+            start = match.end() - 1
+            end = _flow_mapping_end(text, start)
+            out.append(text[cursor : match.start()])
+            out.append(f"{match.group('key')}: {_REDACTED}")
+            cursor = end
+        out.append(text[cursor:])
+        text = "".join(out)
     return text
 
 

@@ -114,6 +114,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "rk_live_exampleStripeKey123" not in request["body"]
     assert "npm_0123456789abcdefghijklmnopqrstuvwxyz" not in request["body"]
     assert "c2VjcmV0LXN5bnRoZXRpYw==" not in request["body"]
+    assert "synthetic-flow-brace" not in request["body"]
+    assert "synthetic-flow-env" not in request["body"]
     assert "arbitrary-secret" not in request["body"]
     assert "synthetic-multiline-env" not in request["body"]
     assert "synthetic-secret-data" not in request["body"]
@@ -128,6 +130,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-tagged-flow-secret" not in request["body"]
     assert "synthetic-anchored-secret" not in request["body"]
     assert "c2VjcmV0LXN5bnRoZXRpYw==" not in request["body"]
+    assert "synthetic-flow-brace" not in request["body"]
+    assert "synthetic-flow-env" not in request["body"]
     assert "synthetic-value-first" not in request["body"]
     assert "synthetic-comment-name" not in request["body"]
     assert "hunter2" not in request["body"]
@@ -811,6 +815,12 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "blank-data" not in redact_text(
         "kind: Secret\ndata:\n\n  database: blank-data\n"
+    )
+    assert "flow-brace" not in redact_text(
+        'kind: Secret\ndata: {first: "}", second: "flow-brace"}'
+    )
+    assert "flow-env" not in redact_text(
+        "env: [{name: API_KEY, value: flow-env}]"
     )
     env_text = (
         "env:\n- value: value-first\n  name: PASSWORD\n"
