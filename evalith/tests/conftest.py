@@ -109,6 +109,10 @@ def project_root(tmp_path: Path) -> Path:
         '- name: "API\\u005fKEY"\n  value: synthetic-escaped-flow\n',
         encoding="utf-8",
     )
+    (root / "config" / "application.properties").write_text(
+        "db.password synthetic-java-properties\n",
+        encoding="utf-8",
+    )
     (root / "config" / "backup.asc").write_text(
         "-----BEGIN PGP PRIVATE KEY BLOCK-----\n"
         "synthetic-pgp-private-key\n"

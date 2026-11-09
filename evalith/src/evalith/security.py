@@ -629,9 +629,28 @@ def _redact_kubernetes_secret_data(text: str) -> str:
     return text
 
 
+_JAVA_PROPERTIES_ENTRY = re.compile(
+    r"(?im)^(?P<prefix>[ \t]*)(?P<key>[A-Za-z0-9_.-]+)[ \t]+"
+    r"(?P<value>[^#\r\n]+)$"
+)
+
+
+def _redact_java_properties(text: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        if not is_credential_key(match.group("key")):
+            return match.group(0)
+        value = match.group("value").lstrip()
+        if value.startswith((":", "=")):
+            return match.group(0)
+        return f"{match.group('prefix')}{match.group('key')} {_REDACTED}"
+
+    return _JAVA_PROPERTIES_ENTRY.sub(replace, text)
+
+
 def redact_text(value: str) -> str:
     """Remove credential-shaped substrings from free text."""
-    redacted = _redact_kubernetes_secret_data(value)
+    redacted = _redact_java_properties(value)
+    redacted = _redact_kubernetes_secret_data(redacted)
     redacted = _redact_kubernetes_env_values(redacted)
     redacted = _redact_yaml_anchor_values(redacted)
     redacted = _redact_json_credentials(redacted)

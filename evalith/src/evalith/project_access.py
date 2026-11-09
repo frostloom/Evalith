@@ -260,8 +260,9 @@ def resolve_root_with_identity(
         )
     if canonical == Path.home():
         raise AccessError("不能将整个用户主目录作为项目范围", code="root_too_broad")
-    for part in canonical.parts:
-        denied = _always_excluded(part, part)
+    parts = canonical.parts
+    for index, part in enumerate(parts):
+        denied = _always_excluded(part, "/".join(parts[index:]))
         if denied:
             raise AccessError(
                 f"项目根目录命中敏感凭据排除规则，不会读取：{part}",

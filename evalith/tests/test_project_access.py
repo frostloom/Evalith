@@ -967,6 +967,14 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
     assert ".vault-token" not in traversed
 
 
+def test_sensitive_multi_component_root_is_rejected(tmp_path: Path) -> None:
+    root = tmp_path / ".config" / "gcloud"
+    root.mkdir(parents=True)
+    with pytest.raises(AccessError) as excinfo:
+        resolve_root(str(root))
+    assert excinfo.value.code == "sensitive_path_denied"
+
+
 def test_relative_project_root_is_rejected() -> None:
     with pytest.raises(AccessError) as exc:
         resolve_root("relative-project")
