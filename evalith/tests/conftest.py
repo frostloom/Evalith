@@ -111,7 +111,9 @@ def project_root(tmp_path: Path) -> Path:
     )
     (root / "config" / "application.properties").write_text(
         "db.password synthetic-java-properties\n"
-        "pass\\u0077ord=synthetic-escaped-property\n",
+        "pass\\u0077ord=synthetic-escaped-property\n"
+        "pass\\u0077ord: synthetic-colon-property\n"
+        "password=\\\n  synthetic-continued-property\n",
         encoding="utf-8",
     )
     (root / "config" / "embedded.json.md").write_text(

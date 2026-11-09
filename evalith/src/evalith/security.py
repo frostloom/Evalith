@@ -653,7 +653,7 @@ def _redact_kubernetes_secret_data(text: str) -> str:
 
 _JAVA_PROPERTIES_ENTRY = re.compile(
     r"(?im)^(?P<prefix>[ \t]*)(?P<key>[A-Za-z0-9_.\\-]+)"
-    r"(?P<sep>[ \t]*=[ \t]*|[ \t]+)(?P<value>[^#\r\n]+)$"
+    r"(?P<sep>[ \t]*[=:][ \t]*|[ \t]+)(?P<value>[^#\r\n]+)$"
 )
 _JAVA_UNICODE_ESCAPE = re.compile(r"\\u([0-9A-Fa-f]{4})")
 
@@ -665,16 +665,39 @@ def _decode_java_key(key: str) -> str:
 
 
 def _redact_java_properties(text: str) -> str:
-    def replace(match: re.Match[str]) -> str:
-        key = _decode_java_key(match.group("key"))
+    out: list[str] = []
+    cursor = 0
+    for match in _JAVA_PROPERTIES_ENTRY.finditer(text):
+        if match.start() < cursor:
+            continue
+        raw_key = match.group("key")
+        key = _decode_java_key(raw_key)
         if not is_credential_key(key):
-            return match.group(0)
+            continue
+        separator = match.group("sep")
+        if ":" in separator and "\\u" not in raw_key.casefold():
+            continue
         value = match.group("value").lstrip()
         if value.startswith((":", "=", '"', "'", "{", "[", "&", "*", "|", ">")):
-            return match.group(0)
-        return f"{match.group('prefix')}{match.group('key')} {_REDACTED}"
-
-    return _JAVA_PROPERTIES_ENTRY.sub(replace, text)
+            continue
+        end = match.end()
+        physical = match.group("value").rstrip()
+        while physical.endswith("\\") and end < len(text):
+            start = end + 1 if text[end] == "\n" else end
+            newline = text.find("\n", start)
+            if newline < 0:
+                end = len(text)
+                break
+            physical = text[start:newline].rstrip()
+            end = newline + 1
+        out.append(text[cursor : match.start()])
+        replacement = f"{match.group('prefix')}{raw_key} {_REDACTED}"
+        if end > match.end():
+            replacement += "\n"
+        out.append(replacement)
+        cursor = end
+    out.append(text[cursor:])
+    return "".join(out)
 
 
 def redact_text(value: str) -> str:
