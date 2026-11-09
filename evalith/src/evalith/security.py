@@ -23,7 +23,7 @@ _SECRET_PATTERNS = [
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|"
-        r"password|passwd|pwd|pass|authorization)[A-Za-z0-9_-]*)"
+        r"password|passwd|pwd|pass|auth|authorization)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*(?:(?:![^ \t\n]+|&[^ \t\n]+)[ \t]*)+\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
@@ -31,7 +31,7 @@ _SECRET_PATTERNS = [
     #   sk-project-secret
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
-        r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|pass|authorization)[A-Za-z0-9_-]*)"
+        r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|pass|auth|authorization)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*(?:(?:![^ \t\n]+|&[^ \t\n]+)[ \t]+)*[|>][-+0-9]*[ \t]*(?:#[^\n]*)?\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
@@ -42,14 +42,14 @@ _SECRET_PATTERNS = [
         r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|"
         r"secret[_-]?key|signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
         r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
-        r"token|secret|password|passwd|pwd|pass|authorization)[\"']?\s*[:=]\s*"
+        r"token|secret|password|passwd|pwd|pass|auth|authorization)[\"']?\s*[:=]\s*"
         r"(?:[\"']{3}.*?[\"']{3}|[\"']{3}.*?[\"']{3})"
     ),
     # Untagged YAML plain scalars continued on indented lines.
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|"
-        r"password|passwd|pwd|pass|authorization)[A-Za-z0-9_-]*)"
+        r"password|passwd|pwd|pass|auth|authorization)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*"
         r"(?:&[^ \t\r\n]+(?:[ \t]+[^\r\n]*)?|[^ \t\r\n|>!&][^\r\n]*)"
         r"\r?\n"
@@ -65,7 +65,7 @@ _SECRET_PATTERNS = [
         r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|secret[_-]?key|signing[_-]?key|"
         r"npm[_-]?auth[_-]?token|npmAuthToken|access[_-]?key[_-]?id|"
         r"api[_-]?key|access[_-]?token|client[_-]?secret|token|secret|"
-        r"password|passwd|pwd|pass|authorization)[\"']?\s*[:=]\s*"
+        r"password|passwd|pwd|pass|auth|authorization)[\"']?\s*[:=]\s*"
         r"(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|[^\n,}]+)"
     ),
     re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=-]+"),
@@ -83,9 +83,21 @@ _SECRET_PATTERNS.insert(
     0,
     re.compile(
         r"(?is)<[A-Za-z0-9_.:-]*(?:private[_-]?key|credential|secret|token|"
-        r"key|password|passwd|pwd|pass|authorization)[A-Za-z0-9_.:-]*"
+        r"key|password|passwd|pwd|pass|auth|authorization)[A-Za-z0-9_.:-]*"
         r"(?:\s[^>]*)?>.*?</[A-Za-z0-9_.:-]+\s*>"
     ),
+)
+_SECRET_PATTERNS.insert(
+    1,
+    re.compile(
+        r"(?is)<[^>]*\b(?:name|key|id)\s*=\s*[\"'][^\"']*"
+        r"(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|"
+        r"pass|auth|authorization)[^\"']*[\"'][^>]*>"
+    ),
+)
+_SECRET_PATTERNS.insert(
+    2,
+    re.compile(r"\bsk-[A-Za-z0-9_-]{8,}\b"),
 )
 
 _REDACTED = "[REDACTED]"
@@ -96,7 +108,7 @@ _STRUCTURED_CREDENTIAL = re.compile(
     r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|secret[_-]?key|"
     r"signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
     r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
-    r"token|secret|password|passwd|pwd|pass|authorization)[\"']?\s*[:=]\s*"
+    r"token|secret|password|passwd|pwd|pass|auth|authorization)[\"']?\s*[:=]\s*"
     r"(?=[\[{])"
 )
 

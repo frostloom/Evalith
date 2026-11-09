@@ -68,11 +68,16 @@ def project_root(tmp_path: Path) -> Path:
         'npmAuthToken: "registry-secret-value"\n', encoding="utf-8"
     )
     (root / "config").mkdir()
+    (root / "config" / "auth.json").write_text(
+        '{"auth": "sk-example-project-credential"}\n', encoding="utf-8"
+    )
     (root / "config" / "credential.json").write_text(
         '{"credential": "sensitive-value"}\n', encoding="utf-8"
     )
     (root / "config" / "settings.xml").write_text(
-        "<config><password>synthetic-xml-password</password></config>\n",
+        "<config><password>synthetic-xml-password</password>"
+        '<property name="password" value="synthetic-xml-attribute"/>'
+        "</config>\n",
         encoding="utf-8",
     )
     (root / "config" / "tagged.yaml").write_text(
