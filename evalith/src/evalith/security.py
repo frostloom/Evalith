@@ -277,6 +277,7 @@ _JSON_CREDENTIAL_PREFIXES = {
     "storage",
     "service",
     "svc",
+    "database",
 }
 
 
@@ -352,9 +353,27 @@ def _redact_yaml_anchor_values(text: str) -> str:
     return text
 
 
+_K8S_ENV_ENTRY = re.compile(
+    r"(?im)^(?P<indent>[ \t]*)-[ \t]+name:[ \t]*(?P<name>[^\r\n]+?)[ \t]*\r?\n"
+    r"(?P<body>(?:[ \t]+[^\r\n]*\r?\n){0,4}?[ \t]+value:[ \t]*)"
+    r"(?P<value>[^\r\n]*)"
+)
+
+
+def _redact_kubernetes_env_values(text: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        name = match.group("name").strip(" \t\"'")
+        if not is_credential_key(name):
+            return match.group(0)
+        return text[match.start() : match.start("body")] + match.group("body") + _REDACTED
+
+    return _K8S_ENV_ENTRY.sub(replace, text)
+
+
 def redact_text(value: str) -> str:
     """Remove credential-shaped substrings from free text."""
-    redacted = _redact_yaml_anchor_values(value)
+    redacted = _redact_kubernetes_env_values(value)
+    redacted = _redact_yaml_anchor_values(redacted)
     redacted = _redact_json_credentials(redacted)
     redacted = _redact_xml_credential_elements(redacted)
     redacted = _redact_structured_values(redacted)

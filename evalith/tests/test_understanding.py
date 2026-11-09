@@ -668,6 +668,27 @@ def test_snapshot_change_clears_continuation_consent(
     assert refreshed["readiness"]["generation_allowed"] is False
 
 
+def test_english_continuation_can_be_withdrawn(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    continued = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "Please continue"},
+    )
+    assert continued.status_code == 200, continued.text
+    assert continued.json()["understanding"]["user_continued"] is True
+    withdrawn = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "do not continue"},
+    )
+    assert withdrawn.status_code == 200, withdrawn.text
+    assert withdrawn.json()["understanding"]["user_continued"] is False
+    assert withdrawn.json()["readiness"]["generation_allowed"] is False
+
+
 def test_ordinary_explicit_continuation_phrases_are_accepted(
     client: TestClient, project_root: Path
 ) -> None:

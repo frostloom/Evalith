@@ -82,6 +82,10 @@ def project_root(tmp_path: Path) -> Path:
         "servicePassword: *service\n",
         encoding="utf-8",
     )
+    (root / "config" / "k8s-env.yaml").write_text(
+        "env:\n  - name: DATABASE_PASSWORD\n    value: arbitrary-secret\n",
+        encoding="utf-8",
+    )
     (root / "config" / "kube.yaml").write_text(
         "client-key-data: c2VjcmV0LXN5bnRoZXRpYw==", encoding="utf-8"
     )

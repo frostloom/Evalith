@@ -301,6 +301,12 @@ class ModelGateway:
     def withdraws_continuation(self, text: str) -> bool:
         if any(marker in text for marker in WITHDRAWAL_MARKERS):
             return True
+        if re.search(
+            r"(?i)\b(?:do\s+not|don't|dont|not|stop|no\s+longer|won't|will\s+not)"
+            r"\s+(?:continue|proceed|go\s+on)\b",
+            text,
+        ):
+            return True
         return any(
             phrase in text for phrase in ("继续", "下一步", "开始出题", "开始设计", "下一阶段")
         ) and _has_negation(text)
