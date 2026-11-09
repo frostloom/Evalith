@@ -948,3 +948,25 @@ def test_rescan_persists_new_diagnostics_without_content_change(
     assert after["digest"] == before["digest"]
     assert after["id"] != before["id"]
     assert "link.txt" in {item["path"] for item in after["excluded"]}
+
+
+def test_chat_rescan_persists_new_diagnostics_without_content_change(
+    client: TestClient, tmp_path: Path
+) -> None:
+    root = tmp_path / "chat-diagnostics-only-change"
+    root.mkdir()
+    (root / "README.md").write_text("stable content\n", encoding="utf-8")
+    model = create_stub_model(client)
+    detail = import_project(client, root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    before = detail["snapshot"]
+    (root / "link.txt").symlink_to(root / "README.md")
+    response = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "请继续，保留未知项。"},
+    )
+    assert response.status_code == 200, response.text
+    after = client.get(f"/api/projects/{project_id}").json()["snapshot"]
+    assert after["digest"] == before["digest"]
+    assert after["id"] != before["id"]
+    assert "link.txt" in {item["path"] for item in after["excluded"]}

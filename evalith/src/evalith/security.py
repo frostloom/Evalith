@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import logging
 import os
 import re
@@ -217,9 +218,41 @@ def _redact_xml_credential_elements(text: str) -> str:
     return "".join(out)
 
 
+_JSON_CREDENTIAL_TERM = re.compile(
+    r"(?i)(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|"
+    r"pass|auth|authorization|github[_-]?pat)"
+)
+
+
+def _redact_json_credentials(text: str) -> str:
+    stripped = text.strip()
+    if not stripped.startswith(("{", "[")):
+        return text
+    try:
+        parsed = json.loads(text)
+    except ValueError:
+        return text
+
+    def walk(value):
+        if isinstance(value, dict):
+            cleaned = {}
+            for key, item in value.items():
+                if _JSON_CREDENTIAL_TERM.search(str(key)):
+                    cleaned[key] = _REDACTED
+                else:
+                    cleaned[key] = walk(item)
+            return cleaned
+        if isinstance(value, list):
+            return [walk(item) for item in value]
+        return value
+
+    return json.dumps(walk(parsed), ensure_ascii=False)
+
+
 def redact_text(value: str) -> str:
     """Remove credential-shaped substrings from free text."""
-    redacted = _redact_xml_credential_elements(value)
+    redacted = _redact_json_credentials(value)
+    redacted = _redact_xml_credential_elements(redacted)
     redacted = _redact_structured_values(redacted)
     for pattern in _YAML_PATTERNS:
         # Keep the line break so following YAML keys remain anchored.

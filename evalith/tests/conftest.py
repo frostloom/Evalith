@@ -72,6 +72,9 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "classic-token.txt").write_text(
         "token=ghp_exampleclassictoken\n", encoding="utf-8"
     )
+    (root / "config" / "escaped.json").write_text(
+        '{"pass\\u0077ord": "escaped-secret-value"}\n', encoding="utf-8"
+    )
     (root / "config" / "auth.json").write_text(
         '{"auth": "sk-example-project-credential"}\n', encoding="utf-8"
     )

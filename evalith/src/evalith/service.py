@@ -1036,7 +1036,14 @@ class WorkspaceService:
             snapshot_changed = (
                 current_snapshot is None or scan.digest != current_snapshot["digest"]
             )
-            if snapshot_changed:
+            diagnostics_changed = current_snapshot is None or (
+                json.loads(current_snapshot["manifest"]) != scan.manifest()
+                or json.loads(current_snapshot["excluded"]) != scan.excluded
+                or json.loads(current_snapshot["read_errors"]) != scan.read_errors
+                or json.loads(current_snapshot["selected_scope"])
+                != scan.selected_scope
+            )
+            if snapshot_changed or diagnostics_changed:
                 # Files changed while the session was open: record a new
                 # snapshot so the sources shown afterwards match what was sent.
                 snapshot_id = self._store_snapshot(project["id"], scan)

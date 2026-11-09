@@ -102,6 +102,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-nested-xml" not in request["body"]
     assert "synthetic-cdata-xml" not in request["body"]
     assert "ghp_exampleclassictoken" not in request["body"]
+    assert "escaped-secret-value" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -563,6 +564,14 @@ def test_structured_credential_values_are_redacted() -> None:
         "nested-second",
     ):
         assert secret not in redacted
+
+
+def test_escaped_json_credential_keys_are_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text('{"pass\\u0077ord": "escaped-secret-value"}')
+    assert "escaped-secret-value" not in redacted
+    assert "[REDACTED]" in redacted
 
 
 def test_github_pat_assignment_is_redacted() -> None:
