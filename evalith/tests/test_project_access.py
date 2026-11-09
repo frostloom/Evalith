@@ -972,6 +972,22 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
     assert ".kube/config" not in traversed
 
 
+def test_hard_linked_file_is_never_read(tmp_path: Path) -> None:
+    root = tmp_path / "hardlink-root"
+    root.mkdir()
+    outside = tmp_path / "outside.env"
+    outside.write_text("synthetic-hardlink-secret\n", encoding="utf-8")
+    os.link(outside, root / "notes.txt")
+    traversed = scan_project(root, [], [])
+    assert "notes.txt" not in {item.path for item in traversed.files}
+    assert any(
+        item.get("code") == "hard_link_denied" for item in traversed.read_errors
+    )
+    with pytest.raises(AccessError) as excinfo:
+        scan_project(root, ["notes.txt"], [])
+    assert excinfo.value.code == "hard_link_denied"
+
+
 def test_overlapping_selections_are_deduplicated(tmp_path: Path) -> None:
     root = tmp_path / "overlap"
     (root / "src").mkdir(parents=True)

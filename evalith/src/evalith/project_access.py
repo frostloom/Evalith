@@ -408,6 +408,10 @@ def _record_from_fd(
         stat_result = os.fstat(owned)
         if not stat.S_ISREG(stat_result.st_mode):
             raise AccessError(f"不是普通文件：{relative}", code="not_regular_file")
+        if stat_result.st_nlink > 1:
+            raise AccessError(
+                f"硬链接文件不会读取：{relative}", code="hard_link_denied"
+            )
         if stat_result.st_size > MAX_HASH_BYTES:
             raise AccessError(
                 f"文件超过指纹上限（{MAX_HASH_BYTES} 字节）：{relative}",
