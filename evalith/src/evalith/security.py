@@ -23,8 +23,8 @@ _SECRET_PATTERNS = [
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|pass)[A-Za-z0-9_-]*)"
-        r"[\"']?[ \t]*:\s*[|>][-+0-9]*[ \t]*\n"
-        r"(?:(?:[ \t]*\n)|(?P=indent)[ \t]+.*(?:\n|$))*"
+        r"[\"']?[ \t]*:\s*[|>][-+0-9]*[ \t]*(?:#[^\n]*)?\r?\n"
+        r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
     # key=value / "key": "value" forms, including JSON and quoted values.
     # The optional identifier prefix (e.g. OPENAI_API_KEY, DB_PASSWORD) is what

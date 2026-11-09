@@ -83,6 +83,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "hunter2" not in request["body"]
     assert "secret-value" not in request["body"]
     assert "ghp_example" not in request["body"]
+    assert "synthetic-comment-secret" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -419,6 +420,18 @@ def test_signing_secret_is_redacted() -> None:
     redacted = redact_text(text)
     assert "synthetic-signing-secret" not in redacted
     assert "[REDACTED]" in redacted
+
+
+def test_yaml_block_header_comments_and_crlf_are_redacted() -> None:
+    from evalith.security import redact_text
+
+    for text in (
+        "password: | # deployment credential\n  secret-value\n",
+        "password: |\r\n  secret-value\r\n",
+    ):
+        redacted = redact_text(text)
+        assert "secret-value" not in redacted
+        assert "[REDACTED]" in redacted
 
 
 def test_yaml_block_stops_at_sibling_indentation() -> None:

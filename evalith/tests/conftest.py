@@ -102,7 +102,8 @@ def project_root(tmp_path: Path) -> Path:
         "tokens:\n  - secret_key: |\n      sk-sequence-yaml-secret\n"
         "DB_PASS: |\n  synthetic-yaml-db-pass\n"
         "DB_PWD: >\n  synthetic-yaml-db-pwd\n"
-        "blank_secret: |\n  first-part\n\n  second-part\n",
+        "blank_secret: |\n  first-part\n\n  second-part\n"
+        "password: | # deployment credential\n  synthetic-comment-secret\n",
         encoding="utf-8",
     )
     (root / "binary.dat").write_bytes(b"\x00\x01secret-binary\x02")
