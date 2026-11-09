@@ -368,6 +368,22 @@ _K8S_ENV_ENTRY = re.compile(
 )
 
 
+_K8S_ITEM = re.compile(
+    r"(?m)^(?P<indent>[ \t]*)-[ \t]+(?P<first>[^\r\n]*)(?:\r?\n|$)"
+    r"(?P<rest>(?:(?P=indent)[ \t]+[^\r\n]*(?:\r?\n|$))*)"
+)
+_K8S_ITEM_NAME = re.compile(
+    r"(?m)^(?P<prefix>[ \t]*(?:-[ \t]+)?name:[ \t]*)"
+    r"(?P<name>[^\r\n#]+?)[ \t]*(?:#[^\r\n]*)?$"
+)
+_K8S_ITEM_VALUE = re.compile(
+    r"(?m)^[ \t]*(?:-[ \t]+)?value:[ \t]*(?P<value>"
+    r"(?:[|>][-+0-9]*[ \t]*(?:#[^\r\n]*)?\r?\n"
+    r"(?:[ \t]+[^\r\n]*(?:\r?\n|$))*)|(?s:\"[^\"]*\")|(?s:'[^']*')|"
+    r"[^\r\n]*)"
+)
+
+
 def _redact_kubernetes_env_values(text: str) -> str:
     def replace(match: re.Match[str]) -> str:
         name = match.group("name").strip(" \t\"'")
@@ -375,12 +391,38 @@ def _redact_kubernetes_env_values(text: str) -> str:
             return match.group(0)
         return text[match.start() : match.start("body")] + match.group("body") + _REDACTED
 
-    return _K8S_ENV_ENTRY.sub(replace, text)
+    text = _K8S_ENV_ENTRY.sub(replace, text)
+
+    def replace_item(match: re.Match[str]) -> str:
+        block = match.group(0)
+        name_match = _K8S_ITEM_NAME.search(block)
+        if name_match is None:
+            return block
+        name = name_match.group("name").strip(" \t\"'")
+        if not is_credential_key(name):
+            return block
+        value_match = _K8S_ITEM_VALUE.search(block)
+        if value_match is None:
+            return block
+        return (
+            block[: value_match.start("value")]
+            + _REDACTED
+            + block[value_match.end("value") :]
+        )
+
+    return _K8S_ITEM.sub(replace_item, text)
 
 
 _K8S_SECRET_KIND = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
     r"[\"']?Secret[\"']?[ \t]*(?:#[^\r\n]*)?$"
+)
+_K8S_SECRET_FLOW_KIND = re.compile(
+    r"(?i)[{,][ \t]*kind[ \t]*:[ \t]*[\"']?Secret\b"
+)
+_K8S_SECRET_FLOW_DATA = re.compile(
+    r"(?i)\b(?P<key>data|stringData)[ \t]*:[ \t]*"
+    r"\{(?:[^{}]|\{[^{}]*\})*\}"
 )
 _K8S_SECRET_DATA = re.compile(
     r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
@@ -391,13 +433,19 @@ _K8S_SECRET_DATA = re.compile(
 
 
 def _redact_kubernetes_secret_data(text: str) -> str:
-    if not _K8S_SECRET_KIND.search(text):
+    flow = bool(_K8S_SECRET_FLOW_KIND.search(text))
+    if not flow and not _K8S_SECRET_KIND.search(text):
         return text
 
     def replace(match: re.Match[str]) -> str:
         return f"{match.group('indent')}{match.group('key')}: {_REDACTED}\n"
 
-    return _K8S_SECRET_DATA.sub(replace, text)
+    text = _K8S_SECRET_DATA.sub(replace, text)
+    if flow:
+        text = _K8S_SECRET_FLOW_DATA.sub(
+            lambda match: f"{match.group('key')}: {_REDACTED}", text
+        )
+    return text
 
 
 def redact_text(value: str) -> str:

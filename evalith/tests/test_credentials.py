@@ -122,6 +122,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-comment-secret-data" not in request["body"]
     assert "synthetic-quoted-data-secret" not in request["body"]
     assert "synthetic-list-secret" not in request["body"]
+    assert "synthetic-flow-secret" not in request["body"]
+    assert "synthetic-value-first" not in request["body"]
+    assert "synthetic-comment-name" not in request["body"]
     assert "hunter2" not in request["body"]
     assert "dXNlcjpwYXNz" not in request["body"]
     assert "example-credential-value" not in request["body"]
@@ -786,6 +789,16 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "list-secret" not in redact_text(
         "items:\n- kind: Secret\n  stringData:\n    value: list-secret\n"
     )
+    assert "flow-secret" not in redact_text(
+        "{kind: Secret, stringData: {foo: flow-secret}}"
+    )
+    env_text = (
+        "env:\n- value: value-first\n  name: PASSWORD\n"
+        "- name: API_KEY # comment\n  value: comment-name\n"
+    )
+    env_redacted = redact_text(env_text)
+    assert "value-first" not in env_redacted
+    assert "comment-name" not in env_redacted
 
 
 def test_kubernetes_env_value_is_redacted() -> None:
