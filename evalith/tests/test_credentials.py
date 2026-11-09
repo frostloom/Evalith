@@ -117,6 +117,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "arbitrary-secret" not in request["body"]
     assert "synthetic-multiline-env" not in request["body"]
     assert "synthetic-secret-data" not in request["body"]
+    assert "synthetic-json-secret" not in request["body"]
+    assert "synthetic-quoted-secret" not in request["body"]
     assert "hunter2" not in request["body"]
     assert "dXNlcjpwYXNz" not in request["body"]
     assert "example-credential-value" not in request["body"]
@@ -760,6 +762,17 @@ def test_basic_authorization_is_redacted() -> None:
 
     redacted = redact_text('const basicAuth = "Basic dXNlcjpwYXNz";')
     assert "dXNlcjpwYXNz" not in redacted
+
+
+def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
+    from evalith.security import redact_text
+
+    assert "json-secret" not in redact_text(
+        '{"kind":"Secret","stringData":{"value":"json-secret"}}'
+    )
+    assert "quoted-secret" not in redact_text(
+        'kind: "Secret"\nstringData:\n  value: quoted-secret\n'
+    )
 
 
 def test_kubernetes_env_value_is_redacted() -> None:

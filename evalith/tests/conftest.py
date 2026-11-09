@@ -82,6 +82,14 @@ def project_root(tmp_path: Path) -> Path:
         "servicePassword: *service\n",
         encoding="utf-8",
     )
+    (root / "config" / "secret.json").write_text(
+        '{"kind": "Secret", "stringData": {"value": "synthetic-json-secret"}}\n',
+        encoding="utf-8",
+    )
+    (root / "config" / "quoted-secret.yaml").write_text(
+        'kind: "Secret"\nstringData:\n  value: synthetic-quoted-secret\n',
+        encoding="utf-8",
+    )
     (root / "config" / "k8s-env.yaml").write_text(
         "env:\n  - name: DATABASE_PASSWORD\n    value: arbitrary-secret\n"
         "  - name: API_KEY\n    value: |\n      synthetic-multiline-env\n"

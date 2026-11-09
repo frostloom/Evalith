@@ -307,6 +307,12 @@ def _redact_json_credentials(text: str) -> str:
 
     def walk(value):
         if isinstance(value, dict):
+            if str(value.get("kind", "")).casefold() == "secret":
+                cleaned = dict(value)
+                for secret_key in ("data", "stringData"):
+                    if secret_key in cleaned:
+                        cleaned[secret_key] = _REDACTED
+                return cleaned
             cleaned = {}
             for key, item in value.items():
                 if is_credential_key(key):
@@ -372,7 +378,9 @@ def _redact_kubernetes_env_values(text: str) -> str:
     return _K8S_ENV_ENTRY.sub(replace, text)
 
 
-_K8S_SECRET_KIND = re.compile(r"(?im)^[ \t]*kind:[ \t]*Secret\b")
+_K8S_SECRET_KIND = re.compile(
+    r"(?im)^[ \t]*kind:[ \t]*[\"']?Secret[\"']?[ \t]*$"
+)
 _K8S_SECRET_DATA = re.compile(
     r"(?im)^(?P<indent>[ \t]*)(?P<key>data|stringData):[ \t]*"
     r"(?:\{[^}]*\}|[^\r\n]*\r?\n"
