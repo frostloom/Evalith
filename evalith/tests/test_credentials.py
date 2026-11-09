@@ -106,6 +106,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "ghp_exampleclassictoken" not in request["body"]
     assert "glpat-examplegitlabtoken" not in request["body"]
     assert "c2VjcmV0LXN5bnRoZXRpYw==" not in request["body"]
+    assert "hunter2" not in request["body"]
     assert "escaped-secret-value" not in request["body"]
     assert "xoxb-example-slack-token" not in request["body"]
     assert "xoxc-example-slack-session-token" not in request["body"]
@@ -702,6 +703,13 @@ def test_structured_credential_values_are_redacted() -> None:
         "nested-second",
     ):
         assert secret not in redacted
+
+
+def test_yaml_credential_alias_anchor_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text("shared: &dbpass hunter2\npassword: *dbpass\n")
+    assert "hunter2" not in redacted
 
 
 def test_kubernetes_client_key_data_is_redacted() -> None:

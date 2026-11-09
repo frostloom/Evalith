@@ -314,9 +314,28 @@ def _redact_json_credentials(text: str) -> str:
     return json.dumps(walk(parsed), ensure_ascii=False)
 
 
+_YAML_CREDENTIAL_ALIAS = re.compile(
+    r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?"
+    r"(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|pass|"
+    r"auth|authorization|account[_-]?key|client[_-]?key[_-]?data|"
+    r"github[_-]?pat|githubToken)[\"']?[ \t]*:[ \t]*\*([A-Za-z0-9_-]+)"
+)
+
+
+def _redact_yaml_anchor_values(text: str) -> str:
+    for anchor in set(_YAML_CREDENTIAL_ALIAS.findall(text)):
+        text = re.sub(
+            rf"&{re.escape(anchor)}\b[^\r\n]*",
+            _REDACTED,
+            text,
+        )
+    return text
+
+
 def redact_text(value: str) -> str:
     """Remove credential-shaped substrings from free text."""
-    redacted = _redact_json_credentials(value)
+    redacted = _redact_yaml_anchor_values(value)
+    redacted = _redact_json_credentials(redacted)
     redacted = _redact_xml_credential_elements(redacted)
     redacted = _redact_structured_values(redacted)
     for pattern in _YAML_PATTERNS:
