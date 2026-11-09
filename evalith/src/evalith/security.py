@@ -582,6 +582,26 @@ _K8S_SECRET_DATA = re.compile(
 )
 
 
+_ESCAPED_SECRET_KEY = re.compile(
+    r"(?m)(?P<prefix>(?:^|[{,])[ \t]*(?:-[ \t]+)?)"
+    r"\"(?P<key>(?:[^\"\\]|\\.)*)\""
+    r"(?P<colon>[ \t]*:[ \t]*)"
+)
+
+
+def _normalize_escaped_secret_keys(text: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        try:
+            key = json.loads(f'"{match.group("key")}"')
+        except ValueError:
+            return match.group(0)
+        if key not in ("data", "stringData"):
+            return match.group(0)
+        return f"{match.group('prefix')}{key}{match.group('colon')}"
+
+    return _ESCAPED_SECRET_KEY.sub(replace, text)
+
+
 def _redact_anchored_secret_data(text: str, anchor: str) -> str:
     pattern = re.compile(rf"&{re.escape(anchor)}\b[ \t]*")
     match = pattern.search(text)
@@ -623,9 +643,11 @@ def _redact_kubernetes_secret_data(text: str) -> str:
         or _K8S_SECRET_FLOW_OPEN.search(text)
     )
     block_kind = bool(_K8S_SECRET_BLOCK_KIND.search(text))
-    if not flow and not alias_kind and not block_kind and not _K8S_SECRET_KIND.search(text):
+    line_kind = bool(_K8S_SECRET_KIND.search(text))
+    if not flow and not alias_kind and not block_kind and not line_kind:
         return text
 
+    text = _normalize_escaped_secret_keys(text)
     data_aliases = set(_K8S_SECRET_DATA_ALIAS.findall(text))
     data_aliases.update(_K8S_SECRET_FLOW_DATA_ALIAS.findall(text))
     for alias in data_aliases:
