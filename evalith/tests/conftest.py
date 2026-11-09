@@ -72,6 +72,9 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "classic-token.txt").write_text(
         "token=ghp_exampleclassictoken\n", encoding="utf-8"
     )
+    (root / "config" / "google.json").write_text(
+        '{"key": "AIzaExampleGoogleApiKey1234567890"}\n', encoding="utf-8"
+    )
     (root / "config" / "slack.json").write_text(
         '{"slack": "xoxb-example-slack-token"}\n', encoding="utf-8"
     )

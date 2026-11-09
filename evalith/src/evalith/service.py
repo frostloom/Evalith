@@ -189,6 +189,22 @@ class WorkspaceService:
                     status_code=422,
                     code="model_url_credentials",
                 )
+            if parsed_url.scheme not in {"http", "https"}:
+                raise WorkspaceError(
+                    "模型服务地址必须使用 HTTP 或 HTTPS",
+                    status_code=422,
+                    code="model_url_scheme",
+                )
+            if parsed_url.scheme == "http" and parsed_url.hostname not in {
+                "127.0.0.1",
+                "::1",
+                "localhost",
+            }:
+                raise WorkspaceError(
+                    "非本机模型服务必须使用 HTTPS",
+                    status_code=422,
+                    code="model_url_insecure",
+                )
         if not model_name:
             raise WorkspaceError("模型名称不能为空")
         now = utc_now()

@@ -104,6 +104,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "ghp_exampleclassictoken" not in request["body"]
     assert "escaped-secret-value" not in request["body"]
     assert "xoxb-example-slack-token" not in request["body"]
+    assert "AIzaExampleGoogleApiKey1234567890" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -431,6 +432,41 @@ def test_model_url_with_credentials_is_rejected(client: TestClient) -> None:
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "model_url_credentials"
     assert "password" not in str(client.get("/api/model-configs").json())
+
+
+def test_google_api_key_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text("key=AIzaExampleGoogleApiKey1234567890")
+    assert "AIzaExampleGoogleApiKey1234567890" not in redacted
+    assert "[REDACTED]" in redacted
+
+
+def test_non_loopback_http_model_url_is_rejected(client: TestClient) -> None:
+    response = client.post(
+        "/api/model-configs",
+        json={
+            "name": "plaintext-remote",
+            "provider": "openai_compatible",
+            "base_url": "http://example.com/v1",
+            "model_name": "fake",
+        },
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "model_url_insecure"
+
+
+def test_non_loopback_https_model_url_is_accepted(client: TestClient) -> None:
+    response = client.post(
+        "/api/model-configs",
+        json={
+            "name": "secure-remote",
+            "provider": "openai_compatible",
+            "base_url": "https://example.com/v1",
+            "model_name": "fake",
+        },
+    )
+    assert response.status_code == 201, response.text
 
 
 def test_signing_secret_is_redacted() -> None:
