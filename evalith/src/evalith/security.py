@@ -577,7 +577,7 @@ def _normalize_escaped_secret_kind(text: str) -> str:
 _K8S_SECRET_DATA = re.compile(
     r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
     r"(?P<key>data|stringData)[\"']?[ \t]*:[ \t]*"
-    r"[^\r\n]*\r?\n"
+    r"[^\r\n]*(?:\r?\n|$)"
     r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+[^\r\n]*(?:\r?\n|$))*"
 )
 
