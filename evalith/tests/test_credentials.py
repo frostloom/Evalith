@@ -131,6 +131,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-aws-key-id" not in request["body"]
     assert "synthetic-aws-secret" not in request["body"]
     assert "synthetic-aws-json-secret" not in request["body"]
+    assert "synthetic-escaped-env" not in request["body"]
+    assert "synthetic-pgp-private-key" not in request["body"]
     assert "c2VjcmV0" not in request["body"]
     assert "arbitrary-secret" not in request["body"]
     assert "synthetic-multiline-env" not in request["body"]
@@ -162,6 +164,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-aws-key-id" not in request["body"]
     assert "synthetic-aws-secret" not in request["body"]
     assert "synthetic-aws-json-secret" not in request["body"]
+    assert "synthetic-escaped-env" not in request["body"]
+    assert "synthetic-pgp-private-key" not in request["body"]
     assert "c2VjcmV0" not in request["body"]
     assert "synthetic-value-first" not in request["body"]
     assert "synthetic-comment-name" not in request["body"]
@@ -896,6 +900,17 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "aws-json" not in redact_text(
         '{"env": [{"name": "AWS_SECRET_ACCESS_KEY", "value": "aws-json"}]}'
+    )
+    assert "escaped-env" not in redact_text(
+        '- name: "API\\u005fKEY"\n  value: escaped-env\n'
+    )
+    assert "escaped-flow" not in redact_text(
+        'env: [{"name": "API\\u005fKEY", "value": "escaped-flow"}]'
+    )
+    assert "pgp-private" not in redact_text(
+        "-----BEGIN PGP PRIVATE KEY BLOCK-----\n"
+        "pgp-private\n"
+        "-----END PGP PRIVATE KEY BLOCK-----"
     )
     env_text = (
         "env:\n- value: value-first\n  name: PASSWORD\n"

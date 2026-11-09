@@ -76,7 +76,11 @@ _SECRET_PATTERNS = [
     re.compile(
         r"(?i)\b[a-z][a-z0-9+.-]*://[^@\s/]+@[^\s,}\"']+"
     ),
-    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),
+    re.compile(
+        r"-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----.*?"
+        r"-----END [A-Z ]*PRIVATE KEY(?: BLOCK)?-----",
+        re.S,
+    ),
 ]
 
 _YAML_PATTERNS = _SECRET_PATTERNS[:3]
@@ -521,7 +525,15 @@ _YAML_NAME_PREFIX = re.compile(r"^(?:(?:![^\s]+|&[^\s]+)[ \t]+)+")
 
 
 def _yaml_key_name(value: str) -> str:
-    return _YAML_NAME_PREFIX.sub("", value.strip()).strip(" \t\"'")
+    raw = _YAML_NAME_PREFIX.sub("", value.strip()).strip()
+    if raw.startswith('"') and raw.endswith('"'):
+        try:
+            return str(json.loads(raw))
+        except ValueError:
+            pass
+    if raw.startswith("'") and raw.endswith("'"):
+        return raw[1:-1].replace("''", "'")
+    return raw.strip(" \t\"'")
 
 
 def _normalize_escaped_secret_kind(text: str) -> str:

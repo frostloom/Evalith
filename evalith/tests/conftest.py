@@ -104,6 +104,17 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "escaped-env.yaml").write_text(
+        '- name: "API\\u005fKEY"\n  value: synthetic-escaped-env\n'
+        '- name: "API\\u005fKEY"\n  value: synthetic-escaped-flow\n',
+        encoding="utf-8",
+    )
+    (root / "config" / "backup.asc").write_text(
+        "-----BEGIN PGP PRIVATE KEY BLOCK-----\n"
+        "synthetic-pgp-private-key\n"
+        "-----END PGP PRIVATE KEY BLOCK-----\n",
+        encoding="utf-8",
+    )
     (root / "config" / "aws-env.yaml").write_text(
         "- name: AWS_ACCESS_KEY_ID\n  value: synthetic-aws-key-id\n"
         "- name: AWS_SECRET_ACCESS_KEY\n  value: synthetic-aws-secret\n",
