@@ -934,7 +934,14 @@ class WorkspaceService:
         if store_new_snapshot:
             previous_snapshot = project["snapshot_id"]
             existing = self.db.get_snapshot(previous_snapshot)
-            if existing is not None and existing["digest"] == scan.digest:
+            content_changed = existing is None or existing["digest"] != scan.digest
+            diagnostics_changed = existing is None or (
+                json.loads(existing["manifest"]) != scan.manifest()
+                or json.loads(existing["excluded"]) != scan.excluded
+                or json.loads(existing["read_errors"]) != scan.read_errors
+                or json.loads(existing["selected_scope"]) != scan.selected_scope
+            )
+            if not content_changed and not diagnostics_changed:
                 return scan
             snapshot_id = self._store_snapshot(project["id"], scan)
             self.db.update_project_snapshot(project["id"], snapshot_id, None)
@@ -944,7 +951,8 @@ class WorkspaceService:
                 self.db.get_understanding(project["id"])
             )
             if (
-                current is not None
+                content_changed
+                and current is not None
                 and current.get("sufficient")
                 and not current.get("error")
             ):

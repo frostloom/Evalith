@@ -910,3 +910,22 @@ def test_snapshot_digest_is_deterministic_for_unchanged_files(
     second = import_project(client, project_root, model_config_id=model["id"], name="B")
     assert first.status_code == 201 and second.status_code == 201
     assert first.json()["snapshot"]["digest"] == second.json()["snapshot"]["digest"]
+
+
+def test_rescan_persists_new_diagnostics_without_content_change(
+    client: TestClient, tmp_path: Path
+) -> None:
+    root = tmp_path / "diagnostics-only-change"
+    root.mkdir()
+    (root / "README.md").write_text("stable content\n", encoding="utf-8")
+    model = create_stub_model(client)
+    detail = import_project(client, root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    before = detail["snapshot"]
+    (root / "link.txt").symlink_to(root / "README.md")
+    rescanned = client.post(f"/api/projects/{project_id}/rescan")
+    assert rescanned.status_code == 200, rescanned.text
+    after = rescanned.json()["snapshot"]
+    assert after["digest"] == before["digest"]
+    assert after["id"] != before["id"]
+    assert "link.txt" in {item["path"] for item in after["excluded"]}
