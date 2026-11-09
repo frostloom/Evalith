@@ -477,6 +477,7 @@ class WorkspaceService:
         understanding: dict[str, Any],
         sources: list[dict[str, Any]],
         previous_known: list[dict[str, Any]] | None = None,
+        session_texts: list[str] | None = None,
     ) -> None:
         current_paths = {
             str(item.get("path")) for item in sources if item.get("path")
@@ -494,18 +495,39 @@ class WorkspaceService:
             for item in previous_known or []
             if isinstance(item, dict)
         }
+        any_sent = any(item.get("sent") for item in sources)
         for item in understanding.get("known", []):
             if not isinstance(item, dict):
                 continue
             source = item.get("source")
-            if source in sent_paths or source in {"会话", "snapshot"}:
+            text = str(item.get("text"))
+            if source in sent_paths:
                 continue
+            if source == "会话":
+                user_evidence = [
+                    str(item).casefold() for item in session_texts or []
+                ]
+                if (text, source) in previous_facts or any(
+                    text.casefold() in message for message in user_evidence
+                ):
+                    continue
+                raise ModelError(
+                    "模型返回的 known 来源无法核对：会话；"
+                    "新的会话事实必须由用户消息建立"
+                )
+            if source == "snapshot":
+                if (text, source) in previous_facts or not any_sent:
+                    continue
+                raise ModelError(
+                    "模型返回的 known 来源无法核对：snapshot；"
+                    "快照来源不能用于新的模型断言"
+                )
             # A prior fact may keep an unsent source only when the exact fact
             # already existed; a new assertion still needs transmitted evidence.
             if (
                 isinstance(source, str)
                 and source in current_paths
-                and (str(item.get("text")), source) in previous_facts
+                and (text, source) in previous_facts
             ):
                 continue
             raise ModelError(
@@ -841,6 +863,11 @@ class WorkspaceService:
                 result,
                 sources,
                 current.get("known", []) if current else [],
+                [
+                    str(message.get("content", ""))
+                    for message in history
+                    if message.get("role") == "user"
+                ],
             )
             # A reanalysis must not silently drop corrections the user already
             # made in this main session, even when the provider returns a fresh
@@ -1305,7 +1332,14 @@ class WorkspaceService:
             # Validate first: an invented source must surface as a model
             # error, not be silently dropped before validation.
             self._validate_known_sources(
-                understanding, sources, current.get("known", [])
+                understanding,
+                sources,
+                current.get("known", []),
+                [
+                    str(message.get("content", ""))
+                    for message in history
+                    if message.get("role") == "user"
+                ],
             )
             understanding["known"] = _known_for_sources(
                 understanding.get("known", []),

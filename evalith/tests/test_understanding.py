@@ -589,6 +589,30 @@ def test_valid_provider_sufficiency_survives_ordinary_discussion(
         assert response.json()["readiness"]["generation_allowed"] is True
 
 
+def test_reserved_sources_require_prior_facts(client: TestClient) -> None:
+    service = client.app.state.service
+    sources = [{"path": "README.md", "sent": True}]
+    previous = [
+        {"text": "old conversation", "source": "会话"},
+        {"text": "old snapshot", "source": "snapshot"},
+    ]
+    service._validate_known_sources(
+        {"known": previous}, sources, previous
+    )
+    with pytest.raises(ModelError):
+        service._validate_known_sources(
+            {"known": [{"text": "invented", "source": "会话"}]},
+            sources,
+            previous,
+        )
+    with pytest.raises(ModelError):
+        service._validate_known_sources(
+            {"known": [{"text": "invented", "source": "snapshot"}]},
+            sources,
+            previous,
+        )
+
+
 def test_prior_fact_keeps_source_but_new_fact_needs_transmission(
     client: TestClient,
 ) -> None:
@@ -1416,7 +1440,7 @@ def test_failed_understanding_is_not_cleared_by_reply_only_response(
         "understanding": {
             "summary": "恢复后的项目理解",
             "agent_or_flow": "",
-            "known": [{"text": "恢复的已知项", "source": "会话"}],
+            "known": [{"text": "恢复的已知项", "source": "README.md"}],
             "inferred": [],
             "unknowns": [],
             "sufficient": False,
