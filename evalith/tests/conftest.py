@@ -55,7 +55,8 @@ def project_root(tmp_path: Path) -> Path:
         "AWS_SECRET_ACCESS_KEY=synthetic-secret-value\n"
         "JWT_SECRET_KEY=synthetic-signing-secret\n"
         'PRIVATE_KEY = "raw-private-key-value"\n'
-        'GITHUB_PAT=github_pat_examplecredential\n' 
+        'GITHUB_PAT=github_pat_examplecredential\n'
+        "VAULT_TOKEN=hvs.syntheticVaultToken\n"
         "The agent approves releases.\n",
         encoding="utf-8",
     )

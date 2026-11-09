@@ -82,6 +82,7 @@ ALWAYS_EXCLUDED = [
     ".boto*",
     ".s3cfg",
     "*.s3cfg",
+    ".vault-token",
 ]
 
 #: Dependency/build noise.  These are user-overridable, unlike the always

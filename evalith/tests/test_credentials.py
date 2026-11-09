@@ -113,6 +113,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "glpat-examplegitlabtoken" not in request["body"]
     assert "rk_live_exampleStripeKey123" not in request["body"]
     assert "npm_0123456789abcdefghijklmnopqrstuvwxyz" not in request["body"]
+    assert "hvs.syntheticVaultToken" not in request["body"]
     assert "c2VjcmV0LXN5bnRoZXRpYw==" not in request["body"]
     assert "synthetic-flow-brace" not in request["body"]
     assert "synthetic-flow-env" not in request["body"]
