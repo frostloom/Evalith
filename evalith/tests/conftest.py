@@ -69,6 +69,9 @@ def project_root(tmp_path: Path) -> Path:
         'npmAuthToken: "registry-secret-value"\n', encoding="utf-8"
     )
     (root / "config").mkdir()
+    (root / "config" / "kube.yaml").write_text(
+        "client-key-data: c2VjcmV0LXN5bnRoZXRpYw==", encoding="utf-8"
+    )
     (root / "config" / "gitlab.txt").write_text(
         "token=glpat-examplegitlabtoken\n", encoding="utf-8"
     )

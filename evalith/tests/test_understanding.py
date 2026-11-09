@@ -605,6 +605,13 @@ def test_deferred_continuation_does_not_open_gate(
     assert deferred.status_code == 200, deferred.text
     assert deferred.json()["understanding"]["user_continued"] is False
     assert deferred.json()["readiness"]["generation_allowed"] is False
+    conditional = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "继续，审批通过时执行"},
+    )
+    assert conditional.status_code == 200, conditional.text
+    assert conditional.json()["understanding"]["user_continued"] is False
+    assert conditional.json()["readiness"]["generation_allowed"] is False
 
 
 def test_continuation_with_context_is_accepted(
