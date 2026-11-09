@@ -3,9 +3,12 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
+import pytest
+
 from fastapi.testclient import TestClient
 
 from conftest import _RecordingHandler, create_stub_model, import_project
+from evalith.model_gateway import ModelError
 
 
 def _detail(client: TestClient, project_id: str) -> dict:
@@ -586,6 +589,25 @@ def test_valid_provider_sufficiency_survives_ordinary_discussion(
         assert response.json()["readiness"]["generation_allowed"] is True
 
 
+def test_prior_fact_keeps_source_but_new_fact_needs_transmission(
+    client: TestClient,
+) -> None:
+    service = client.app.state.service
+    sources = [{"path": "README.md", "sent": False}]
+    previous = [{"text": "old fact", "source": "README.md"}]
+    service._validate_known_sources(
+        {"known": [{"text": "old fact", "source": "README.md"}]},
+        sources,
+        previous,
+    )
+    with pytest.raises(ModelError):
+        service._validate_known_sources(
+            {"known": [{"text": "new fact", "source": "README.md"}]},
+            sources,
+            previous,
+        )
+
+
 def test_ordinary_explicit_continuation_phrases_are_accepted(
     client: TestClient, project_root: Path
 ) -> None:
@@ -626,6 +648,13 @@ def test_deferred_continuation_does_not_open_gate(
     assert conditional.status_code == 200, conditional.text
     assert conditional.json()["understanding"]["user_continued"] is False
     assert conditional.json()["readiness"]["generation_allowed"] is False
+    approval = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "继续，确认通过才行"},
+    )
+    assert approval.status_code == 200, approval.text
+    assert approval.json()["understanding"]["user_continued"] is False
+    assert approval.json()["readiness"]["generation_allowed"] is False
 
 
 def test_continuation_with_context_is_accepted(

@@ -484,25 +484,34 @@ class WorkspaceService:
         # New claims must cite evidence that was actually transmitted.  Facts
         # already established in this session may keep their prior source while
         # it is still in the current scope.
-        allowed = {
+        sent_paths = {
             str(item.get("path"))
             for item in sources
             if item.get("path") and item.get("sent")
         }
-        for item in previous_known or []:
-            source = item.get("source") if isinstance(item, dict) else None
-            if isinstance(source, str) and source in current_paths:
-                allowed.add(source)
-        allowed.update({"会话", "snapshot"})
+        previous_facts = {
+            (str(item.get("text")), str(item.get("source")))
+            for item in previous_known or []
+            if isinstance(item, dict)
+        }
         for item in understanding.get("known", []):
             if not isinstance(item, dict):
                 continue
             source = item.get("source")
-            if source not in allowed:
-                raise ModelError(
-                    "模型返回的 known 来源无法核对："
-                    f"{source or '（空）'}；请重新分析或补充资料"
-                )
+            if source in sent_paths or source in {"会话", "snapshot"}:
+                continue
+            # A prior fact may keep an unsent source only when the exact fact
+            # already existed; a new assertion still needs transmitted evidence.
+            if (
+                isinstance(source, str)
+                and source in current_paths
+                and (str(item.get("text")), source) in previous_facts
+            ):
+                continue
+            raise ModelError(
+                "模型返回的 known 来源无法核对："
+                f"{source or '（空）'}；请重新分析或补充资料"
+            )
 
     def _store_snapshot(self, project_id: str, scan: ScanResult) -> str:
         snapshot_id = _id("snp")

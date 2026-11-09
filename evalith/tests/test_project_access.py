@@ -948,6 +948,12 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
         scan_project(root, ["key.ppk"], [])
 
 
+def test_relative_project_root_is_rejected() -> None:
+    with pytest.raises(AccessError) as exc:
+        resolve_root("relative-project")
+    assert exc.value.code == "root_not_absolute"
+
+
 def test_rescan_persists_new_diagnostics_without_content_change(
     client: TestClient, tmp_path: Path
 ) -> None:

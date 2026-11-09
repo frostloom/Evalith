@@ -216,9 +216,10 @@ def resolve_root_with_identity(
         )
     if not root_path or not root_path.strip():
         raise AccessError("请选择本地项目目录", code="root_missing")
-    raw = Path(os.path.abspath(os.path.expanduser(root_path)))
-    if not raw.is_absolute():  # pragma: no cover - abspath always returns absolute
+    expanded = Path(os.path.expanduser(root_path))
+    if not expanded.is_absolute():
         raise AccessError("项目目录必须是绝对路径", code="root_not_absolute")
+    raw = Path(os.path.abspath(expanded))
     if raw == Path("/"):
         raise AccessError("不能将文件系统根目录作为项目范围", code="root_too_broad")
     try:
