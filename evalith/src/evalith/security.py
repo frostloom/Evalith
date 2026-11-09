@@ -25,15 +25,6 @@ _SECRET_PATTERNS = [
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|secret|token|key|password|passwd|pwd|pass)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*[|>][-+0-9]*[ \t]*\n(?:[ \t]+.*(?:\n|$))*"
     ),
-    # JSON/structured credential values (arrays and nested objects).
-    re.compile(
-        r"(?is)(?<![A-Za-z0-9])[\"']?(?:[A-Za-z0-9]+[_-])*"
-        r"(?:private[_-]?key|secret[_-]?access[_-]?key|secret[_-]?key|"
-        r"signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
-        r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
-        r"token|secret|password|passwd|pwd|pass|authorization)[\"']?\s*[:=]\s*"
-        r"(?:\{.*?\}|\[.*?\])"
-    ),
     # key=value / "key": "value" forms, including JSON and quoted values.
     # The optional identifier prefix (e.g. OPENAI_API_KEY, DB_PASSWORD) is what
     # makes prefixed credential names visible; a bare word-boundary would miss
@@ -57,10 +48,63 @@ _SECRET_PATTERNS = [
 
 _REDACTED = "[REDACTED]"
 
+_STRUCTURED_CREDENTIAL = re.compile(
+    r"(?is)(?<![A-Za-z0-9])[\"']?(?:[A-Za-z0-9]+[_-])*"
+    r"(?:private[_-]?key|secret[_-]?access[_-]?key|secret[_-]?key|"
+    r"signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
+    r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
+    r"token|secret|password|passwd|pwd|pass|authorization)[\"']?\s*[:=]\s*"
+    r"(?=[\[{])"
+)
+
+
+def _structured_value_end(text: str, start: int) -> int:
+    stack: list[str] = []
+    quote: str | None = None
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in "\"'":
+            quote = char
+            continue
+        if char in "[{":
+            stack.append("]" if char == "[" else "}")
+            continue
+        if char in "]}":
+            if stack and stack[-1] == char:
+                stack.pop()
+                if not stack:
+                    return index + 1
+            else:
+                return index + 1
+    return len(text)
+
+
+def _redact_structured_values(text: str) -> str:
+    out: list[str] = []
+    cursor = 0
+    for match in _STRUCTURED_CREDENTIAL.finditer(text):
+        if match.start() < cursor:
+            continue
+        end = _structured_value_end(text, match.end())
+        out.append(text[cursor : match.start()])
+        out.append(_REDACTED)
+        cursor = end
+    out.append(text[cursor:])
+    return "".join(out)
+
 
 def redact_text(value: str) -> str:
     """Remove credential-shaped substrings from free text."""
-    redacted = value
+    redacted = _redact_structured_values(value)
     for pattern in _SECRET_PATTERNS:
         redacted = pattern.sub(_REDACTED, redacted)
     return redacted

@@ -70,7 +70,9 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config").mkdir()
     (root / "config" / "structured.json").write_text(
         '{"api_key": ["first-secret", "second-secret"], '
-        '"nested": {"api_key": "nested-secret"}}\n',
+        '"nested": {"api_key": "nested-secret"}, '
+        '"password": {"nested": {"value": "nested-first"}, '
+        '"backup": "nested-second"}}\n',
         encoding="utf-8",
     )
     (root / "config" / "settings.json").write_text(

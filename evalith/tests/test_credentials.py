@@ -75,6 +75,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "first-secret" not in request["body"]
     assert "second-secret" not in request["body"]
     assert "nested-secret" not in request["body"]
+    assert "nested-first" not in request["body"]
+    assert "nested-second" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -416,10 +418,18 @@ def test_structured_credential_values_are_redacted() -> None:
 
     text = (
         '{"api_key": ["first-secret", "second-secret"], '
-        '"nested": {"api_key": "nested-secret"}}'
+        '"nested": {"api_key": "nested-secret"}, '
+        '"password": {"nested": {"value": "nested-first"}, '
+        '"backup": "nested-second"}}'
     )
     redacted = redact_text(text)
-    for secret in ("first-secret", "second-secret", "nested-secret"):
+    for secret in (
+        "first-secret",
+        "second-secret",
+        "nested-secret",
+        "nested-first",
+        "nested-second",
+    ):
         assert secret not in redacted
 
 
