@@ -500,7 +500,7 @@ _K8S_SECRET_BLOCK_KIND = re.compile(
     r"(?:[ \t]*\r?\n)*[ \t]+[\"']?Secret[\"']?[ \t]*$"
 )
 _K8S_SECRET_DATA_ALIAS = re.compile(
-    r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?data[\"']?[ \t]*:[ \t]*"
+    r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?(?:data|stringData)[\"']?[ \t]*:[ \t]*"
     r"\*([A-Za-z0-9_-]+)"
 )
 _K8S_SECRET_DATA = re.compile(
@@ -520,10 +520,24 @@ def _redact_anchored_secret_data(text: str, anchor: str) -> str:
     if start < len(text) and text[start] == "{":
         end = _flow_mapping_end(text, start)
         return text[: match.start()] + f"&{anchor} {_REDACTED}" + text[end:]
+    line_start = text.rfind("\n", 0, match.start()) + 1
+    indent_match = re.match(r"[ \t]*", text[line_start:])
+    indent = indent_match.group(0) if indent_match else ""
     line_end = text.find("\n", start)
     if line_end < 0:
-        line_end = len(text)
-    return text[: match.start()] + f"&{anchor} {_REDACTED}" + text[line_end:]
+        return text[: match.start()] + f"&{anchor} {_REDACTED}"
+    end = line_end + 1
+    while end < len(text):
+        next_end = text.find("\n", end)
+        line = text[end : next_end if next_end >= 0 else len(text)]
+        if line.strip() == "":
+            end = len(text) if next_end < 0 else next_end + 1
+            continue
+        if line.startswith(indent) and len(line) > len(indent) and line[len(indent)] in " \t":
+            end = len(text) if next_end < 0 else next_end + 1
+            continue
+        break
+    return text[: match.start()] + f"&{anchor} {_REDACTED}\n" + text[end:]
 
 
 def _redact_kubernetes_secret_data(text: str) -> str:

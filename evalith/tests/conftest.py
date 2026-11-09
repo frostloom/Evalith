@@ -98,6 +98,13 @@ def project_root(tmp_path: Path) -> Path:
         'env: [{"name": "API_KEY", "value": "synthetic-quoted-flow-env"}]\n',
         encoding="utf-8",
     )
+    (root / "config" / "block-anchor-secret.yaml").write_text(
+        "shared: &creds\n  neutral: synthetic-block-anchor-secret\n"
+        "kind: Secret\ndata: *creds\n"
+        "extra_anchor: &creds2\n  neutral: synthetic-block-stringdata\n"
+        "kind: Secret\nstringData: *creds2\n",
+        encoding="utf-8",
+    )
     (root / "config" / "block-kind-secret.yaml").write_text(
         "kind: >-\n  Secret\nstringData:\n  value: synthetic-block-kind-secret\n",
         encoding="utf-8",
