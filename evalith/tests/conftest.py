@@ -89,6 +89,9 @@ def project_root(tmp_path: Path) -> Path:
         '{"author": "alice", "keyboard": "qwerty", "compass": "north"}\n',
         encoding="utf-8",
     )
+    (root / ".pgpass").write_text(
+        "localhost:5432:app:alice:synthetic-pg-password\n", encoding="utf-8"
+    )
     (root / ".htpasswd").write_text(
         "alice:$apr1$synthetic$hashvalue\n", encoding="utf-8"
     )

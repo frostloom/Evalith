@@ -41,6 +41,7 @@ ALWAYS_EXCLUDED = [
     ".env.*",
     ".htpasswd",
     "*.htpasswd",
+    ".pgpass",
     "*.env",
     "*.pem",
     "*.key",

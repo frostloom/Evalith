@@ -922,6 +922,9 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
     build.mkdir()
     (build / "app.js").write_text("app\n", encoding="utf-8")
     (root / ".env").write_text("SECRET=x\n", encoding="utf-8")
+    (root / ".pgpass").write_text(
+        "localhost:5432:app:alice:password\n", encoding="utf-8"
+    )
 
     selected_file = scan_project(root, ["dist/report.md"], [])
     assert "dist/report.md" in {item.path for item in selected_file.files}
@@ -929,6 +932,8 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
     assert "build/app.js" in {item.path for item in selected_dir.files}
     with pytest.raises(AccessError):
         scan_project(root, [".env"], [])
+    with pytest.raises(AccessError):
+        scan_project(root, [".pgpass"], [])
 
 
 def test_rescan_persists_new_diagnostics_without_content_change(
