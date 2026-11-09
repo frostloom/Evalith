@@ -24,7 +24,7 @@ _SECRET_PATTERNS = [
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|"
-        r"password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
+        r"db[_-]?pass|app[_-]?db[_-]?pass|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*(?:(?:![^ \t\n]+|&[^ \t\n]+)[ \t]*)+\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
@@ -32,7 +32,7 @@ _SECRET_PATTERNS = [
     #   sk-project-secret
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
-        r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
+        r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|db[_-]?pass|app[_-]?db[_-]?pass|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*(?:(?:![^ \t\n]+|&[^ \t\n]+)[ \t]+)*[|>][-+0-9]*[ \t]*(?:#[^\n]*)?\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
@@ -50,7 +50,7 @@ _SECRET_PATTERNS = [
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|"
-        r"password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
+        r"db[_-]?pass|app[_-]?db[_-]?pass|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*"
         r"(?:&[^ \t\r\n]+(?:[ \t]+[^\r\n]*)?|[^ \t\r\n|>!&][^\r\n]*)"
         r"\r?\n"
@@ -61,7 +61,7 @@ _SECRET_PATTERNS = [
     # makes prefixed credential names visible; a bare word-boundary would miss
     # them because "_" is a word character.
     re.compile(
-        r"(?i)[\"']?(?:[A-Za-z0-9]+[_-])*"
+        r"(?i)(?<![A-Za-z0-9])[\"']?(?:[A-Za-z0-9]+[_-]|[A-Za-z]+(?=apiKey|Token|Password|Secret|Credential|Authorization))*"
         r"(?:private[_-]?key|privateKey|apiKey|accessToken|dbPassword|jwtSecret|"
         r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|secret[_-]?key|signing[_-]?key|"
         r"npm[_-]?auth[_-]?token|npmAuthToken|access[_-]?key[_-]?id|"
@@ -84,7 +84,7 @@ _SECRET_PATTERNS.insert(
     0,
     re.compile(
         r"(?is)<[A-Za-z0-9_.:-]*(?:private[_-]?key|credential|secret|token|"
-        r"key|password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_.:-]*"
+        r"key|db[_-]?pass|app[_-]?db[_-]?pass|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_.:-]*"
         r"(?:\s[^>]*)?>.*?</[A-Za-z0-9_.:-]+\s*>"
     ),
 )
@@ -116,7 +116,7 @@ _SECRET_PATTERNS.insert(
 _REDACTED = "[REDACTED]"
 
 _STRUCTURED_CREDENTIAL = re.compile(
-    r"(?is)[\"']?(?:[A-Za-z0-9]+[_-])*"
+    r"(?is)(?<![A-Za-z0-9])[\"']?(?:[A-Za-z0-9]+[_-]|[A-Za-z]+(?=apiKey|Token|Password|Secret|Credential|Authorization))*"
     r"(?:private[_-]?key|privateKey|apiKey|accessToken|dbPassword|jwtSecret|"
     r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|secret[_-]?key|"
     r"signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
@@ -219,10 +219,67 @@ def _redact_xml_credential_elements(text: str) -> str:
     return "".join(out)
 
 
-_JSON_CREDENTIAL_TERM = re.compile(
-    r"(?i)(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|"
-    r"pass|auth|authorization|github[_-]?pat)"
+_JSON_EXACT_CREDENTIAL_KEYS = {
+    "apikey",
+    "accesstoken",
+    "refreshtoken",
+    "clientsecret",
+    "privatekey",
+    "secretkey",
+    "signingkey",
+    "password",
+    "passwd",
+    "pwd",
+    "pass",
+    "token",
+    "secret",
+    "auth",
+    "authorization",
+    "credential",
+    "credentials",
+    "githubpat",
+}
+_JSON_CREDENTIAL_SUFFIXES = (
+    "apikey",
+    "accesstoken",
+    "refreshtoken",
+    "clientsecret",
+    "privatekey",
+    "secretkey",
+    "signingkey",
+    "password",
+    "passwd",
+    "token",
+    "secret",
+    "credential",
+    "authorization",
+    "auth",
 )
+_JSON_CREDENTIAL_PREFIXES = {
+    "db",
+    "api",
+    "jwt",
+    "github",
+    "slack",
+    "openai",
+    "aws",
+    "gcp",
+    "azure",
+    "my",
+}
+
+
+def _is_credential_key(key: object) -> bool:
+    normalized = re.sub(r"[^a-z0-9]", "", str(key).casefold())
+    if normalized in _JSON_EXACT_CREDENTIAL_KEYS:
+        return True
+    for suffix in _JSON_CREDENTIAL_SUFFIXES:
+        if not normalized.endswith(suffix):
+            continue
+        prefix = normalized[: -len(suffix)]
+        if prefix in _JSON_CREDENTIAL_PREFIXES:
+            return True
+    return False
 
 
 def _redact_json_credentials(text: str) -> str:
@@ -238,7 +295,7 @@ def _redact_json_credentials(text: str) -> str:
         if isinstance(value, dict):
             cleaned = {}
             for key, item in value.items():
-                if _JSON_CREDENTIAL_TERM.search(str(key)):
+                if _is_credential_key(key):
                     cleaned[key] = _REDACTED
                 else:
                     cleaned[key] = walk(item)

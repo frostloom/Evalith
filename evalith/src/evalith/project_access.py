@@ -39,6 +39,8 @@ ALWAYS_EXCLUDED = [
     ".svn",
     ".env",
     ".env.*",
+    ".htpasswd",
+    "*.htpasswd",
     "*.env",
     "*.pem",
     "*.key",

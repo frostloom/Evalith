@@ -72,6 +72,13 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "classic-token.txt").write_text(
         "token=ghp_exampleclassictoken\n", encoding="utf-8"
     )
+    (root / "config" / "ordinary.json").write_text(
+        '{"author": "alice", "keyboard": "qwerty", "compass": "north"}\n',
+        encoding="utf-8",
+    )
+    (root / ".htpasswd").write_text(
+        "alice:$apr1$synthetic$hashvalue\n", encoding="utf-8"
+    )
     (root / "config" / "google.json").write_text(
         '{"key": "AIzaExampleGoogleApiKey1234567890"}\n', encoding="utf-8"
     )
