@@ -415,10 +415,11 @@ def _redact_kubernetes_env_values(text: str) -> str:
 
 _K8S_SECRET_KIND = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
-    r"[\"']?Secret[\"']?[ \t]*(?:#[^\r\n]*)?$"
+    r"(?:![^\s#]+[ \t]+)?[\"']?Secret[\"']?[ \t]*(?:#[^\r\n]*)?$"
 )
 _K8S_SECRET_FLOW_KIND = re.compile(
-    r"(?i)[{,][ \t]*[\"']?kind[\"']?[ \t]*:[ \t]*[\"']?Secret\b"
+    r"(?i)[{,][ \t]*[\"']?kind[\"']?[ \t]*:[ \t]*"
+    r"(?:![^\s,}]+[ \t]+)?[\"']?Secret\b"
 )
 _K8S_SECRET_FLOW_DATA = re.compile(
     r"(?i)\b[\"']?(?P<key>data|stringData)[\"']?[ \t]*:[ \t]*"

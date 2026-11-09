@@ -86,6 +86,11 @@ def project_root(tmp_path: Path) -> Path:
         '{"kind": "Secret", "stringData": {"value": "synthetic-json-secret"}}\n',
         encoding="utf-8",
     )
+    (root / "config" / "tagged-secret.yaml").write_text(
+        "kind: !!str Secret\ndata:\n  config: synthetic-tagged-secret-data\n"
+        "{kind: !!str Secret, stringData: {foo: synthetic-tagged-flow-secret}}\n",
+        encoding="utf-8",
+    )
     (root / "config" / "flow-secret.yaml").write_text(
         "{kind: Secret, stringData: {foo: synthetic-flow-secret}}\n"
         '{"kind": Secret, "data": {foo: synthetic-quoted-flow-secret}}\n',
