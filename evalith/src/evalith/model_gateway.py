@@ -736,16 +736,22 @@ def _is_descriptive_statement(text: str) -> bool:
 _AFFIRMATIVE_CONTINUATION = re.compile(
     r"^(?:好的?|好|可以|确认|同意|那就|我们|现在|请|我会|我同意|我确认)?"
     r"[，,\s]*"
-    r"(?:继续下一步|继续|进入下一步|开始出题|开始设计|进入下一阶段)"
+    r"(?:继续进行下一步|继续下一步|继续|进入下一步|开始出题|开始设计|进入下一阶段)"
     r"(?:吧|了|好)?[。！!]?$"
 )
 
 _AFFIRMATIVE_CONTINUATION_WITH_CONTEXT = re.compile(
     r"^(?:好的?|好|可以|确认|同意|那就|我们|现在|请|我会|我同意|我确认)?"
     r"[，,\s]*"
-    r"(?:继续下一步|继续|进入下一步|开始出题|开始设计|进入下一阶段)"
+    r"(?:继续进行下一步|继续下一步|继续|进入下一步|开始出题|开始设计|进入下一阶段)"
     r"(?:吧|了|好)?"
     r"[，,]\s*[^，,。.!！?？\n]{1,80}[。！!]?$"
+)
+
+
+_ENGLISH_CONTINUATION = re.compile(
+    r"(?i)^(?:please\s+)?(?:continue|proceed|go\s+on|next\s+step)"
+    r"(?:\s+please)?[.!]?$"
 )
 
 
@@ -788,6 +794,8 @@ def _affirmative_continuation(text: str) -> bool:
     stripped = text.strip()
     if not stripped:
         return False
+    if _ENGLISH_CONTINUATION.fullmatch(stripped):
+        return True
     context_match = _AFFIRMATIVE_CONTINUATION_WITH_CONTEXT.fullmatch(stripped)
     safety_text = stripped
     if context_match:

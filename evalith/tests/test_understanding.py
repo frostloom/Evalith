@@ -586,6 +586,20 @@ def test_valid_provider_sufficiency_survives_ordinary_discussion(
         assert response.json()["readiness"]["generation_allowed"] is True
 
 
+def test_ordinary_explicit_continuation_phrases_are_accepted(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    for content in ("请继续进行下一步", "Please continue"):
+        response = client.post(
+            f"/api/projects/{detail['project']['id']}/messages",
+            json={"content": content},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["understanding"]["user_continued"] is True
+
+
 def test_deferred_continuation_does_not_open_gate(
     client: TestClient, project_root: Path
 ) -> None:
