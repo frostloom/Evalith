@@ -32,7 +32,7 @@ _SECRET_PATTERNS = [
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|pass|authorization)[A-Za-z0-9_-]*)"
-        r"[\"']?[ \t]*:\s*(?:![^ \t\n]*[ \t]+)?[|>][-+0-9]*[ \t]*(?:#[^\n]*)?\r?\n"
+        r"[\"']?[ \t]*:\s*(?:(?:![^ \t\n]+|&[^ \t\n]+)[ \t]+)*[|>][-+0-9]*[ \t]*(?:#[^\n]*)?\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
     # Multiline triple-quoted values (TOML/Python style).
@@ -44,6 +44,14 @@ _SECRET_PATTERNS = [
         r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
         r"token|secret|password|passwd|pwd|pass|authorization)[\"']?\s*[:=]\s*"
         r"(?:[\"']{3}.*?[\"']{3}|[\"']{3}.*?[\"']{3})"
+    ),
+    # Untagged YAML plain scalars continued on indented lines.
+    re.compile(
+        r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
+        r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|"
+        r"password|passwd|pwd|pass|authorization)[A-Za-z0-9_-]*)"
+        r"[\"']?[ \t]*:\s*[^ \t\r\n|>!&][^\r\n]*\r?\n"
+        r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
     # key=value / "key": "value" forms, including JSON and quoted values.
     # The optional identifier prefix (e.g. OPENAI_API_KEY, DB_PASSWORD) is what
@@ -66,6 +74,9 @@ _SECRET_PATTERNS = [
     ),
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),
 ]
+
+_YAML_PATTERNS = _SECRET_PATTERNS[:3]
+_SECRET_PATTERNS = _SECRET_PATTERNS[3:]
 
 _REDACTED = "[REDACTED]"
 
@@ -127,6 +138,9 @@ def _redact_structured_values(text: str) -> str:
 def redact_text(value: str) -> str:
     """Remove credential-shaped substrings from free text."""
     redacted = _redact_structured_values(value)
+    for pattern in _YAML_PATTERNS:
+        # Keep the line break so following YAML keys remain anchored.
+        redacted = pattern.sub(f"{_REDACTED}\n", redacted)
     for pattern in _SECRET_PATTERNS:
         redacted = pattern.sub(_REDACTED, redacted)
     return redacted

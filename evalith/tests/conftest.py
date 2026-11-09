@@ -75,7 +75,9 @@ def project_root(tmp_path: Path) -> Path:
         "api_key: !vault |\n  synthetic-tagged-secret\n"
         "password: !!str |\n  synthetic-multibang-secret\n"
         "authorization: |\n  synthetic-authorization-token\n"
-        "password: !!str\n  synthetic-tagged-plain\n",
+        "password: !!str\n  synthetic-tagged-plain\n"
+        "password: &pw |\n  synthetic-anchored-secret\n"
+        "password: plain-first\n  synthetic-plain-second\n",
         encoding="utf-8",
     )
     (root / "config" / "multiline.toml").write_text(
