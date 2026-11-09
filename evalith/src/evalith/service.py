@@ -154,12 +154,12 @@ class WorkspaceService:
         self.db = db
         self.settings = settings
         self.cipher = cipher
-        self._project_locks: dict[str, threading.Lock] = {}
+        self._project_locks: dict[str, threading.RLock] = {}
         self._project_locks_guard = threading.Lock()
 
-    def _project_lock(self, project_id: str) -> threading.Lock:
+    def _project_lock(self, project_id: str) -> threading.RLock:
         with self._project_locks_guard:
-            return self._project_locks.setdefault(project_id, threading.Lock())
+            return self._project_locks.setdefault(project_id, threading.RLock())
 
     # ------------------------------------------------------------------
     # model configs
@@ -534,6 +534,10 @@ class WorkspaceService:
     # workspace entry / serialization
     # ------------------------------------------------------------------
     def get_project_detail(self, project_id: str) -> dict[str, Any]:
+        with self._project_lock(project_id):
+            return self._get_project_detail(project_id)
+
+    def _get_project_detail(self, project_id: str) -> dict[str, Any]:
         project = self.db.get_project(project_id)
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")

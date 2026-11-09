@@ -24,7 +24,7 @@ _SECRET_PATTERNS = [
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|"
-        r"(?<![A-Za-z0-9])pass|db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|client[_-]?key[_-]?data|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
+        r"(?<![A-Za-z0-9])pass|db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|client[_-]?key[_-]?data|password|passphrase|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*(?:(?:![^ \t\n]+|&[^ \t\n]+)[ \t]*)+\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
@@ -32,7 +32,7 @@ _SECRET_PATTERNS = [
     #   sk-project-secret
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
-        r"(?:[A-Za-z0-9_-]*(?:(?<![A-Za-z0-9])pass|private[_-]?key|credential|secret|token|key|db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|client[_-]?key[_-]?data|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
+        r"(?:[A-Za-z0-9_-]*(?:(?<![A-Za-z0-9])pass|private[_-]?key|credential|secret|token|key|db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|client[_-]?key[_-]?data|password|passphrase|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*(?:(?:![^ \t\n]+|&[^ \t\n]+)[ \t]+)*[|>][-+0-9]*[ \t]*(?:#[^\n]*)?\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
@@ -43,14 +43,14 @@ _SECRET_PATTERNS = [
         r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|"
         r"secret[_-]?key|signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
         r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
-        r"token|secret|account[_-]?key|client[_-]?key[_-]?data|sig|signature|password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
+        r"token|secret|account[_-]?key|client[_-]?key[_-]?data|sig|signature|password|passphrase|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
         r"(?:[\"']{3}.*?[\"']{3}|[\"']{3}.*?[\"']{3})"
     ),
     # Untagged YAML plain scalars continued on indented lines.
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|"
-        r"(?<![A-Za-z0-9])pass|db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|client[_-]?key[_-]?data|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
+        r"(?<![A-Za-z0-9])pass|db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|client[_-]?key[_-]?data|password|passphrase|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*"
         r"(?:&[^ \t\r\n]+(?:[ \t]+[^\r\n]*)?|[^ \t\r\n|>!&][^\r\n]*)"
         r"\r?\n"
@@ -66,7 +66,7 @@ _SECRET_PATTERNS = [
         r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|secret[_-]?key|signing[_-]?key|"
         r"npm[_-]?auth[_-]?token|npmAuthToken|access[_-]?key[_-]?id|"
         r"api[_-]?key|access[_-]?token|client[_-]?secret|token|secret|"
-        r"account[_-]?key|client[_-]?key[_-]?data|sig|signature|password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
+        r"account[_-]?key|client[_-]?key[_-]?data|sig|signature|password|passphrase|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
         r"(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|[^\n,}]+)"
     ),
     re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=-]+"),
@@ -84,7 +84,7 @@ _SECRET_PATTERNS.insert(
     0,
     re.compile(
         r"(?is)<[A-Za-z0-9_.:-]*(?:private[_-]?key|credential|secret|token|"
-        r"key|db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|client[_-]?key[_-]?data|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_.:-]*"
+        r"key|db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|client[_-]?key[_-]?data|password|passphrase|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_.:-]*"
         r"(?:\s[^>]*)?>.*?</[A-Za-z0-9_.:-]+\s*>"
     ),
 )
@@ -92,7 +92,7 @@ _SECRET_PATTERNS.insert(
     1,
     re.compile(
         r"(?is)<[^>]*\b(?:name|key|id)\s*=\s*[\"'][^\"']*"
-        r"(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|"
+        r"(?:private[_-]?key|credential|secret|token|key|password|passphrase|passwd|pwd|"
         r"pass|auth|authorization|github[_-]?pat|githubToken)[^\"']*[\"'][^>]*>.*?</[A-Za-z0-9_.:-]+\s*>"
     ),
 )
@@ -100,7 +100,7 @@ _SECRET_PATTERNS.insert(
     2,
     re.compile(
         r"(?is)<[^>]*\b(?:name|key|id)\s*=\s*[\"'][^\"']*"
-        r"(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|"
+        r"(?:private[_-]?key|credential|secret|token|key|password|passphrase|passwd|pwd|"
         r"pass|auth|authorization|github[_-]?pat|githubToken)[^\"']*[\"'][^>]*>"
     ),
 )
@@ -122,7 +122,7 @@ _STRUCTURED_CREDENTIAL = re.compile(
     r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|secret[_-]?key|"
     r"signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
     r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
-    r"token|secret|account[_-]?key|client[_-]?key[_-]?data|sig|signature|password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
+    r"token|secret|account[_-]?key|client[_-]?key[_-]?data|sig|signature|password|passphrase|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
     r"(?=[\[{])"
 )
 
@@ -173,7 +173,7 @@ def _redact_structured_values(text: str) -> str:
 
 _XML_TAG = re.compile(r"(?is)<\s*(/)?\s*([A-Za-z0-9_.:-]+)([^>]*)>")
 _XML_CREDENTIAL_TERM = re.compile(
-    r"(?i)(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|"
+    r"(?i)(?:private[_-]?key|credential|secret|token|key|password|passphrase|passwd|pwd|"
     r"pass|auth|authorization|github[_-]?pat)"
 )
 
@@ -229,6 +229,7 @@ _JSON_EXACT_CREDENTIAL_KEYS = {
     "secretkey",
     "signingkey",
     "password",
+    "passphrase",
     "passwd",
     "pwd",
     "pass",
@@ -251,6 +252,7 @@ _JSON_CREDENTIAL_SUFFIXES = (
     "secretkey",
     "signingkey",
     "password",
+    "passphrase",
     "passwd",
     "token",
     "secret",
