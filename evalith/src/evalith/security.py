@@ -484,14 +484,16 @@ def _redact_kubernetes_env_values(text: str) -> str:
 _K8S_SECRET_KIND = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
     r"(?:(?:![^\s#]+|&[^\s#]+)[ \t]+)*"
-    r"[\"']?Secret[\"']?[ \t]*(?:#[^\r\n]*)?$"
+    r"[\"']?Secret[\"']?[ \t]*(?:#[^\r\n]*)?\r?$"
 )
 _K8S_SECRET_FLOW_KIND = re.compile(
     r"(?i)[{,][ \t]*[\"']?kind[\"']?[ \t]*:[ \t]*"
     r"(?:(?:![^\s,}]+|&[^\s,}]+)[ \t]+)*[\"']?Secret\b"
 )
 _K8S_SECRET_FLOW_OPEN = re.compile(
-    r"(?im)(?:^|[{,])[ \t]*[\"']?(?P<key>data|stringData)[\"']?[ \t]*:[ \t]*\{"
+    r"(?im)(?:^|[{,])[ \t]*"
+    r"(?:(?:![^\s,}]+|&[^\s,}]+)[ \t]+)?"
+    r"[\"']?(?P<key>data|stringData)[\"']?[ \t]*:[ \t]*\{"
 )
 
 
@@ -528,7 +530,7 @@ _K8S_SECRET_ALIAS_KIND = re.compile(
 _K8S_SECRET_BLOCK_KIND = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
     r"[|>][-+0-9]*[ \t]*(?:#[^\r\n]*)?\r?\n"
-    r"(?:[ \t]*\r?\n)*[ \t]+[\"']?Secret[\"']?[ \t]*$"
+    r"(?:[ \t]*\r?\n)*[ \t]+[\"']?Secret[\"']?[ \t]*\r?$"
 )
 _K8S_SECRET_DATA_ALIAS = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?(?:data|stringData)[\"']?[ \t]*:[ \t]*"
@@ -575,7 +577,8 @@ def _normalize_escaped_secret_kind(text: str) -> str:
 
     return _ESCAPED_SECRET_KIND.sub(replace, text)
 _K8S_SECRET_DATA = re.compile(
-    r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
+    r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?"
+    r"(?:(?:![^\s#]+|&[^\s#]+)[ \t]+)?[\"']?"
     r"(?P<key>data|stringData)[\"']?[ \t]*:[ \t]*"
     r"[^\r\n]*(?:\r?\n|$)"
     r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+[^\r\n]*(?:\r?\n|$))*"

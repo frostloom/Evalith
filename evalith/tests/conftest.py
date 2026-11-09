@@ -144,6 +144,13 @@ def project_root(tmp_path: Path) -> Path:
         'kind: !!str "Se\\u0063ret"\nstringData:\n  foo: synthetic-tagged-escaped\n',
         encoding="utf-8",
     )
+    (root / "config" / "crlf-secret.yaml").write_bytes(
+        b"kind: Secret\r\nstringData:\r\n  db: synthetic-crlf-secret\r\n"
+    )
+    (root / "config" / "tagged-data-secret.yaml").write_text(
+        "kind: Secret\n!!str data:\n  foo: synthetic-tagged-data-secret\n",
+        encoding="utf-8",
+    )
     (root / "config" / "no-newline-secret.yaml").write_text(
         "kind: Secret\ndata: {username: synthetic-no-newline-secret}",
         encoding="utf-8",
