@@ -325,8 +325,11 @@ _YAML_CREDENTIAL_ALIAS = re.compile(
 def _redact_yaml_anchor_values(text: str) -> str:
     for anchor in set(_YAML_CREDENTIAL_ALIAS.findall(text)):
         text = re.sub(
-            rf"&{re.escape(anchor)}\b[^\r\n]*",
-            _REDACTED,
+            rf"(?m)^(?P<anchor_indent>[ \t]*)[^\r\n]*"
+            rf"&{re.escape(anchor)}\b[^\r\n]*(?:\r?\n|$)"
+            r"(?:(?:[ \t]*\r?\n)|"
+            r"(?P=anchor_indent)[ \t]+[^\r\n]*(?:\r?\n|$))*",
+            _REDACTED + "\n",
             text,
         )
     return text

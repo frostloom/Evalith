@@ -927,6 +927,7 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
     )
     (root / "auth.p8").write_text("synthetic-p8", encoding="utf-8")
     (root / "id_dsa").write_text("synthetic-dsa", encoding="utf-8")
+    (root / "key.ppk").write_text("synthetic-ppk", encoding="utf-8")
     (root / "trust.jks").write_text("synthetic-jks", encoding="utf-8")
 
     selected_file = scan_project(root, ["dist/report.md"], [])
@@ -943,6 +944,8 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
         scan_project(root, ["trust.jks"], [])
     with pytest.raises(AccessError):
         scan_project(root, ["id_dsa"], [])
+    with pytest.raises(AccessError):
+        scan_project(root, ["key.ppk"], [])
 
 
 def test_rescan_persists_new_diagnostics_without_content_change(

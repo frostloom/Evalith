@@ -53,6 +53,7 @@ ALWAYS_EXCLUDED = [
     "*.p8",
     "*.jks",
     "*.keystore",
+    "*.ppk",
     "*.kdbx",
     "id_rsa*",
     "id_dsa*",
