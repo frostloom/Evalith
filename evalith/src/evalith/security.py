@@ -589,6 +589,26 @@ _ESCAPED_SECRET_KEY = re.compile(
 )
 
 
+_ESCAPED_KIND_KEY = re.compile(
+    r"(?m)(?P<prefix>(?:^|[{,])[ \t]*(?:-[ \t]+)?)"
+    r"\"(?P<key>(?:[^\"\\]|\\.)*)\""
+    r"(?P<colon>[ \t]*:[ \t]*)"
+)
+
+
+def _normalize_escaped_kind_key(text: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        try:
+            key = json.loads(f'"{match.group("key")}"')
+        except ValueError:
+            return match.group(0)
+        if key != "kind":
+            return match.group(0)
+        return f"{match.group('prefix')}kind{match.group('colon')}"
+
+    return _ESCAPED_KIND_KEY.sub(replace, text)
+
+
 def _normalize_escaped_secret_keys(text: str) -> str:
     def replace(match: re.Match[str]) -> str:
         try:
@@ -632,6 +652,7 @@ def _redact_anchored_secret_data(text: str, anchor: str) -> str:
 
 
 def _redact_kubernetes_secret_data(text: str) -> str:
+    text = _normalize_escaped_kind_key(text)
     text = _normalize_escaped_secret_kind(text)
     anchors = {match.group(1) for match in _K8S_SECRET_ANCHOR.finditer(text)}
     alias_kind = any(

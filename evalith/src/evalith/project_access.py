@@ -83,6 +83,9 @@ ALWAYS_EXCLUDED = [
     ".s3cfg",
     "*.s3cfg",
     ".vault-token",
+    ".kube",
+    "*.kubeconfig",
+    "kubeconfig*",
 ]
 
 #: Dependency/build noise.  These are user-overridable, unlike the always

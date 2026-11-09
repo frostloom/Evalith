@@ -932,6 +932,8 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
     (root / ".boto").write_text("[Credentials]\naws_access_key_id = synthetic-boto\n", encoding="utf-8")
     (root / ".s3cfg").write_text("[default]\naccess_key = synthetic-s3cfg\n", encoding="utf-8")
     (root / ".vault-token").write_text("hvs.syntheticVaultToken\n", encoding="utf-8")
+    (root / ".kube").mkdir()
+    (root / ".kube" / "config").write_text("synthetic-kubeconfig\n", encoding="utf-8")
 
     selected_file = scan_project(root, ["dist/report.md"], [])
     assert "dist/report.md" in {item.path for item in selected_file.files}
@@ -961,10 +963,13 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
         scan_project(root, [".s3cfg"], [])
     with pytest.raises(AccessError):
         scan_project(root, [".vault-token"], [])
+    with pytest.raises(AccessError):
+        scan_project(root, [".kube/config"], [])
     traversed = {item.path for item in scan_project(root, [], []).files}
     assert ".boto" not in traversed
     assert ".s3cfg" not in traversed
     assert ".vault-token" not in traversed
+    assert ".kube/config" not in traversed
 
 
 def test_sensitive_multi_component_root_is_rejected(tmp_path: Path) -> None:

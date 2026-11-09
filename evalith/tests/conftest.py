@@ -144,6 +144,11 @@ def project_root(tmp_path: Path) -> Path:
         'kind: !!str "Se\\u0063ret"\nstringData:\n  foo: synthetic-tagged-escaped\n',
         encoding="utf-8",
     )
+    (root / "config" / "escaped-kind-key-secret.yaml").write_text(
+        '"k\\u0069nd": Secret\nstringData:\n'
+        "  neutral: synthetic-escaped-kind-key\n",
+        encoding="utf-8",
+    )
     (root / "config" / "escaped-data-key-secret.yaml").write_text(
         'kind: Secret\n"\\u0064ata":\n  foo: synthetic-escaped-data-key\n',
         encoding="utf-8",
