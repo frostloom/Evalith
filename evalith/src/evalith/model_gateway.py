@@ -751,6 +751,17 @@ _AFFIRMATIVE_CONTINUATION_WITH_CONTEXT = re.compile(
 
 _CONTINUATION_DEFERRAL_MARKERS = (
     "明天",
+    "后天",
+    "今晚",
+    "下周",
+    "下月",
+    "下个月",
+    "明年",
+    "晚点",
+    "过几天",
+    "几天后",
+    "一周后",
+    "周末",
     "以后",
     "之后",
     "再说",
