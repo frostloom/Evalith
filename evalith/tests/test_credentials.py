@@ -108,6 +108,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "AIzaExampleGoogleApiKey1234567890" not in request["body"]
     assert "$apr1$synthetic$hashvalue" not in request["body"]
     assert "synthetic-pg-password" not in request["body"]
+    assert "synthetic-tf-password" not in request["body"]
     assert "synthetic-azure-account-key" not in request["body"]
     assert "SYNTHETIC-SAS-VALUE" not in request["body"]
     assert "example-credential" not in request["body"]
@@ -477,6 +478,22 @@ def test_google_api_key_is_redacted() -> None:
     redacted = redact_text("key=AIzaExampleGoogleApiKey1234567890")
     assert "AIzaExampleGoogleApiKey1234567890" not in redacted
     assert "[REDACTED]" in redacted
+
+
+def test_model_url_query_credential_variants_are_rejected(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/api/model-configs",
+        json={
+            "name": "query-client-secret",
+            "provider": "openai_compatible",
+            "base_url": "https://model.example/v1?client_secret=VALUE",
+            "model_name": "fake",
+        },
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "model_url_query_credentials"
 
 
 def test_model_url_query_credentials_are_rejected(client: TestClient) -> None:

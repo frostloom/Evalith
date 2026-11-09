@@ -19,7 +19,7 @@ from .project_access import (
     resolve_root_with_identity,
     scan_project,
 )
-from .security import CredentialCipher, redact_text
+from .security import CredentialCipher, is_credential_key, redact_text
 
 
 class WorkspaceError(Exception):
@@ -205,26 +205,14 @@ class WorkspaceService:
                     status_code=422,
                     code="model_url_insecure",
                 )
-            sensitive_query = {
-                "api_key",
-                "apikey",
-                "access_token",
-                "accesstoken",
-                "token",
-                "secret",
-                "password",
-                "passwd",
-                "pwd",
-                "key",
-                "sig",
-                "signature",
-                "auth",
-                "credential",
-            }
             for query_key, _ in urllib.parse.parse_qsl(
                 parsed_url.query, keep_blank_values=True
             ):
-                if query_key.casefold() in sensitive_query:
+                if is_credential_key(query_key) or query_key.casefold() in {
+                    "sig",
+                    "signature",
+                    "key",
+                }:
                     raise WorkspaceError(
                         "模型服务地址不能在查询参数中包含凭据",
                         status_code=422,

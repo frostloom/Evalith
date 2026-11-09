@@ -272,7 +272,7 @@ _JSON_CREDENTIAL_PREFIXES = {
 }
 
 
-def _is_credential_key(key: object) -> bool:
+def is_credential_key(key: object) -> bool:
     normalized = re.sub(r"[^a-z0-9]", "", str(key).casefold())
     if normalized in _JSON_EXACT_CREDENTIAL_KEYS:
         return True
@@ -300,7 +300,7 @@ def _redact_json_credentials(text: str) -> str:
         if isinstance(value, dict):
             cleaned = {}
             for key, item in value.items():
-                if _is_credential_key(key):
+                if is_credential_key(key):
                     cleaned[key] = _REDACTED
                 else:
                     cleaned[key] = walk(item)

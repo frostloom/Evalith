@@ -92,6 +92,11 @@ def project_root(tmp_path: Path) -> Path:
         '{"author": "alice", "keyboard": "qwerty", "compass": "north"}\n',
         encoding="utf-8",
     )
+    (root / ".terraform").mkdir()
+    (root / ".terraform" / "terraform.tfstate").write_text(
+        '{"sensitive": true, "value": "synthetic-tf-password"}\n',
+        encoding="utf-8",
+    )
     (root / ".pgpass").write_text(
         "localhost:5432:app:alice:synthetic-pg-password\n", encoding="utf-8"
     )
