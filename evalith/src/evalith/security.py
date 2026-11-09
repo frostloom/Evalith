@@ -415,11 +415,12 @@ def _redact_kubernetes_env_values(text: str) -> str:
 
 _K8S_SECRET_KIND = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
-    r"(?:![^\s#]+[ \t]+)?[\"']?Secret[\"']?[ \t]*(?:#[^\r\n]*)?$"
+    r"(?:(?:![^\s#]+|&[^\s#]+)[ \t]+)*"
+    r"[\"']?Secret[\"']?[ \t]*(?:#[^\r\n]*)?$"
 )
 _K8S_SECRET_FLOW_KIND = re.compile(
     r"(?i)[{,][ \t]*[\"']?kind[\"']?[ \t]*:[ \t]*"
-    r"(?:![^\s,}]+[ \t]+)?[\"']?Secret\b"
+    r"(?:(?:![^\s,}]+|&[^\s,}]+)[ \t]+)*[\"']?Secret\b"
 )
 _K8S_SECRET_FLOW_DATA = re.compile(
     r"(?i)\b[\"']?(?P<key>data|stringData)[\"']?[ \t]*:[ \t]*"
@@ -429,7 +430,7 @@ _K8S_SECRET_DATA = re.compile(
     r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
     r"(?P<key>data|stringData)[\"']?:[ \t]*"
     r"(?:\{[^}]*\}|[^\r\n]*\r?\n"
-    r"(?:(?P=indent)[ \t]+[^\r\n]*(?:\r?\n|$))*)"
+    r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+[^\r\n]*(?:\r?\n|$))*)"
 )
 
 

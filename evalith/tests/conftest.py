@@ -88,7 +88,11 @@ def project_root(tmp_path: Path) -> Path:
     )
     (root / "config" / "tagged-secret.yaml").write_text(
         "kind: !!str Secret\ndata:\n  config: synthetic-tagged-secret-data\n"
-        "{kind: !!str Secret, stringData: {foo: synthetic-tagged-flow-secret}}\n",
+        "{kind: !!str Secret, stringData: {foo: synthetic-tagged-flow-secret}}\n"
+        "kind: &secret_kind Secret\nstringData:\n"
+        "  config: synthetic-anchored-secret\n"
+        "---\nkind: Secret\ndata:\n\n"
+        "  database: c2VjcmV0LXN5bnRoZXRpYw==\n",
         encoding="utf-8",
     )
     (root / "config" / "flow-secret.yaml").write_text(
