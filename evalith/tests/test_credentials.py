@@ -134,6 +134,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-escaped-env" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
+    assert "synthetic-escaped-property" not in request["body"]
+    assert "synthetic-embedded-json" not in request["body"]
     assert "c2VjcmV0" not in request["body"]
     assert "arbitrary-secret" not in request["body"]
     assert "synthetic-multiline-env" not in request["body"]
@@ -168,6 +170,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-escaped-env" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
+    assert "synthetic-escaped-property" not in request["body"]
+    assert "synthetic-embedded-json" not in request["body"]
     assert "c2VjcmV0" not in request["body"]
     assert "synthetic-value-first" not in request["body"]
     assert "synthetic-comment-name" not in request["body"]
@@ -916,6 +920,12 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "java-properties" not in redact_text(
         "db.password java-properties\n"
+    )
+    assert "escaped-property" not in redact_text(
+        "pass\\u0077ord=escaped-property\n"
+    )
+    assert "embedded-json" not in redact_text(
+        '```json\n{ "\\u0070assword": "embedded-json" }\n```\n'
     )
     env_text = (
         "env:\n- value: value-first\n  name: PASSWORD\n"

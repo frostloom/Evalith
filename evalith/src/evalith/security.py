@@ -305,6 +305,28 @@ def is_credential_key(key: object) -> bool:
     return False
 
 
+_ESCAPED_JSON_ENTRY = re.compile(
+    r'"((?:[^"\\]|\\.)*)"[ \t]*:[ \t]*'
+    r'("(?:[^"\\]|\\.)*"|[^,}\]\r\n]+)'
+)
+
+
+def _redact_embedded_json_keys(text: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        raw_key = match.group(1)
+        if "\\u" not in raw_key.casefold():
+            return match.group(0)
+        try:
+            key = json.loads(f'"{raw_key}"')
+        except ValueError:
+            return match.group(0)
+        if not is_credential_key(key):
+            return match.group(0)
+        return f'"{raw_key}": "[REDACTED]"'
+
+    return _ESCAPED_JSON_ENTRY.sub(replace, text)
+
+
 def _redact_json_credentials(text: str) -> str:
     stripped = text.strip()
     if not stripped.startswith(("{", "[")):
@@ -630,17 +652,25 @@ def _redact_kubernetes_secret_data(text: str) -> str:
 
 
 _JAVA_PROPERTIES_ENTRY = re.compile(
-    r"(?im)^(?P<prefix>[ \t]*)(?P<key>[A-Za-z0-9_.-]+)[ \t]+"
-    r"(?P<value>[^#\r\n]+)$"
+    r"(?im)^(?P<prefix>[ \t]*)(?P<key>[A-Za-z0-9_.\\-]+)"
+    r"(?P<sep>[ \t]*=[ \t]*|[ \t]+)(?P<value>[^#\r\n]+)$"
 )
+_JAVA_UNICODE_ESCAPE = re.compile(r"\\u([0-9A-Fa-f]{4})")
+
+
+def _decode_java_key(key: str) -> str:
+    return _JAVA_UNICODE_ESCAPE.sub(
+        lambda match: chr(int(match.group(1), 16)), key
+    )
 
 
 def _redact_java_properties(text: str) -> str:
     def replace(match: re.Match[str]) -> str:
-        if not is_credential_key(match.group("key")):
+        key = _decode_java_key(match.group("key"))
+        if not is_credential_key(key):
             return match.group(0)
         value = match.group("value").lstrip()
-        if value.startswith((":", "=")):
+        if value.startswith((":", "=", '"', "'", "{", "[", "&", "*", "|", ">")):
             return match.group(0)
         return f"{match.group('prefix')}{match.group('key')} {_REDACTED}"
 
@@ -650,6 +680,7 @@ def _redact_java_properties(text: str) -> str:
 def redact_text(value: str) -> str:
     """Remove credential-shaped substrings from free text."""
     redacted = _redact_java_properties(value)
+    redacted = _redact_embedded_json_keys(redacted)
     redacted = _redact_kubernetes_secret_data(redacted)
     redacted = _redact_kubernetes_env_values(redacted)
     redacted = _redact_yaml_anchor_values(redacted)

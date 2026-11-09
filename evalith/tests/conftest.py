@@ -110,7 +110,12 @@ def project_root(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (root / "config" / "application.properties").write_text(
-        "db.password synthetic-java-properties\n",
+        "db.password synthetic-java-properties\n"
+        "pass\\u0077ord=synthetic-escaped-property\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "embedded.json.md").write_text(
+        '```json\n{ "\\u0070assword": "synthetic-embedded-json" }\n```\n',
         encoding="utf-8",
     )
     (root / "config" / "backup.asc").write_text(
