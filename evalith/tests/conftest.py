@@ -71,6 +71,10 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "credential.json").write_text(
         '{"credential": "sensitive-value"}\n', encoding="utf-8"
     )
+    (root / "config" / "settings.xml").write_text(
+        "<config><password>synthetic-xml-password</password></config>\n",
+        encoding="utf-8",
+    )
     (root / "config" / "tagged.yaml").write_text(
         "api_key: !vault |\n  synthetic-tagged-secret\n"
         "password: !!str |\n  synthetic-multibang-secret\n"
@@ -79,7 +83,8 @@ def project_root(tmp_path: Path) -> Path:
         "password: &pw |\n  synthetic-anchored-secret\n"
         "password: plain-first\n  synthetic-plain-second\n"
         "password: &apw anchored-first\n  synthetic-anchored-plain\n"
-        "password: &bare\n  synthetic-anchored-only\n",
+        "password: &bare\n  synthetic-anchored-only\n"
+        "password: !!str &saved\n  synthetic-tag-anchor\n",
         encoding="utf-8",
     )
     (root / "config" / "multiline.toml").write_text(

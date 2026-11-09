@@ -24,7 +24,7 @@ _SECRET_PATTERNS = [
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|"
         r"password|passwd|pwd|pass|authorization)[A-Za-z0-9_-]*)"
-        r"[\"']?[ \t]*:\s*![^ \t\n]+[ \t]*\r?\n"
+        r"[\"']?[ \t]*:\s*(?:(?:![^ \t\n]+|&[^ \t\n]+)[ \t]*)+\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
     # YAML literal/folded block scalars, e.g. api_key: |
@@ -79,6 +79,14 @@ _SECRET_PATTERNS = [
 
 _YAML_PATTERNS = _SECRET_PATTERNS[:3]
 _SECRET_PATTERNS = _SECRET_PATTERNS[3:]
+_SECRET_PATTERNS.insert(
+    0,
+    re.compile(
+        r"(?is)<[A-Za-z0-9_.:-]*(?:private[_-]?key|credential|secret|token|"
+        r"key|password|passwd|pwd|pass|authorization)[A-Za-z0-9_.:-]*"
+        r"(?:\s[^>]*)?>.*?</[A-Za-z0-9_.:-]+\s*>"
+    ),
+)
 
 _REDACTED = "[REDACTED]"
 
