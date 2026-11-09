@@ -103,6 +103,10 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "spaced-key-secret.yaml").write_text(
+        "kind: Secret\nstringData :\n  foo: synthetic-spaced-key-secret\n",
+        encoding="utf-8",
+    )
     (root / "config" / "escaped-kind-secret.yaml").write_text(
         'kind: "\\u0053ecret"\ndata: {config: synthetic-escaped-kind-secret}\n',
         encoding="utf-8",
