@@ -43,7 +43,7 @@ _SECRET_PATTERNS = [
         r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|"
         r"secret[_-]?key|signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
         r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
-        r"token|secret|account[_-]?key|password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
+        r"token|secret|account[_-]?key|sig|signature|password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
         r"(?:[\"']{3}.*?[\"']{3}|[\"']{3}.*?[\"']{3})"
     ),
     # Untagged YAML plain scalars continued on indented lines.
@@ -66,7 +66,7 @@ _SECRET_PATTERNS = [
         r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|secret[_-]?key|signing[_-]?key|"
         r"npm[_-]?auth[_-]?token|npmAuthToken|access[_-]?key[_-]?id|"
         r"api[_-]?key|access[_-]?token|client[_-]?secret|token|secret|"
-        r"account[_-]?key|password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
+        r"account[_-]?key|sig|signature|password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
         r"(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|[^\n,}]+)"
     ),
     re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=-]+"),
@@ -121,7 +121,7 @@ _STRUCTURED_CREDENTIAL = re.compile(
     r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|secret[_-]?key|"
     r"signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
     r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
-    r"token|secret|account[_-]?key|password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
+    r"token|secret|account[_-]?key|sig|signature|password|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
     r"(?=[\[{])"
 )
 

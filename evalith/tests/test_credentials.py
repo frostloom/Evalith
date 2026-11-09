@@ -107,6 +107,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "AIzaExampleGoogleApiKey1234567890" not in request["body"]
     assert "$apr1$synthetic$hashvalue" not in request["body"]
     assert "synthetic-azure-account-key" not in request["body"]
+    assert "SYNTHETIC-SAS-VALUE" not in request["body"]
     assert "alice" in request["body"]
     assert "qwerty" in request["body"]
     assert "north" in request["body"]
@@ -466,6 +467,31 @@ def test_google_api_key_is_redacted() -> None:
     redacted = redact_text("key=AIzaExampleGoogleApiKey1234567890")
     assert "AIzaExampleGoogleApiKey1234567890" not in redacted
     assert "[REDACTED]" in redacted
+
+
+def test_model_url_query_credentials_are_rejected(client: TestClient) -> None:
+    response = client.post(
+        "/api/model-configs",
+        json={
+            "name": "query-credential",
+            "provider": "openai_compatible",
+            "base_url": "https://model.example/v1?api_key=secret",
+            "model_name": "fake",
+        },
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "model_url_query_credentials"
+    assert "secret" not in str(client.get("/api/model-configs").json())
+
+
+def test_azure_sas_signature_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text(
+        "https://example.blob.core.windows.net/container/blob?"
+        "sv=2023-01-03&sig=SYNTHETIC-SAS-VALUE"
+    )
+    assert "SYNTHETIC-SAS-VALUE" not in redacted
 
 
 def test_non_loopback_http_model_url_is_rejected(client: TestClient) -> None:

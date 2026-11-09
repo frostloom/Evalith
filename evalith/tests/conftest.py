@@ -72,6 +72,11 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "classic-token.txt").write_text(
         "token=ghp_exampleclassictoken\n", encoding="utf-8"
     )
+    (root / "config" / "sas.txt").write_text(
+        "https://example.blob.core.windows.net/container/blob?"
+        "sv=2023-01-03&sig=SYNTHETIC-SAS-VALUE\n",
+        encoding="utf-8",
+    )
     (root / "config" / "azure.txt").write_text(
         "DefaultEndpointsProtocol=https;AccountName=acct;"
         "AccountKey=synthetic-azure-account-key;EndpointSuffix=core\n",
