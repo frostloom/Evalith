@@ -489,6 +489,20 @@ def test_google_api_key_is_redacted() -> None:
     assert "[REDACTED]" in redacted
 
 
+def test_model_url_fragment_is_rejected(client: TestClient) -> None:
+    response = client.post(
+        "/api/model-configs",
+        json={
+            "name": "fragment-url",
+            "provider": "openai_compatible",
+            "base_url": "https://model.example/v1#fragment",
+            "model_name": "fake",
+        },
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "model_url_fragment"
+
+
 def test_model_url_non_credential_query_is_rejected(client: TestClient) -> None:
     response = client.post(
         "/api/model-configs",
@@ -716,6 +730,7 @@ def test_yaml_credential_alias_anchor_is_redacted() -> None:
         "shared: &dbpass hunter2\npassword: *dbpass\n"
         "blockshared: &pw |\n  anchor-block-secret\npassword: *pw\n"
         "keyvalue: &value ordinary-secret\napi_key: *value\n"
+        "servicevalue: &service hunter2\nservicePassword: *service\n"
     )
     assert "hunter2" not in redacted
     assert "anchor-block-secret" not in redacted

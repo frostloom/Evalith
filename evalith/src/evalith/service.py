@@ -224,6 +224,12 @@ class WorkspaceService:
                     status_code=422,
                     code="model_url_query_unsupported",
                 )
+            if parsed_url.fragment:
+                raise WorkspaceError(
+                    "模型服务地址不支持片段",
+                    status_code=422,
+                    code="model_url_fragment",
+                )
         if not model_name:
             raise WorkspaceError("模型名称不能为空")
         now = utc_now()

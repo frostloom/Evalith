@@ -74,7 +74,9 @@ def project_root(tmp_path: Path) -> Path:
         "blockshared: &pw |\n  synthetic-anchor-block-secret\n"
         "password: *pw\n"
         "keyvalue: &value ordinary-secret\n"
-        "api_key: *value\n",
+        "api_key: *value\n"
+        "servicevalue: &service hunter2\n"
+        "servicePassword: *service\n",
         encoding="utf-8",
     )
     (root / "config" / "kube.yaml").write_text(

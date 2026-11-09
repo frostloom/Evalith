@@ -271,6 +271,8 @@ _JSON_CREDENTIAL_PREFIXES = {
     "azure",
     "my",
     "storage",
+    "service",
+    "svc",
 }
 
 
