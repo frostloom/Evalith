@@ -80,6 +80,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "first-part" not in request["body"]
     assert "second-part" not in request["body"]
     assert "sensitive-value" not in request["body"]
+    assert "hunter2" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -416,6 +417,32 @@ def test_signing_secret_is_redacted() -> None:
     redacted = redact_text(text)
     assert "synthetic-signing-secret" not in redacted
     assert "[REDACTED]" in redacted
+
+
+def test_yaml_block_stops_at_sibling_indentation() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text(
+        "config:\n  api_key: |\n    first\n  region: eu\nother: x\n"
+    )
+    assert "first" not in redacted
+    assert "region: eu" in redacted
+    assert "other: x" in redacted
+
+
+def test_camel_case_credential_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text('{"dbPassword": "hunter2"}')
+    assert "hunter2" not in redacted
+    assert "[REDACTED]" in redacted
+
+
+def test_redaction_count_counts_substitutions() -> None:
+    from evalith.project_access import _count_redactions
+
+    assert _count_redactions("token=x", "[REDACTED]") == 1
+    assert _count_redactions("[REDACTED] token=y", "[REDACTED] token=y") == 0
 
 
 def test_yaml_block_with_blank_line_is_redacted() -> None:

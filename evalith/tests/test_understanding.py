@@ -559,6 +559,21 @@ def test_valid_provider_sufficiency_survives_ordinary_discussion(
         assert response.json()["readiness"]["generation_allowed"] is True
 
 
+def test_continuation_with_context_is_accepted(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    response = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "请继续，保留未知项。"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["understanding"]["user_continued"] is True
+    assert response.json()["readiness"]["generation_allowed"] is True
+    assert response.json()["understanding"]["unknowns"]
+
+
 def test_provider_accepts_explicit_continuation_phrases(
     client: TestClient, project_root: Path, recording_server
 ) -> None:

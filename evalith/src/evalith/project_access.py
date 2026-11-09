@@ -438,9 +438,9 @@ def _record_from_fd(
 
 def _count_redactions(before: str, after: str) -> int:
     marker = "[REDACTED]"
-    if marker not in after:
-        return 0
-    return after.count(marker) if len(after) < len(before) else 0
+    # Count newly introduced markers; comparing lengths fails when the
+    # replacement is longer than the original value (e.g. token=x).
+    return max(0, after.count(marker) - before.count(marker))
 
 
 def _selection_exclusion(parts: tuple[str, ...], patterns: list[str]) -> str | None:

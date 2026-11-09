@@ -71,6 +71,9 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "credential.json").write_text(
         '{"credential": "sensitive-value"}\n', encoding="utf-8"
     )
+    (root / "config" / "camel.json").write_text(
+        '{"dbPassword": "hunter2"}\n', encoding="utf-8"
+    )
     (root / "config" / "structured.json").write_text(
         '{"api_key": ["first-secret", "second-secret"], '
         '"nested": {"api_key": "nested-secret"}, '

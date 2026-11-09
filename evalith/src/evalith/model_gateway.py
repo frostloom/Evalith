@@ -740,19 +740,36 @@ _AFFIRMATIVE_CONTINUATION = re.compile(
     r"(?:吧|了|好)?[。！!]?$"
 )
 
+_AFFIRMATIVE_CONTINUATION_WITH_CONTEXT = re.compile(
+    r"^(?:好的?|好|可以|确认|同意|那就|我们|现在|请|我会|我同意|我确认)?"
+    r"[，,\s]*"
+    r"(?:继续|进入下一步|开始出题|开始设计|进入下一阶段)"
+    r"(?:吧|了|好)?"
+    r"[，,]\s*[^，,。.!！?？\n]{1,80}[。！!]?$"
+)
+
 
 def _affirmative_continuation(text: str) -> bool:
     """Return True only for an explicit, complete continuation request."""
     stripped = text.strip()
     if not stripped:
         return False
-    if _has_negation(stripped) or _is_non_affirmative(stripped):
+    context_match = _AFFIRMATIVE_CONTINUATION_WITH_CONTEXT.fullmatch(stripped)
+    safety_text = stripped
+    if context_match:
+        # Naming unresolved items is valid context for an explicit request.
+        safety_text = safety_text.replace("保留未知项", "").replace(
+            "未知项", ""
+        )
+    if _has_negation(safety_text) or _is_non_affirmative(safety_text):
         return False
     if _is_descriptive_statement(stripped) or _is_conditional_statement(stripped):
         return False
     if any(marker in stripped for marker in HESITATION_MARKERS):
         return False
-    return bool(_AFFIRMATIVE_CONTINUATION.fullmatch(stripped))
+    return bool(
+        _AFFIRMATIVE_CONTINUATION.fullmatch(stripped) or context_match
+    )
 
 
 _AFFIRMATIVE_SUFFICIENCY = re.compile(
