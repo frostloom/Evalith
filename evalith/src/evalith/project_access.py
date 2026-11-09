@@ -78,6 +78,10 @@ ALWAYS_EXCLUDED = [
     ".aws",
     ".gnupg",
     ".docker",
+    ".boto",
+    ".boto*",
+    ".s3cfg",
+    "*.s3cfg",
 ]
 
 #: Dependency/build noise.  These are user-overridable, unlike the always
