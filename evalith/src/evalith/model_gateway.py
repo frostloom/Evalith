@@ -749,6 +749,21 @@ _AFFIRMATIVE_CONTINUATION_WITH_CONTEXT = re.compile(
 )
 
 
+_CONTINUATION_DEFERRAL_MARKERS = (
+    "明天",
+    "以后",
+    "之后",
+    "再说",
+    "稍后",
+    "改天",
+    "回头",
+    "下次",
+    "暂时",
+    "先不",
+    "等一",
+)
+
+
 def _affirmative_continuation(text: str) -> bool:
     """Return True only for an explicit, complete continuation request."""
     stripped = text.strip()
@@ -757,6 +772,11 @@ def _affirmative_continuation(text: str) -> bool:
     context_match = _AFFIRMATIVE_CONTINUATION_WITH_CONTEXT.fullmatch(stripped)
     safety_text = stripped
     if context_match:
+        _, _, tail = stripped.partition("，")
+        if not tail:
+            _, _, tail = stripped.partition(",")
+        if any(marker in tail for marker in _CONTINUATION_DEFERRAL_MARKERS):
+            return False
         # Naming unresolved items is valid context for an explicit request.
         safety_text = safety_text.replace("保留未知项", "").replace(
             "未知项", ""

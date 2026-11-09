@@ -586,6 +586,20 @@ def test_valid_provider_sufficiency_survives_ordinary_discussion(
         assert response.json()["readiness"]["generation_allowed"] is True
 
 
+def test_deferred_continuation_does_not_open_gate(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    response = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "继续，明天再说"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["understanding"]["user_continued"] is False
+    assert response.json()["readiness"]["generation_allowed"] is False
+
+
 def test_continuation_with_context_is_accepted(
     client: TestClient, project_root: Path
 ) -> None:

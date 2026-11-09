@@ -108,6 +108,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "$apr1$synthetic$hashvalue" not in request["body"]
     assert "synthetic-azure-account-key" not in request["body"]
     assert "SYNTHETIC-SAS-VALUE" not in request["body"]
+    assert "example-credential" not in request["body"]
     assert "alice" in request["body"]
     assert "qwerty" in request["body"]
     assert "north" in request["body"]
@@ -448,6 +449,13 @@ def test_azure_account_key_is_redacted() -> None:
         "AccountKey=synthetic-azure-account-key;EndpointSuffix=core"
     )
     assert "synthetic-azure-account-key" not in redacted
+
+
+def test_numeric_camel_json_key_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text('{"prod2ApiKey": "example-credential"}')
+    assert "example-credential" not in redacted
 
 
 def test_ordinary_json_property_names_are_preserved() -> None:

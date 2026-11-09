@@ -82,6 +82,9 @@ def project_root(tmp_path: Path) -> Path:
         "AccountKey=synthetic-azure-account-key;EndpointSuffix=core\n",
         encoding="utf-8",
     )
+    (root / "config" / "numeric.json").write_text(
+        '{"prod2ApiKey": "example-credential"}\n', encoding="utf-8"
+    )
     (root / "config" / "ordinary.json").write_text(
         '{"author": "alice", "keyboard": "qwerty", "compass": "north"}\n',
         encoding="utf-8",
