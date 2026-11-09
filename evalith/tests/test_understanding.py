@@ -318,6 +318,33 @@ def test_chat_scope_history_matches_provider_window(
     assert scope["history_messages"] == 6
 
 
+def test_known_fact_cannot_cite_unsent_file(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    (project_root / "binary.bin").write_bytes(b"\x00\x01synthetic-binary")
+    _RecordingHandler.body_override = {
+        "summary": "invented source",
+        "agent_or_flow": "",
+        "known": [{"text": "binary fact", "source": "binary.bin"}],
+        "inferred": [],
+        "unknowns": [],
+        "sufficient": False,
+        "sufficient_reason": "pending",
+    }
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "unsent-source",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    assert detail["project"]["analysis_error"]
+    assert "binary.bin" in detail["project"]["analysis_error"]
+
+
 def test_marker_like_file_content_does_not_fabricate_sources(
     client: TestClient, tmp_path: Path
 ) -> None:

@@ -451,17 +451,23 @@ class WorkspaceService:
         self,
         understanding: dict[str, Any],
         sources: list[dict[str, Any]],
-        previous_sources: list[dict[str, Any]] | None = None,
+        previous_known: list[dict[str, Any]] | None = None,
     ) -> None:
-        allowed = {
+        current_paths = {
             str(item.get("path")) for item in sources if item.get("path")
         }
-        # Facts carried over from the current understanding were resolvable in
-        # the snapshot they came from (for example after narrowing the source
-        # scope); they remain valid provenance, not anonymous claims.
-        for item in previous_sources or []:
-            if item.get("path"):
-                allowed.add(str(item["path"]))
+        # New claims must cite evidence that was actually transmitted.  Facts
+        # already established in this session may keep their prior source while
+        # it is still in the current scope.
+        allowed = {
+            str(item.get("path"))
+            for item in sources
+            if item.get("path") and item.get("sent")
+        }
+        for item in previous_known or []:
+            source = item.get("source") if isinstance(item, dict) else None
+            if isinstance(source, str) and source in current_paths:
+                allowed.add(source)
         allowed.update({"会话", "snapshot"})
         for item in understanding.get("known", []):
             if not isinstance(item, dict):
@@ -791,7 +797,7 @@ class WorkspaceService:
             self._validate_known_sources(
                 result,
                 sources,
-                current.get("sources", []) if current else [],
+                current.get("known", []) if current else [],
             )
             # A reanalysis must not silently drop corrections the user already
             # made in this main session, even when the provider returns a fresh
@@ -1242,7 +1248,7 @@ class WorkspaceService:
             # Validate first: an invented source must surface as a model
             # error, not be silently dropped before validation.
             self._validate_known_sources(
-                understanding, sources, current.get("sources", [])
+                understanding, sources, current.get("known", [])
             )
             understanding["known"] = _known_for_sources(
                 understanding.get("known", []),
