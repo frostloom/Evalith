@@ -314,16 +314,19 @@ def _redact_json_credentials(text: str) -> str:
     return json.dumps(walk(parsed), ensure_ascii=False)
 
 
-_YAML_CREDENTIAL_ALIAS = re.compile(
-    r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?"
-    r"(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|pass|"
-    r"auth|authorization|account[_-]?key|client[_-]?key[_-]?data|"
-    r"github[_-]?pat|githubToken)[\"']?[ \t]*:[ \t]*\*([A-Za-z0-9_-]+)"
+_YAML_ALIAS_REFERENCE = re.compile(
+    r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?([^:\r\n\"']+?)[\"']?"
+    r"[ \t]*:[ \t]*\*([A-Za-z0-9_-]+)"
 )
 
 
 def _redact_yaml_anchor_values(text: str) -> str:
-    for anchor in set(_YAML_CREDENTIAL_ALIAS.findall(text)):
+    anchors = {
+        anchor
+        for key, anchor in _YAML_ALIAS_REFERENCE.findall(text)
+        if is_credential_key(key)
+    }
+    for anchor in anchors:
         text = re.sub(
             rf"(?m)^(?P<anchor_indent>[ \t]*)[^\r\n]*"
             rf"&{re.escape(anchor)}\b[^\r\n]*(?:\r?\n|$)"

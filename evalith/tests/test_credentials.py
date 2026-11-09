@@ -82,6 +82,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "sensitive-value" not in request["body"]
     assert "hunter2" not in request["body"]
     assert "synthetic-anchor-block-secret" not in request["body"]
+    assert "ordinary-secret" not in request["body"]
     assert "secret-value" not in request["body"]
     assert "ghp_example" not in request["body"]
     assert "synthetic-comment-secret" not in request["body"]
@@ -109,6 +110,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "c2VjcmV0LXN5bnRoZXRpYw==" not in request["body"]
     assert "hunter2" not in request["body"]
     assert "synthetic-anchor-block-secret" not in request["body"]
+    assert "ordinary-secret" not in request["body"]
     assert "escaped-secret-value" not in request["body"]
     assert "xoxb-example-slack-token" not in request["body"]
     assert "xoxc-example-slack-session-token" not in request["body"]
@@ -713,9 +715,11 @@ def test_yaml_credential_alias_anchor_is_redacted() -> None:
     redacted = redact_text(
         "shared: &dbpass hunter2\npassword: *dbpass\n"
         "blockshared: &pw |\n  anchor-block-secret\npassword: *pw\n"
+        "keyvalue: &value ordinary-secret\napi_key: *value\n"
     )
     assert "hunter2" not in redacted
     assert "anchor-block-secret" not in redacted
+    assert "ordinary-secret" not in redacted
 
 
 def test_kubernetes_client_key_data_is_redacted() -> None:

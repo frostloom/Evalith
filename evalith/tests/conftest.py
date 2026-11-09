@@ -72,7 +72,9 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "alias.yaml").write_text(
         "shared: &dbpass hunter2\npassword: *dbpass\n"
         "blockshared: &pw |\n  synthetic-anchor-block-secret\n"
-        "password: *pw\n",
+        "password: *pw\n"
+        "keyvalue: &value ordinary-secret\n"
+        "api_key: *value\n",
         encoding="utf-8",
     )
     (root / "config" / "kube.yaml").write_text(
