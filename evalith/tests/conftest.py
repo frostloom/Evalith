@@ -86,6 +86,15 @@ def project_root(tmp_path: Path) -> Path:
         '{"kind": "Secret", "stringData": {"value": "synthetic-json-secret"}}\n',
         encoding="utf-8",
     )
+    (root / "config" / "quoted-data-secret.yaml").write_text(
+        'kind: Secret\n"stringData":\n  value: synthetic-quoted-data-secret\n',
+        encoding="utf-8",
+    )
+    (root / "config" / "list-secret.yaml").write_text(
+        "items:\n- kind: Secret\n  stringData:\n"
+        "    value: synthetic-list-secret\n",
+        encoding="utf-8",
+    )
     (root / "config" / "commented-secret.yaml").write_text(
         "kind: Secret # deployment credential\n"
         "data:\n  connection: synthetic-comment-secret-data\n",

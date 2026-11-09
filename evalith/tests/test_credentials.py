@@ -120,6 +120,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-json-secret" not in request["body"]
     assert "synthetic-quoted-secret" not in request["body"]
     assert "synthetic-comment-secret-data" not in request["body"]
+    assert "synthetic-quoted-data-secret" not in request["body"]
+    assert "synthetic-list-secret" not in request["body"]
     assert "hunter2" not in request["body"]
     assert "dXNlcjpwYXNz" not in request["body"]
     assert "example-credential-value" not in request["body"]
@@ -777,6 +779,12 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "comment-secret" not in redact_text(
         "kind: Secret # credentials\n"
         "data:\n  connection: comment-secret\n"
+    )
+    assert "quoted-data" not in redact_text(
+        'kind: Secret\n"stringData":\n  value: quoted-data\n'
+    )
+    assert "list-secret" not in redact_text(
+        "items:\n- kind: Secret\n  stringData:\n    value: list-secret\n"
     )
 
 
