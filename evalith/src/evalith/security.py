@@ -23,8 +23,18 @@ _SECRET_PATTERNS = [
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|pass)[A-Za-z0-9_-]*)"
-        r"[\"']?[ \t]*:\s*[|>][-+0-9]*[ \t]*(?:#[^\n]*)?\r?\n"
+        r"[\"']?[ \t]*:\s*(?:![A-Za-z0-9_.-]+[ \t]+)?[|>][-+0-9]*[ \t]*(?:#[^\n]*)?\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
+    ),
+    # Multiline triple-quoted values (TOML/Python style).
+    re.compile(
+        r"(?is)[\"']?(?:[A-Za-z0-9_]+[_-])*"
+        r"(?:private[_-]?key|privateKey|apiKey|accessToken|dbPassword|jwtSecret|"
+        r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|"
+        r"secret[_-]?key|signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
+        r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
+        r"token|secret|password|passwd|pwd|pass|authorization)[\"']?\s*[:=]\s*"
+        r"(?:[\"']{3}.*?[\"']{3}|[\"']{3}.*?[\"']{3})"
     ),
     # key=value / "key": "value" forms, including JSON and quoted values.
     # The optional identifier prefix (e.g. OPENAI_API_KEY, DB_PASSWORD) is what

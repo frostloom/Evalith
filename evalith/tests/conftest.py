@@ -71,6 +71,13 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "credential.json").write_text(
         '{"credential": "sensitive-value"}\n', encoding="utf-8"
     )
+    (root / "config" / "tagged.yaml").write_text(
+        "api_key: !vault |\n  synthetic-tagged-secret\n", encoding="utf-8"
+    )
+    (root / "config" / "multiline.toml").write_text(
+        'password = """\nsynthetic-multiline-secret\n"""\n',
+        encoding="utf-8",
+    )
     (root / "config" / "camel-credentials.txt").write_text(
         'openaiApiKey = "secret-value"\ngithubToken: ghp_example\n',
         encoding="utf-8",
