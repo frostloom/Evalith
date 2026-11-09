@@ -103,11 +103,22 @@ class LocalHostMiddleware(BaseHTTPMiddleware):
                 content={"error": "untrusted request host", "code": "untrusted_host"},
             )
         origin = request.headers.get("origin")
-        if origin and self._normalize_origin(origin) not in self.allowed_origins:
-            return JSONResponse(
-                status_code=403,
-                content={"error": "untrusted request origin", "code": "untrusted_origin"},
+        if origin:
+            normalized_origin = self._normalize_origin(origin)
+            host_header = request.headers.get("host") or ""
+            same_origin = self._normalize_origin(
+                f"{request.url.scheme}://{host_header}"
             )
+            if normalized_origin not in self.allowed_origins and not (
+                normalized_origin == same_origin and host in self.allowed_hosts
+            ):
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "error": "untrusted request origin",
+                        "code": "untrusted_origin",
+                    },
+                )
         return await call_next(request)
 
 

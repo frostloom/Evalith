@@ -32,6 +32,28 @@ def test_untrusted_loopback_port_origin_is_rejected(client: TestClient) -> None:
     assert response.json()["code"] == "untrusted_origin"
 
 
+def test_configured_same_origin_port_is_accepted(client: TestClient) -> None:
+    response = client.get(
+        "/api/health",
+        headers={
+            "host": "127.0.0.1:8123",
+            "origin": "http://127.0.0.1:8123",
+        },
+    )
+    assert response.status_code == 200
+
+
+def test_same_host_other_port_origin_is_rejected(client: TestClient) -> None:
+    response = client.get(
+        "/api/health",
+        headers={
+            "host": "127.0.0.1:8123",
+            "origin": "http://127.0.0.1:8124",
+        },
+    )
+    assert response.status_code == 403
+
+
 def test_loopback_origin_is_accepted(client: TestClient) -> None:
     response = client.get(
         "/api/health", headers={"origin": "http://127.0.0.1:8090"}
