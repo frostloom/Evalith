@@ -130,6 +130,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-escaped-kind-key" not in request["body"]
     assert "synthetic-no-newline-secret" not in request["body"]
     assert "synthetic-crlf-secret" not in request["body"]
+    assert "synthetic-tagged-block" not in request["body"]
     assert "synthetic-tagged-data-secret" not in request["body"]
     assert "synthetic-tagged-env" not in request["body"]
     assert "synthetic-tagged-escaped" not in request["body"]
@@ -173,6 +174,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-escaped-kind-key" not in request["body"]
     assert "synthetic-no-newline-secret" not in request["body"]
     assert "synthetic-crlf-secret" not in request["body"]
+    assert "synthetic-tagged-block" not in request["body"]
     assert "synthetic-tagged-data-secret" not in request["body"]
     assert "synthetic-tagged-env" not in request["body"]
     assert "synthetic-tagged-escaped" not in request["body"]
@@ -919,6 +921,9 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "crlf-secret" not in redact_text(
         "kind: Secret\r\nstringData:\r\n  db: crlf-secret\r\n"
+    )
+    assert "tagged-block" not in redact_text(
+        "kind: !!str |-\n  Secret\nstringData: {foo: tagged-block}\n"
     )
     assert "tagged-data-secret" not in redact_text(
         "kind: Secret\n!!str data:\n  foo: tagged-data-secret\n"

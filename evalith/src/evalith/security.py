@@ -529,6 +529,7 @@ _K8S_SECRET_ALIAS_KIND = re.compile(
 )
 _K8S_SECRET_BLOCK_KIND = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
+    r"(?:(?:![^\s#]+|&[^\s#]+)[ \t]+)*"
     r"[|>][-+0-9]*[ \t]*(?:#[^\r\n]*)?\r?\n"
     r"(?:[ \t]*\r?\n)*[ \t]+[\"']?Secret[\"']?[ \t]*\r?$"
 )

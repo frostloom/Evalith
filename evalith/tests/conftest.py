@@ -144,6 +144,10 @@ def project_root(tmp_path: Path) -> Path:
         'kind: !!str "Se\\u0063ret"\nstringData:\n  foo: synthetic-tagged-escaped\n',
         encoding="utf-8",
     )
+    (root / "config" / "tagged-block-kind-secret.yaml").write_text(
+        "kind: !!str |-\n  Secret\nstringData: {foo: synthetic-tagged-block}\n",
+        encoding="utf-8",
+    )
     (root / "config" / "crlf-secret.yaml").write_bytes(
         b"kind: Secret\r\nstringData:\r\n  db: synthetic-crlf-secret\r\n"
     )
