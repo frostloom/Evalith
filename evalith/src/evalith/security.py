@@ -356,7 +356,9 @@ def _redact_yaml_anchor_values(text: str) -> str:
 _K8S_ENV_ENTRY = re.compile(
     r"(?im)^(?P<indent>[ \t]*)-[ \t]+name:[ \t]*(?P<name>[^\r\n]+?)[ \t]*\r?\n"
     r"(?P<body>(?:[ \t]+[^\r\n]*\r?\n){0,4}?[ \t]+value:[ \t]*)"
-    r"(?P<value>[^\r\n]*)"
+    r"(?P<value>(?:[|>][-+0-9]*[ \t]*(?:#[^\r\n]*)?\r?\n"
+    r"(?:[ \t]+[^\r\n]*(?:\r?\n|$))*)|(?s:\"[^\"]*\")|(?s:'[^']*')|"
+    r"[^\r\n]*)"
 )
 
 
@@ -370,9 +372,28 @@ def _redact_kubernetes_env_values(text: str) -> str:
     return _K8S_ENV_ENTRY.sub(replace, text)
 
 
+_K8S_SECRET_KIND = re.compile(r"(?im)^[ \t]*kind:[ \t]*Secret\b")
+_K8S_SECRET_DATA = re.compile(
+    r"(?im)^(?P<indent>[ \t]*)(?P<key>data|stringData):[ \t]*"
+    r"(?:\{[^}]*\}|[^\r\n]*\r?\n"
+    r"(?:(?P=indent)[ \t]+[^\r\n]*(?:\r?\n|$))*)"
+)
+
+
+def _redact_kubernetes_secret_data(text: str) -> str:
+    if not _K8S_SECRET_KIND.search(text):
+        return text
+
+    def replace(match: re.Match[str]) -> str:
+        return f"{match.group('indent')}{match.group('key')}: {_REDACTED}\n"
+
+    return _K8S_SECRET_DATA.sub(replace, text)
+
+
 def redact_text(value: str) -> str:
     """Remove credential-shaped substrings from free text."""
-    redacted = _redact_kubernetes_env_values(value)
+    redacted = _redact_kubernetes_secret_data(value)
+    redacted = _redact_kubernetes_env_values(redacted)
     redacted = _redact_yaml_anchor_values(redacted)
     redacted = _redact_json_credentials(redacted)
     redacted = _redact_xml_credential_elements(redacted)

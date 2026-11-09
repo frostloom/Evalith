@@ -83,7 +83,9 @@ def project_root(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (root / "config" / "k8s-env.yaml").write_text(
-        "env:\n  - name: DATABASE_PASSWORD\n    value: arbitrary-secret\n",
+        "env:\n  - name: DATABASE_PASSWORD\n    value: arbitrary-secret\n"
+        "  - name: API_KEY\n    value: |\n      synthetic-multiline-env\n"
+        "kind: Secret\ndata:\n  db: synthetic-secret-data\n",
         encoding="utf-8",
     )
     (root / "config" / "kube.yaml").write_text(

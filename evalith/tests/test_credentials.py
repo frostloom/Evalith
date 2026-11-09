@@ -115,6 +115,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "npm_0123456789abcdefghijklmnopqrstuvwxyz" not in request["body"]
     assert "c2VjcmV0LXN5bnRoZXRpYw==" not in request["body"]
     assert "arbitrary-secret" not in request["body"]
+    assert "synthetic-multiline-env" not in request["body"]
+    assert "synthetic-secret-data" not in request["body"]
     assert "hunter2" not in request["body"]
     assert "dXNlcjpwYXNz" not in request["body"]
     assert "example-credential-value" not in request["body"]
@@ -763,8 +765,15 @@ def test_basic_authorization_is_redacted() -> None:
 def test_kubernetes_env_value_is_redacted() -> None:
     from evalith.security import redact_text
 
-    text = "env:\n  - name: DATABASE_PASSWORD\n    value: arbitrary-secret\n"
-    assert "arbitrary-secret" not in redact_text(text)
+    text = (
+        "env:\n  - name: DATABASE_PASSWORD\n    value: arbitrary-secret\n"
+        "  - name: API_KEY\n    value: |\n      multiline-env\n"
+        "kind: Secret\ndata:\n  db: secret-data\n"
+    )
+    redacted = redact_text(text)
+    assert "arbitrary-secret" not in redacted
+    assert "multiline-env" not in redacted
+    assert "secret-data" not in redacted
 
 
 def test_passphrase_json_value_is_redacted() -> None:
