@@ -31,7 +31,7 @@ _SECRET_PATTERNS = [
     # makes prefixed credential names visible; a bare word-boundary would miss
     # them because "_" is a word character.
     re.compile(
-        r"(?i)(?<![A-Za-z0-9])[\"']?(?:[A-Za-z0-9]+[_-])*"
+        r"(?i)[\"']?(?:[A-Za-z0-9]+[_-])*"
         r"(?:private[_-]?key|privateKey|apiKey|accessToken|dbPassword|jwtSecret|"
         r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|secret[_-]?key|signing[_-]?key|"
         r"npm[_-]?auth[_-]?token|npmAuthToken|access[_-]?key[_-]?id|"
@@ -51,7 +51,7 @@ _SECRET_PATTERNS = [
 _REDACTED = "[REDACTED]"
 
 _STRUCTURED_CREDENTIAL = re.compile(
-    r"(?is)(?<![A-Za-z0-9])[\"']?(?:[A-Za-z0-9]+[_-])*"
+    r"(?is)[\"']?(?:[A-Za-z0-9]+[_-])*"
     r"(?:private[_-]?key|privateKey|apiKey|accessToken|dbPassword|jwtSecret|"
     r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|secret[_-]?key|"
     r"signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"

@@ -71,6 +71,10 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "credential.json").write_text(
         '{"credential": "sensitive-value"}\n', encoding="utf-8"
     )
+    (root / "config" / "camel-credentials.txt").write_text(
+        'openaiApiKey = "secret-value"\ngithubToken: ghp_example\n',
+        encoding="utf-8",
+    )
     (root / "config" / "camel.json").write_text(
         '{"dbPassword": "hunter2"}\n', encoding="utf-8"
     )

@@ -81,6 +81,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "second-part" not in request["body"]
     assert "sensitive-value" not in request["body"]
     assert "hunter2" not in request["body"]
+    assert "secret-value" not in request["body"]
+    assert "ghp_example" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -428,6 +430,15 @@ def test_yaml_block_stops_at_sibling_indentation() -> None:
     assert "first" not in redacted
     assert "region: eu" in redacted
     assert "other: x" in redacted
+
+
+def test_prefixed_camel_case_credentials_are_redacted() -> None:
+    from evalith.security import redact_text
+
+    text = 'openaiApiKey = "secret-value"\ngithubToken: ghp_example\n'
+    redacted = redact_text(text)
+    assert "secret-value" not in redacted
+    assert "ghp_example" not in redacted
 
 
 def test_camel_case_credential_is_redacted() -> None:
