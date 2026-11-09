@@ -24,7 +24,7 @@ _SECRET_PATTERNS = [
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|"
-        r"db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
+        r"(?<![A-Za-z0-9])pass|db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*(?:(?:![^ \t\n]+|&[^ \t\n]+)[ \t]*)+\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
@@ -32,7 +32,7 @@ _SECRET_PATTERNS = [
     #   sk-project-secret
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
-        r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
+        r"(?:[A-Za-z0-9_-]*(?:(?<![A-Za-z0-9])pass|private[_-]?key|credential|secret|token|key|db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*(?:(?:![^ \t\n]+|&[^ \t\n]+)[ \t]+)*[|>][-+0-9]*[ \t]*(?:#[^\n]*)?\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
@@ -50,7 +50,7 @@ _SECRET_PATTERNS = [
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|"
-        r"db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
+        r"(?<![A-Za-z0-9])pass|db[_-]?pass|app[_-]?db[_-]?pass|account[_-]?key|password|passwd|pwd|auth|authorization|github[_-]?pat|githubToken)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*"
         r"(?:&[^ \t\r\n]+(?:[ \t]+[^\r\n]*)?|[^ \t\r\n|>!&][^\r\n]*)"
         r"\r?\n"

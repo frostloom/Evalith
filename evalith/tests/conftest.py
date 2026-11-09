@@ -133,7 +133,9 @@ def project_root(tmp_path: Path) -> Path:
         "password: plain-first\n  synthetic-plain-second\n"
         "password: &apw anchored-first\n  synthetic-anchored-plain\n"
         "password: &bare\n  synthetic-anchored-only\n"
-        "password: !!str &saved\n  synthetic-tag-anchor\n",
+        "password: !!str &saved\n  synthetic-tag-anchor\n"
+        "pass: |\n  synthetic-pass-literal\n"
+        "pass: >\n  synthetic-pass-folded\n",
         encoding="utf-8",
     )
     (root / "config" / "multiline.toml").write_text(

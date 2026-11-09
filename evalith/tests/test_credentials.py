@@ -94,6 +94,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-anchored-plain" not in request["body"]
     assert "synthetic-anchored-only" not in request["body"]
     assert "synthetic-tag-anchor" not in request["body"]
+    assert "synthetic-pass-literal" not in request["body"]
+    assert "synthetic-pass-folded" not in request["body"]
     assert "synthetic-xml-password" not in request["body"]
     assert "synthetic-xml-attribute" not in request["body"]
     assert "synthetic-xml-text" not in request["body"]
@@ -570,6 +572,8 @@ def test_tagged_yaml_and_multiline_quoted_values_are_redacted() -> None:
         "password: &apw anchored-first\n  anchored-plain\n"
         "password: &bare\n  anchored-only\n"
         "password: !!str &saved\n  tag-anchor\n"
+        "pass: |\n  pass-literal\n"
+        "pass: >\n  pass-folded\n"
         "<password>xml-password</password>\n"
         '<property name="password" value="xml-attribute"/>\n'
         '{"auth": "sk-example-project-credential"}\n'
@@ -583,6 +587,8 @@ def test_tagged_yaml_and_multiline_quoted_values_are_redacted() -> None:
     assert "anchored-plain" not in tagged
     assert "anchored-only" not in tagged
     assert "tag-anchor" not in tagged
+    assert "pass-literal" not in tagged
+    assert "pass-folded" not in tagged
     assert "xml-password" not in tagged
     assert "xml-attribute" not in tagged
     assert "xml-text" not in tagged
