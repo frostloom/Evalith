@@ -164,6 +164,23 @@ class ScanResult:
         return [item.manifest_entry() for item in self.files]
 
 
+def _path_pattern_matches(
+    folded_name: str, folded_relpath: str, folded_parts: list[str], folded: str
+) -> bool:
+    return (
+        fnmatch.fnmatchcase(folded_name, folded)
+        or fnmatch.fnmatchcase(folded_relpath, folded)
+        or any(fnmatch.fnmatchcase(part, folded) for part in folded_parts)
+        or (
+            "/" in folded
+            and (
+                f"/{folded}/" in f"/{folded_relpath}/"
+                or folded_relpath.endswith(f"/{folded}")
+            )
+        )
+    )
+
+
 def _matches(name: str, relpath: str, patterns: list[str]) -> str | None:
     # Case-insensitive filesystems resolve PRIVATE/ to private/; exclusion
     # matching must use the same equivalence before anything is opened.
@@ -172,11 +189,7 @@ def _matches(name: str, relpath: str, patterns: list[str]) -> str | None:
     folded_parts = [part.casefold() for part in PurePosixPath(relpath).parts]
     for pattern in patterns:
         folded = pattern.casefold()
-        if (
-            fnmatch.fnmatchcase(folded_name, folded)
-            or fnmatch.fnmatchcase(folded_relpath, folded)
-            or any(fnmatch.fnmatchcase(part, folded) for part in folded_parts)
-        ):
+        if _path_pattern_matches(folded_name, folded_relpath, folded_parts, folded):
             return pattern
     return None
 
@@ -189,11 +202,7 @@ def _always_excluded(name: str, relpath: str) -> str | None:
     parts = [part.casefold() for part in PurePosixPath(relpath).parts]
     for pattern in ALWAYS_EXCLUDED:
         folded = pattern.casefold()
-        if (
-            fnmatch.fnmatchcase(folded_name, folded)
-            or fnmatch.fnmatchcase(folded_relpath, folded)
-            or any(fnmatch.fnmatchcase(part, folded) for part in parts)
-        ):
+        if _path_pattern_matches(folded_name, folded_relpath, parts, folded):
             return pattern
     return None
 
@@ -808,6 +817,8 @@ def scan_project(
     result.root_dev = root_stat.st_dev
     result.root_ino = root_stat.st_ino
 
+    seen_paths: set[str] = set()
+
     def add_file_from_fd(
         fd: int,
         relative: str,
@@ -817,6 +828,10 @@ def scan_project(
         rulesets: list[tuple[str, list[tuple[str, bool]]]] | None = None,
     ) -> None:
         name = PurePosixPath(relative).name
+        if relative in seen_paths:
+            os.close(fd)
+            return
+        seen_paths.add(relative)
         always = _always_excluded(name, relative)
         if always:
             os.close(fd)

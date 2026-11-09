@@ -972,6 +972,27 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
     assert ".kube/config" not in traversed
 
 
+def test_overlapping_selections_are_deduplicated(tmp_path: Path) -> None:
+    root = tmp_path / "overlap"
+    (root / "src").mkdir(parents=True)
+    (root / "src" / "app.py").write_text("print(1)\n", encoding="utf-8")
+    result = scan_project(root, ["src", "src/app.py"], [])
+    assert [item.path for item in result.files] == ["src/app.py"]
+
+
+def test_nested_sensitive_multi_component_path_is_excluded(tmp_path: Path) -> None:
+    root = tmp_path / "nested-sensitive"
+    target = root / "sub" / ".config" / "gcloud"
+    target.mkdir(parents=True)
+    (target / "creds").write_text("synthetic-gcloud\n", encoding="utf-8")
+    traversed = scan_project(root, ["sub"], [])
+    assert "sub/.config/gcloud/creds" not in {
+        item.path for item in traversed.files
+    }
+    with pytest.raises(AccessError):
+        scan_project(root, ["sub/.config/gcloud/creds"], [])
+
+
 def test_sensitive_multi_component_root_is_rejected(tmp_path: Path) -> None:
     root = tmp_path / ".config" / "gcloud"
     root.mkdir(parents=True)
