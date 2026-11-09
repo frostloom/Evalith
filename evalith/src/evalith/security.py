@@ -22,8 +22,8 @@ _SECRET_PATTERNS = [
     #   sk-project-secret
     re.compile(
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
-        r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|pass)[A-Za-z0-9_-]*)"
-        r"[\"']?[ \t]*:\s*(?:![A-Za-z0-9_.-]+[ \t]+)?[|>][-+0-9]*[ \t]*(?:#[^\n]*)?\r?\n"
+        r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|pass|authorization)[A-Za-z0-9_-]*)"
+        r"[\"']?[ \t]*:\s*(?:![^ \t\n]*[ \t]+)?[|>][-+0-9]*[ \t]*(?:#[^\n]*)?\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
     # Multiline triple-quoted values (TOML/Python style).

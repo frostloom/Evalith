@@ -86,6 +86,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-comment-secret" not in request["body"]
     assert "synthetic-tagged-secret" not in request["body"]
     assert "synthetic-multiline-secret" not in request["body"]
+    assert "synthetic-multibang-secret" not in request["body"]
+    assert "synthetic-authorization-token" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -427,8 +429,14 @@ def test_signing_secret_is_redacted() -> None:
 def test_tagged_yaml_and_multiline_quoted_values_are_redacted() -> None:
     from evalith.security import redact_text
 
-    tagged = redact_text("api_key: !vault |\n  tagged-secret\n")
+    tagged = redact_text(
+        "api_key: !vault |\n  tagged-secret\n"
+        "password: !!str |\n  multibang-secret\n"
+        "authorization: |\n  authorization-secret\n"
+    )
     assert "tagged-secret" not in tagged
+    assert "multibang-secret" not in tagged
+    assert "authorization-secret" not in tagged
     multiline = redact_text(
         'password = """\nmultiline-secret\n"""\n'
     )

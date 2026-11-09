@@ -72,7 +72,10 @@ def project_root(tmp_path: Path) -> Path:
         '{"credential": "sensitive-value"}\n', encoding="utf-8"
     )
     (root / "config" / "tagged.yaml").write_text(
-        "api_key: !vault |\n  synthetic-tagged-secret\n", encoding="utf-8"
+        "api_key: !vault |\n  synthetic-tagged-secret\n"
+        "password: !!str |\n  synthetic-multibang-secret\n"
+        "authorization: |\n  synthetic-authorization-token\n",
+        encoding="utf-8",
     )
     (root / "config" / "multiline.toml").write_text(
         'password = """\nsynthetic-multiline-secret\n"""\n',
