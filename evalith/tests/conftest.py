@@ -109,6 +109,9 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "google.json").write_text(
         '{"key": "AIzaExampleGoogleApiKey1234567890"}\n', encoding="utf-8"
     )
+    (root / "config" / "slack-session.txt").write_text(
+        "xoxc-example-slack-session-token\n", encoding="utf-8"
+    )
     (root / "config" / "slack.json").write_text(
         '{"slack": "xoxb-example-slack-token"}\n', encoding="utf-8"
     )

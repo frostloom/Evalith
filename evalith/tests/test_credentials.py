@@ -108,6 +108,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "c2VjcmV0LXN5bnRoZXRpYw==" not in request["body"]
     assert "escaped-secret-value" not in request["body"]
     assert "xoxb-example-slack-token" not in request["body"]
+    assert "xoxc-example-slack-session-token" not in request["body"]
     assert "AIzaExampleGoogleApiKey1234567890" not in request["body"]
     assert "$apr1$synthetic$hashvalue" not in request["body"]
     assert "synthetic-pg-password" not in request["body"]
@@ -715,6 +716,13 @@ def test_gitlab_pat_is_redacted() -> None:
 
     redacted = redact_text("token=glpat-examplegitlabtoken")
     assert "glpat-examplegitlabtoken" not in redacted
+
+
+def test_slack_session_token_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text("xoxc-example-slack-session-token")
+    assert "xoxc-example-slack-session-token" not in redacted
 
 
 def test_slack_token_is_redacted() -> None:
