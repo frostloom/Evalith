@@ -99,6 +99,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-xml-text" not in request["body"]
     assert "sk-example-project-credential" not in request["body"]
     assert "github_pat_examplecredential" not in request["body"]
+    assert "synthetic-nested-xml" not in request["body"]
+    assert "ghp_exampleclassictoken" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -466,6 +468,8 @@ def test_tagged_yaml_and_multiline_quoted_values_are_redacted() -> None:
     assert "xml-password" not in tagged
     assert "xml-attribute" not in tagged
     assert "xml-text" not in tagged
+    assert "nested-xml" not in tagged
+    assert "ghp_exampleclassictoken" not in tagged
     assert "sk-example-project-credential" not in tagged
     multiline = redact_text(
         'password = """\nmultiline-secret\n"""\n'

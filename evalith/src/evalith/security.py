@@ -105,7 +105,10 @@ _SECRET_PATTERNS.insert(
 )
 _SECRET_PATTERNS.insert(
     3,
-    re.compile(r"\b(?:sk-[A-Za-z0-9_-]{8,}|github_pat_[A-Za-z0-9_]{8,})\b"),
+    re.compile(
+        r"\b(?:sk-[A-Za-z0-9_-]{8,}|github_pat_[A-Za-z0-9_]{8,}|"
+        r"gh[pousr]_[A-Za-z0-9]{8,})\b"
+    ),
 )
 
 _REDACTED = "[REDACTED]"
@@ -165,9 +168,49 @@ def _redact_structured_values(text: str) -> str:
     return "".join(out)
 
 
+_XML_TAG = re.compile(r"(?is)<\s*(/)?\s*([A-Za-z0-9_.:-]+)([^>]*)>")
+_XML_CREDENTIAL_TERM = re.compile(
+    r"(?i)(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|"
+    r"pass|auth|authorization|github[_-]?pat)"
+)
+
+
+def _redact_xml_credential_elements(text: str) -> str:
+    out: list[str] = []
+    cursor = 0
+    for match in _XML_TAG.finditer(text):
+        if match.start() < cursor or match.group(1):
+            continue
+        name = match.group(2)
+        attrs = match.group(3) or ""
+        if not _XML_CREDENTIAL_TERM.search(name + attrs):
+            continue
+        if attrs.rstrip().endswith("/"):
+            end = match.end()
+        else:
+            depth = 1
+            end = len(text)
+            for tag in _XML_TAG.finditer(text, match.end()):
+                if (tag.group(2) or "").casefold() != name.casefold():
+                    continue
+                if tag.group(1):
+                    depth -= 1
+                elif not (tag.group(3) or "").rstrip().endswith("/"):
+                    depth += 1
+                if depth == 0:
+                    end = tag.end()
+                    break
+        out.append(text[cursor : match.start()])
+        out.append(_REDACTED)
+        cursor = end
+    out.append(text[cursor:])
+    return "".join(out)
+
+
 def redact_text(value: str) -> str:
     """Remove credential-shaped substrings from free text."""
-    redacted = _redact_structured_values(value)
+    redacted = _redact_xml_credential_elements(value)
+    redacted = _redact_structured_values(redacted)
     for pattern in _YAML_PATTERNS:
         # Keep the line break so following YAML keys remain anchored.
         redacted = pattern.sub(f"{_REDACTED}\n", redacted)
