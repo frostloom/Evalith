@@ -608,6 +608,46 @@ def test_prior_fact_keeps_source_but_new_fact_needs_transmission(
         )
 
 
+def test_chat_change_clears_continuation_before_provider(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    continued = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "请继续，保留未知项。"},
+    )
+    assert continued.status_code == 200, continued.text
+    assert continued.json()["understanding"]["user_continued"] is True
+    (project_root / "README.md").write_text("# changed in chat\n", encoding="utf-8")
+    response = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "现在还有哪些风险？"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["understanding"]["user_continued"] is False
+    assert response.json()["readiness"]["generation_allowed"] is False
+
+
+def test_detail_refresh_closes_gate_after_file_change(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    sufficient = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "现有资料依据足够。"},
+    )
+    assert sufficient.status_code == 200, sufficient.text
+    assert sufficient.json()["readiness"]["generation_allowed"] is True
+    (project_root / "README.md").write_text("# changed on disk\n", encoding="utf-8")
+    refreshed = client.get(f"/api/projects/{project_id}")
+    assert refreshed.status_code == 200, refreshed.text
+    assert refreshed.json()["readiness"]["generation_allowed"] is False
+
+
 def test_snapshot_change_clears_continuation_consent(
     client: TestClient, project_root: Path
 ) -> None:

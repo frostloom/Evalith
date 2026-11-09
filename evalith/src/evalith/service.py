@@ -537,6 +537,11 @@ class WorkspaceService:
         project = self.db.get_project(project_id)
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
+        # Readiness is only meaningful for the material on disk now; refresh
+        # the snapshot before reporting or using the gate.
+        self._rescan(project, store_new_snapshot=True)
+        project = self.db.get_project(project_id)
+        assert project is not None
         session = self.db.ensure_main_session(project_id)
         messages = [
             self.serialize_message(row)
@@ -1113,6 +1118,19 @@ class WorkspaceService:
             current = self.parse_understanding(current_row)
             if current is None:
                 raise ModelError("项目尚未完成初步分析，无法继续会话")
+            if snapshot_changed and (
+                current.get("sufficient") or current.get("user_continued")
+            ):
+                cleared = dict(current)
+                cleared["sufficient"] = False
+                cleared["user_continued"] = False
+                cleared["sufficient_reason"] = (
+                    "资料快照已变化，需重新确认依据；未知项保留，推进门保持关闭。"
+                )
+                self._store_understanding(
+                    project, cleared, error=current.get("error")
+                )
+                current = cleared
             if text.startswith(("纠正：", "纠正:")):
                 corrected = correction_body(text)
                 correction = {

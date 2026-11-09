@@ -761,13 +761,9 @@ def test_replaced_project_root_is_rejected_on_chat(
     assert response.status_code == 409, response.text
     assert response.json()["code"] == "root_changed"
     assert "must-not-be-read" not in response.text
-    detail_after = client.get(f"/api/projects/{project_id}").json()
-    assert "must-not-be-read" not in str(detail_after)
-    assert any(
-        item["payload"]["kind"] == "error"
-        and item["payload"].get("stage") == "rescan"
-        for item in detail_after["messages"]
-    )
+    detail_after = client.get(f"/api/projects/{project_id}")
+    assert detail_after.status_code in {409, 422}
+    assert "must-not-be-read" not in detail_after.text
 
 
 def test_replaced_project_root_is_rejected_on_reanalyse(
