@@ -244,6 +244,10 @@ _JSON_EXACT_CREDENTIAL_KEYS = {
     "githubpat",
     "accountkey",
     "clientkeydata",
+    "awsaccesskeyid",
+    "awssecretaccesskey",
+    "accesskeyid",
+    "secretaccesskey",
 }
 _JSON_CREDENTIAL_SUFFIXES = (
     "apikey",

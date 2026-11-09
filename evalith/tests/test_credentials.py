@@ -128,6 +128,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-spaced-key-secret" not in request["body"]
     assert "synthetic-tagged-env" not in request["body"]
     assert "synthetic-tagged-escaped" not in request["body"]
+    assert "synthetic-aws-key-id" not in request["body"]
+    assert "synthetic-aws-secret" not in request["body"]
+    assert "synthetic-aws-json-secret" not in request["body"]
     assert "c2VjcmV0" not in request["body"]
     assert "arbitrary-secret" not in request["body"]
     assert "synthetic-multiline-env" not in request["body"]
@@ -156,6 +159,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-spaced-key-secret" not in request["body"]
     assert "synthetic-tagged-env" not in request["body"]
     assert "synthetic-tagged-escaped" not in request["body"]
+    assert "synthetic-aws-key-id" not in request["body"]
+    assert "synthetic-aws-secret" not in request["body"]
+    assert "synthetic-aws-json-secret" not in request["body"]
     assert "c2VjcmV0" not in request["body"]
     assert "synthetic-value-first" not in request["body"]
     assert "synthetic-comment-name" not in request["body"]
@@ -883,6 +889,13 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "tagged-escaped" not in redact_text(
         'kind: !!str "Se\\u0063ret"\nstringData:\n  foo: tagged-escaped\n'
+    )
+    assert "aws-yaml" not in redact_text(
+        "- name: AWS_ACCESS_KEY_ID\n  value: aws-yaml\n"
+        "- name: AWS_SECRET_ACCESS_KEY\n  value: aws-yaml-secret\n"
+    )
+    assert "aws-json" not in redact_text(
+        '{"env": [{"name": "AWS_SECRET_ACCESS_KEY", "value": "aws-json"}]}'
     )
     env_text = (
         "env:\n- value: value-first\n  name: PASSWORD\n"

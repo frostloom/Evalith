@@ -104,6 +104,16 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "aws-env.yaml").write_text(
+        "- name: AWS_ACCESS_KEY_ID\n  value: synthetic-aws-key-id\n"
+        "- name: AWS_SECRET_ACCESS_KEY\n  value: synthetic-aws-secret\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "aws-env.json").write_text(
+        '{"env": [{"name": "AWS_SECRET_ACCESS_KEY", '
+        '"value": "synthetic-aws-json-secret"}]}\n',
+        encoding="utf-8",
+    )
     (root / "config" / "tagged-env.yaml").write_text(
         "- name: !!str PASSWORD\n  value: synthetic-tagged-env\n",
         encoding="utf-8",
