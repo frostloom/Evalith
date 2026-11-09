@@ -27,6 +27,9 @@ class Settings:
     secret_key: str | None = None
     api_host: str = "127.0.0.1"
     api_port: int = 8090
+    #: Remote (non-loopback) access is opt-in; the API additionally rejects
+    #: non-loopback clients unless this is true.
+    allow_remote: bool = False
     #: Preview budget handed to the model for a single project analysis.
     context_budget_chars: int = 24_000
     #: Hard cap per selected file; larger files are fingerprinted but not read
@@ -70,6 +73,8 @@ def settings_from_env() -> Settings:
         secret_key=os.environ.get("EVALITH_SECRET_KEY") or None,
         api_host=os.environ.get("EVALITH_API_HOST", "127.0.0.1"),
         api_port=int(os.environ.get("EVALITH_API_PORT", "8090")),
+        allow_remote=os.environ.get("EVALITH_ALLOW_REMOTE", "").strip().lower()
+        in ("1", "true", "yes"),
         context_budget_chars=int(os.environ.get("EVALITH_CONTEXT_BUDGET", "24000")),
         max_file_bytes=int(os.environ.get("EVALITH_MAX_FILE_BYTES", "512000")),
         max_files=int(os.environ.get("EVALITH_MAX_FILES", "400")),

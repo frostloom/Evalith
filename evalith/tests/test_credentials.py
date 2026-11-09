@@ -98,6 +98,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-xml-attribute" not in request["body"]
     assert "synthetic-xml-text" not in request["body"]
     assert "sk-example-project-credential" not in request["body"]
+    assert "github_pat_examplecredential" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -556,6 +557,13 @@ def test_structured_credential_values_are_redacted() -> None:
         "nested-second",
     ):
         assert secret not in redacted
+
+
+def test_github_pat_assignment_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text("GITHUB_PAT=github_pat_examplecredential\n")
+    assert "github_pat_examplecredential" not in redacted
 
 
 def test_private_key_assignment_is_redacted() -> None:

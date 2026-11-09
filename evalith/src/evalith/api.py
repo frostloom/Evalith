@@ -31,9 +31,15 @@ class LocalHostMiddleware(BaseHTTPMiddleware):
     accepts only its configured loopback hostnames.
     """
 
-    def __init__(self, app, allowed_hosts: tuple[str, ...]) -> None:
+    def __init__(
+        self,
+        app,
+        allowed_hosts: tuple[str, ...],
+        allow_remote: bool = False,
+    ) -> None:
         super().__init__(app)
         self.allowed_hosts = {host.lower() for host in allowed_hosts}
+        self.allow_remote = allow_remote
 
     @staticmethod
     def _hostname(value: str | None) -> str:
@@ -46,6 +52,25 @@ class LocalHostMiddleware(BaseHTTPMiddleware):
             return ""
 
     async def dispatch(self, request, call_next):
+        if self.allow_remote:
+            return await call_next(request)
+        client = getattr(request, "client", None)
+        client_host = getattr(client, "host", None)
+        if client_host not in {
+            None,
+            "testclient",
+            "testserver",
+            "127.0.0.1",
+            "::1",
+            "localhost",
+        }:
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "error": "remote access is disabled",
+                    "code": "remote_access_disabled",
+                },
+            )
         host = self._hostname(request.headers.get("host"))
         if host not in self.allowed_hosts:
             return JSONResponse(
@@ -82,7 +107,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.db = database
     app.state.service = service
 
-    app.add_middleware(LocalHostMiddleware, allowed_hosts=settings.allowed_hosts)
+    app.add_middleware(
+        LocalHostMiddleware,
+        allowed_hosts=settings.allowed_hosts,
+        allow_remote=settings.allow_remote,
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
