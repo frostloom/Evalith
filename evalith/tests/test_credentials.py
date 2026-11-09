@@ -77,6 +77,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "nested-secret" not in request["body"]
     assert "nested-first" not in request["body"]
     assert "nested-second" not in request["body"]
+    assert "first-part" not in request["body"]
+    assert "second-part" not in request["body"]
+    assert "sensitive-value" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -215,6 +218,8 @@ def test_yaml_block_scalar_secret_is_redacted() -> None:
         "sk-sequence-yaml-secret",
         "synthetic-yaml-db-pass",
         "synthetic-yaml-db-pwd",
+        "first-part",
+        "second-part",
     ):
         assert secret not in redacted
     assert "[REDACTED]" in redacted
@@ -410,6 +415,25 @@ def test_signing_secret_is_redacted() -> None:
     text = 'JWT_SECRET_KEY = "synthetic-signing-secret"\n'
     redacted = redact_text(text)
     assert "synthetic-signing-secret" not in redacted
+    assert "[REDACTED]" in redacted
+
+
+def test_yaml_block_with_blank_line_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text(
+        "api_key: |\n  first-part\n\n  second-part\n"
+    )
+    assert "first-part" not in redacted
+    assert "second-part" not in redacted
+    assert "[REDACTED]" in redacted
+
+
+def test_credential_json_key_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text('{"credential": "sensitive-value"}')
+    assert "sensitive-value" not in redacted
     assert "[REDACTED]" in redacted
 
 

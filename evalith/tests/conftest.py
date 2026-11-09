@@ -68,6 +68,9 @@ def project_root(tmp_path: Path) -> Path:
         'npmAuthToken: "registry-secret-value"\n', encoding="utf-8"
     )
     (root / "config").mkdir()
+    (root / "config" / "credential.json").write_text(
+        '{"credential": "sensitive-value"}\n', encoding="utf-8"
+    )
     (root / "config" / "structured.json").write_text(
         '{"api_key": ["first-secret", "second-secret"], '
         '"nested": {"api_key": "nested-secret"}, '
@@ -91,7 +94,8 @@ def project_root(tmp_path: Path) -> Path:
         '"quoted_key": |\n  sk-quoted-yaml-secret\n'
         "tokens:\n  - secret_key: |\n      sk-sequence-yaml-secret\n"
         "DB_PASS: |\n  synthetic-yaml-db-pass\n"
-        "DB_PWD: >\n  synthetic-yaml-db-pwd\n",
+        "DB_PWD: >\n  synthetic-yaml-db-pwd\n"
+        "blank_secret: |\n  first-part\n\n  second-part\n",
         encoding="utf-8",
     )
     (root / "binary.dat").write_bytes(b"\x00\x01secret-binary\x02")

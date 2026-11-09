@@ -22,8 +22,8 @@ _SECRET_PATTERNS = [
     #   sk-project-secret
     re.compile(
         r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?"
-        r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|secret|token|key|password|passwd|pwd|pass)[A-Za-z0-9_-]*)"
-        r"[\"']?[ \t]*:\s*[|>][-+0-9]*[ \t]*\n(?:[ \t]+.*(?:\n|$))*"
+        r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|pass)[A-Za-z0-9_-]*)"
+        r"[\"']?[ \t]*:\s*[|>][-+0-9]*[ \t]*\n(?:[ \t]*\n|[ \t]+.*(?:\n|$))*"
     ),
     # key=value / "key": "value" forms, including JSON and quoted values.
     # The optional identifier prefix (e.g. OPENAI_API_KEY, DB_PASSWORD) is what
@@ -31,7 +31,7 @@ _SECRET_PATTERNS = [
     # them because "_" is a word character.
     re.compile(
         r"(?i)(?<![A-Za-z0-9])[\"']?(?:[A-Za-z0-9]+[_-])*"
-        r"(?:private[_-]?key|secret[_-]?access[_-]?key|secret[_-]?key|signing[_-]?key|"
+        r"(?:private[_-]?key|credential|secret[_-]?access[_-]?key|secret[_-]?key|signing[_-]?key|"
         r"npm[_-]?auth[_-]?token|npmAuthToken|access[_-]?key[_-]?id|"
         r"api[_-]?key|access[_-]?token|client[_-]?secret|token|secret|"
         r"password|passwd|pwd|pass|authorization)[\"']?\s*[:=]\s*"
@@ -50,7 +50,7 @@ _REDACTED = "[REDACTED]"
 
 _STRUCTURED_CREDENTIAL = re.compile(
     r"(?is)(?<![A-Za-z0-9])[\"']?(?:[A-Za-z0-9]+[_-])*"
-    r"(?:private[_-]?key|secret[_-]?access[_-]?key|secret[_-]?key|"
+    r"(?:private[_-]?key|credential|secret[_-]?access[_-]?key|secret[_-]?key|"
     r"signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
     r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
     r"token|secret|password|passwd|pwd|pass|authorization)[\"']?\s*[:=]\s*"
