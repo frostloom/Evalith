@@ -71,6 +71,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-db-pwd" not in request["body"]
     assert "synthetic-yaml-db-pass" not in request["body"]
     assert "synthetic-yaml-db-pwd" not in request["body"]
+    assert "raw-private-key-value" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -389,6 +390,14 @@ def test_signing_secret_is_redacted() -> None:
     text = 'JWT_SECRET_KEY = "synthetic-signing-secret"\n'
     redacted = redact_text(text)
     assert "synthetic-signing-secret" not in redacted
+    assert "[REDACTED]" in redacted
+
+
+def test_private_key_assignment_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text('private_key = "raw-private-key-value"\n')
+    assert "raw-private-key-value" not in redacted
     assert "[REDACTED]" in redacted
 
 
@@ -813,6 +822,7 @@ def test_child_loggers_redact_credentials(client: TestClient, caplog) -> None:
         logger.error("DB_PWD=%s", "synthetic-db-pwd")
         logger.error("DB_PASS: |")
         logger.error("  synthetic-yaml-db-pass")
+        logger.error('PRIVATE_KEY = "raw-private-key-value"')
         logger.error("DB_PWD: >")
         logger.error("  synthetic-yaml-db-pwd")
     assert SECRET_KEY not in caplog.text
