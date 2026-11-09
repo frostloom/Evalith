@@ -307,6 +307,14 @@ def _redact_json_credentials(text: str) -> str:
 
     def walk(value):
         if isinstance(value, dict):
+            if (
+                "name" in value
+                and "value" in value
+                and is_credential_key(value.get("name"))
+            ):
+                cleaned = dict(value)
+                cleaned["value"] = _REDACTED
+                return cleaned
             if str(value.get("kind", "")).casefold() == "secret":
                 cleaned = dict(value)
                 for secret_key in ("data", "stringData"):
