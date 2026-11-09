@@ -55,6 +55,7 @@ ALWAYS_EXCLUDED = [
     "*.keystore",
     "*.kdbx",
     "id_rsa*",
+    "id_dsa*",
     "id_ed25519*",
     "id_ecdsa*",
     "credentials*",

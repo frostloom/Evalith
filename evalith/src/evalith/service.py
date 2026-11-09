@@ -218,6 +218,12 @@ class WorkspaceService:
                         status_code=422,
                         code="model_url_query_credentials",
                     )
+            if parsed_url.query:
+                raise WorkspaceError(
+                    "模型服务地址不支持查询参数",
+                    status_code=422,
+                    code="model_url_query_unsupported",
+                )
         if not model_name:
             raise WorkspaceError("模型名称不能为空")
         now = utc_now()

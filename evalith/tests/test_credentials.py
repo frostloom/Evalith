@@ -483,6 +483,20 @@ def test_google_api_key_is_redacted() -> None:
     assert "[REDACTED]" in redacted
 
 
+def test_model_url_non_credential_query_is_rejected(client: TestClient) -> None:
+    response = client.post(
+        "/api/model-configs",
+        json={
+            "name": "query-param",
+            "provider": "openai_compatible",
+            "base_url": "https://model.example/v1?api-version=2024-01-01",
+            "model_name": "fake",
+        },
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "model_url_query_unsupported"
+
+
 def test_model_url_query_credential_variants_are_rejected(
     client: TestClient,
 ) -> None:
