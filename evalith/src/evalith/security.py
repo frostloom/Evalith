@@ -25,6 +25,15 @@ _SECRET_PATTERNS = [
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|secret|token|key|password|passwd|pwd|pass)[A-Za-z0-9_-]*)"
         r"[\"']?[ \t]*:\s*[|>][-+0-9]*[ \t]*\n(?:[ \t]+.*(?:\n|$))*"
     ),
+    # JSON/structured credential values (arrays and nested objects).
+    re.compile(
+        r"(?is)(?<![A-Za-z0-9])[\"']?(?:[A-Za-z0-9]+[_-])*"
+        r"(?:private[_-]?key|secret[_-]?access[_-]?key|secret[_-]?key|"
+        r"signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
+        r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
+        r"token|secret|password|passwd|pwd|pass|authorization)[\"']?\s*[:=]\s*"
+        r"(?:\{.*?\}|\[.*?\])"
+    ),
     # key=value / "key": "value" forms, including JSON and quoted values.
     # The optional identifier prefix (e.g. OPENAI_API_KEY, DB_PASSWORD) is what
     # makes prefixed credential names visible; a bare word-boundary would miss

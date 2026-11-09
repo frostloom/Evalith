@@ -72,6 +72,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-yaml-db-pass" not in request["body"]
     assert "synthetic-yaml-db-pwd" not in request["body"]
     assert "raw-private-key-value" not in request["body"]
+    assert "first-secret" not in request["body"]
+    assert "second-secret" not in request["body"]
+    assert "nested-secret" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -384,6 +387,21 @@ def test_other_saved_credentials_are_redacted(
     assert encoded not in serialized
 
 
+def test_model_url_with_credentials_is_rejected(client: TestClient) -> None:
+    response = client.post(
+        "/api/model-configs",
+        json={
+            "name": "credential-url",
+            "provider": "openai_compatible",
+            "base_url": "https://user:password@example.com/v1",
+            "model_name": "fake",
+        },
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "model_url_credentials"
+    assert "password" not in str(client.get("/api/model-configs").json())
+
+
 def test_signing_secret_is_redacted() -> None:
     from evalith.security import redact_text
 
@@ -391,6 +409,18 @@ def test_signing_secret_is_redacted() -> None:
     redacted = redact_text(text)
     assert "synthetic-signing-secret" not in redacted
     assert "[REDACTED]" in redacted
+
+
+def test_structured_credential_values_are_redacted() -> None:
+    from evalith.security import redact_text
+
+    text = (
+        '{"api_key": ["first-secret", "second-secret"], '
+        '"nested": {"api_key": "nested-secret"}}'
+    )
+    redacted = redact_text(text)
+    for secret in ("first-secret", "second-secret", "nested-secret"):
+        assert secret not in redacted
 
 
 def test_private_key_assignment_is_redacted() -> None:

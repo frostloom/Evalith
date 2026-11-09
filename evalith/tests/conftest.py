@@ -68,6 +68,11 @@ def project_root(tmp_path: Path) -> Path:
         'npmAuthToken: "registry-secret-value"\n', encoding="utf-8"
     )
     (root / "config").mkdir()
+    (root / "config" / "structured.json").write_text(
+        '{"api_key": ["first-secret", "second-secret"], '
+        '"nested": {"api_key": "nested-secret"}}\n',
+        encoding="utf-8",
+    )
     (root / "config" / "settings.json").write_text(
         '{"api_key": "sk-json-secret-value", "region": "eu-central"}\n',
         encoding="utf-8",

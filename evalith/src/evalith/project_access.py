@@ -775,6 +775,7 @@ def scan_project(
     includes = [item.strip() for item in (include_paths or []) if item.strip()]
     user_excludes = [item.strip() for item in (exclude_patterns or []) if item.strip()]
     patterns = DEFAULT_EXCLUDE_PATTERNS + user_excludes
+    strict_patterns = ALWAYS_EXCLUDED + user_excludes
     result = ScanResult(root=str(root), digest="", selected_scope=includes or ["."])
     root_fd, root_stat = _open_root(root, expected_dev, expected_ino)
     result.root_dev = root_stat.st_dev
@@ -810,7 +811,9 @@ def scan_project(
                 {"path": relative, "reason": f"gitignore: {ignored}"}
             )
             return
-        matched = _matches(name, relative, patterns)
+        matched = _matches(
+            name, relative, strict_patterns if required else patterns
+        )
         if matched:
             os.close(fd)
             result.excluded.append({"path": relative, "reason": f"excluded: {matched}"})
@@ -888,7 +891,9 @@ def scan_project(
                         {"path": relative + "/", "reason": f"gitignore: {ignored}"}
                     )
                     continue
-                matched = _matches(name, relative, patterns)
+                matched = _matches(
+                    name, relative, strict_patterns if force else patterns
+                )
                 if matched:
                     result.excluded.append(
                         {"path": relative + "/", "reason": f"excluded: {matched}"}
@@ -945,7 +950,7 @@ def scan_project(
         if includes:
             for relative in includes:
                 parts = _include_parts(relative)
-                matched = _selection_exclusion(parts, patterns)
+                matched = _selection_exclusion(parts, strict_patterns)
                 if matched:
                     result.excluded.append(
                         {"path": relative, "reason": f"excluded: {matched}"}

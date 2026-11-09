@@ -181,6 +181,14 @@ class WorkspaceService:
             )
         if provider != "stub" and not base_url:
             raise WorkspaceError("非替身模型必须填写 OpenAI 兼容服务地址")
+        if base_url:
+            parsed_url = urllib.parse.urlsplit(base_url)
+            if parsed_url.username is not None or parsed_url.password is not None:
+                raise WorkspaceError(
+                    "模型服务地址不能包含用户名或密码",
+                    status_code=422,
+                    code="model_url_credentials",
+                )
         if not model_name:
             raise WorkspaceError("模型名称不能为空")
         now = utc_now()

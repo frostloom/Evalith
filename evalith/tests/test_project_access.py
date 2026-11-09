@@ -912,6 +912,25 @@ def test_snapshot_digest_is_deterministic_for_unchanged_files(
     assert first.json()["snapshot"]["digest"] == second.json()["snapshot"]["digest"]
 
 
+def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> None:
+    root = tmp_path / "noise-override"
+    root.mkdir()
+    dist = root / "dist"
+    dist.mkdir()
+    (dist / "report.md").write_text("report\n", encoding="utf-8")
+    build = root / "build"
+    build.mkdir()
+    (build / "app.js").write_text("app\n", encoding="utf-8")
+    (root / ".env").write_text("SECRET=x\n", encoding="utf-8")
+
+    selected_file = scan_project(root, ["dist/report.md"], [])
+    assert "dist/report.md" in {item.path for item in selected_file.files}
+    selected_dir = scan_project(root, ["build"], [])
+    assert "build/app.js" in {item.path for item in selected_dir.files}
+    with pytest.raises(AccessError):
+        scan_project(root, [".env"], [])
+
+
 def test_rescan_persists_new_diagnostics_without_content_change(
     client: TestClient, tmp_path: Path
 ) -> None:
