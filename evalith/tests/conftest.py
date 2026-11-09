@@ -77,7 +77,9 @@ def project_root(tmp_path: Path) -> Path:
         "authorization: |\n  synthetic-authorization-token\n"
         "password: !!str\n  synthetic-tagged-plain\n"
         "password: &pw |\n  synthetic-anchored-secret\n"
-        "password: plain-first\n  synthetic-plain-second\n",
+        "password: plain-first\n  synthetic-plain-second\n"
+        "password: &apw anchored-first\n  synthetic-anchored-plain\n"
+        "password: &bare\n  synthetic-anchored-only\n",
         encoding="utf-8",
     )
     (root / "config" / "multiline.toml").write_text(

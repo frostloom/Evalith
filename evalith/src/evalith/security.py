@@ -50,7 +50,9 @@ _SECRET_PATTERNS = [
         r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
         r"(?:[A-Za-z0-9_-]*(?:private[_-]?key|credential|secret|token|key|"
         r"password|passwd|pwd|pass|authorization)[A-Za-z0-9_-]*)"
-        r"[\"']?[ \t]*:\s*[^ \t\r\n|>!&][^\r\n]*\r?\n"
+        r"[\"']?[ \t]*:\s*"
+        r"(?:&[^ \t\r\n]+(?:[ \t]+[^\r\n]*)?|[^ \t\r\n|>!&][^\r\n]*)"
+        r"\r?\n"
         r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+.*(?:\r?\n|$))*"
     ),
     # key=value / "key": "value" forms, including JSON and quoted values.

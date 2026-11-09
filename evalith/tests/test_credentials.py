@@ -91,6 +91,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-tagged-plain" not in request["body"]
     assert "synthetic-anchored-secret" not in request["body"]
     assert "synthetic-plain-second" not in request["body"]
+    assert "synthetic-anchored-plain" not in request["body"]
+    assert "synthetic-anchored-only" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
     assert "registry-secret-value" not in request["body"]
@@ -439,6 +441,8 @@ def test_tagged_yaml_and_multiline_quoted_values_are_redacted() -> None:
         "password: !!str\n  tagged-plain-secret\n"
         "password: &pw |\n  anchored-secret\n"
         "password: plain-first\n  plain-second\n"
+        "password: &apw anchored-first\n  anchored-plain\n"
+        "password: &bare\n  anchored-only\n"
     )
     assert "tagged-secret" not in tagged
     assert "multibang-secret" not in tagged
@@ -446,6 +450,8 @@ def test_tagged_yaml_and_multiline_quoted_values_are_redacted() -> None:
     assert "tagged-plain-secret" not in tagged
     assert "anchored-secret" not in tagged
     assert "plain-second" not in tagged
+    assert "anchored-plain" not in tagged
+    assert "anchored-only" not in tagged
     multiline = redact_text(
         'password = """\nmultiline-secret\n"""\n'
     )
