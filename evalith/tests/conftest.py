@@ -72,6 +72,11 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "classic-token.txt").write_text(
         "token=ghp_exampleclassictoken\n", encoding="utf-8"
     )
+    (root / "config" / "azure.txt").write_text(
+        "DefaultEndpointsProtocol=https;AccountName=acct;"
+        "AccountKey=synthetic-azure-account-key;EndpointSuffix=core\n",
+        encoding="utf-8",
+    )
     (root / "config" / "ordinary.json").write_text(
         '{"author": "alice", "keyboard": "qwerty", "compass": "north"}\n',
         encoding="utf-8",
