@@ -110,6 +110,9 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "numeric.json").write_text(
         '{"prod2ApiKey": "example-credential"}\n', encoding="utf-8"
     )
+    (root / "config" / "access-key.txt").write_text(
+        'accessKey = "example-credential-value"\n', encoding="utf-8"
+    )
     (root / "config" / "passphrase.json").write_text(
         '{"passphrase": "a-private-value"}\n', encoding="utf-8"
     )

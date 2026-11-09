@@ -82,7 +82,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "sensitive-value" not in request["body"]
     assert "hunter2" not in request["body"]
     assert "dXNlcjpwYXNz" not in request["body"]
+    assert "example-credential-value" not in request["body"]
     assert "a-private-value" not in request["body"]
+    assert "ordinary-secret" not in request["body"]
     assert "synthetic-anchor-block-secret" not in request["body"]
     assert "ordinary-secret" not in request["body"]
     assert "secret-value" not in request["body"]
@@ -114,7 +116,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "c2VjcmV0LXN5bnRoZXRpYw==" not in request["body"]
     assert "hunter2" not in request["body"]
     assert "dXNlcjpwYXNz" not in request["body"]
+    assert "example-credential-value" not in request["body"]
     assert "a-private-value" not in request["body"]
+    assert "ordinary-secret" not in request["body"]
     assert "synthetic-anchor-block-secret" not in request["body"]
     assert "ordinary-secret" not in request["body"]
     assert "escaped-secret-value" not in request["body"]
@@ -727,6 +731,22 @@ def test_structured_credential_values_are_redacted() -> None:
         "nested-second",
     ):
         assert secret not in redacted
+
+
+def test_access_key_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text('accessKey = "example-credential-value"')
+    assert "example-credential-value" not in redacted
+
+
+def test_flow_yaml_credential_alias_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text(
+        "{shared: &pw ordinary-secret, password: *pw}"
+    )
+    assert "ordinary-secret" not in redacted
 
 
 def test_basic_authorization_is_redacted() -> None:

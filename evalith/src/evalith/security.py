@@ -42,7 +42,7 @@ _SECRET_PATTERNS = [
         r"(?:private[_-]?key|privateKey|apiKey|accessToken|dbPassword|jwtSecret|"
         r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|"
         r"secret[_-]?key|signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
-        r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
+        r"access[_-]?key[_-]?id|access[_-]?key|accessKey|api[_-]?key|access[_-]?token|client[_-]?secret|"
         r"token|secret|account[_-]?key|client[_-]?key[_-]?data|sig|signature|password|passphrase|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
         r"(?:[\"']{3}.*?[\"']{3}|[\"']{3}.*?[\"']{3})"
     ),
@@ -65,6 +65,7 @@ _SECRET_PATTERNS = [
         r"(?:private[_-]?key|privateKey|apiKey|accessToken|dbPassword|jwtSecret|"
         r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|secret[_-]?key|signing[_-]?key|"
         r"npm[_-]?auth[_-]?token|npmAuthToken|access[_-]?key[_-]?id|"
+        r"access[_-]?key|accessKey|"
         r"api[_-]?key|access[_-]?token|client[_-]?secret|token|secret|"
         r"account[_-]?key|client[_-]?key[_-]?data|sig|signature|password|passphrase|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
         r"(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|[^\n,}]+)"
@@ -121,7 +122,7 @@ _STRUCTURED_CREDENTIAL = re.compile(
     r"(?:private[_-]?key|privateKey|apiKey|accessToken|dbPassword|jwtSecret|"
     r"clientSecret|refreshToken|credential|secret[_-]?access[_-]?key|secret[_-]?key|"
     r"signing[_-]?key|npm[_-]?auth[_-]?token|npmAuthToken|"
-    r"access[_-]?key[_-]?id|api[_-]?key|access[_-]?token|client[_-]?secret|"
+    r"access[_-]?key[_-]?id|access[_-]?key|accessKey|api[_-]?key|access[_-]?token|client[_-]?secret|"
     r"token|secret|account[_-]?key|client[_-]?key[_-]?data|sig|signature|password|passphrase|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
     r"(?=[\[{])"
 )
@@ -323,13 +324,16 @@ _YAML_ALIAS_REFERENCE = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?([^:\r\n\"']+?)[\"']?"
     r"[ \t]*:[ \t]*\*([A-Za-z0-9_-]+)"
 )
+_YAML_FLOW_ALIAS_REFERENCE = re.compile(
+    r"(?i)[,{]\s*[\"']?([^:\r\n\"',}]+?)[\"']?\s*:\s*\*([A-Za-z0-9_-]+)"
+)
 
 
 def _redact_yaml_anchor_values(text: str) -> str:
+    references = _YAML_ALIAS_REFERENCE.findall(text)
+    references += _YAML_FLOW_ALIAS_REFERENCE.findall(text)
     anchors = {
-        anchor
-        for key, anchor in _YAML_ALIAS_REFERENCE.findall(text)
-        if is_credential_key(key)
+        anchor for key, anchor in references if is_credential_key(key)
     }
     for anchor in anchors:
         text = re.sub(
@@ -338,6 +342,11 @@ def _redact_yaml_anchor_values(text: str) -> str:
             r"(?:(?:[ \t]*\r?\n)|"
             r"(?P=anchor_indent)[ \t]+[^\r\n]*(?:\r?\n|$))*",
             _REDACTED + "\n",
+            text,
+        )
+        text = re.sub(
+            rf"&{re.escape(anchor)}\b[^,}}\r\n]*",
+            _REDACTED,
             text,
         )
     return text
