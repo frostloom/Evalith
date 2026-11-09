@@ -59,6 +59,9 @@ def project_root(tmp_path: Path) -> Path:
         "The agent approves releases.\n",
         encoding="utf-8",
     )
+    (root / "basic-auth.txt").write_text(
+        'const basicAuth = "Basic dXNlcjpwYXNz";\n', encoding="utf-8"
+    )
     (root / "bearer-token.txt").write_text(
         "Authorization: Bearer abc/def+ghi==\n", encoding="utf-8"
     )

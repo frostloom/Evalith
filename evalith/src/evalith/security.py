@@ -69,7 +69,7 @@ _SECRET_PATTERNS = [
         r"account[_-]?key|client[_-]?key[_-]?data|sig|signature|password|passphrase|passwd|pwd|pass|auth|authorization|github[_-]?pat|githubToken)[\"']?\s*[:=]\s*"
         r"(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'|[^\n,}]+)"
     ),
-    re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=-]+"),
+    re.compile(r"(?i)\b(?:bearer|basic)\s+[a-z0-9._~+/=-]+"),
     # Connection strings with userinfo, including token-only forms such as
     # https://ghp_token@github.com and user:password@ forms.
     re.compile(
