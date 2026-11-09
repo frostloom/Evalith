@@ -24,6 +24,14 @@ def test_untrusted_origin_is_rejected(client: TestClient) -> None:
     assert response.json()["code"] == "untrusted_origin"
 
 
+def test_untrusted_loopback_port_origin_is_rejected(client: TestClient) -> None:
+    response = client.get(
+        "/api/health", headers={"origin": "http://localhost:9999"}
+    )
+    assert response.status_code == 403
+    assert response.json()["code"] == "untrusted_origin"
+
+
 def test_loopback_origin_is_accepted(client: TestClient) -> None:
     response = client.get(
         "/api/health", headers={"origin": "http://127.0.0.1:8090"}

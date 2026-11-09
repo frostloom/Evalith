@@ -22,6 +22,14 @@ from .service import WorkspaceError, WorkspaceService
 logger = logging.getLogger("evalith.api")
 
 
+_TRUSTED_ORIGINS = (
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+    "http://127.0.0.1:8090",
+    "http://localhost:8090",
+)
+
+
 class LocalHostMiddleware(BaseHTTPMiddleware):
     """Reject non-loopback Host/Origin values before any project API runs.
 
@@ -36,10 +44,27 @@ class LocalHostMiddleware(BaseHTTPMiddleware):
         app,
         allowed_hosts: tuple[str, ...],
         allow_remote: bool = False,
+        allowed_origins: tuple[str, ...] = _TRUSTED_ORIGINS,
     ) -> None:
         super().__init__(app)
         self.allowed_hosts = {host.lower() for host in allowed_hosts}
         self.allow_remote = allow_remote
+        self.allowed_origins = {
+            self._normalize_origin(origin) for origin in allowed_origins
+        }
+
+    @staticmethod
+    def _normalize_origin(value: str) -> str:
+        try:
+            parsed = urlsplit(value)
+            port = parsed.port
+        except ValueError:
+            return ""
+        if not parsed.hostname:
+            return ""
+        if port is None:
+            port = 443 if parsed.scheme.lower() == "https" else 80
+        return f"{parsed.scheme.lower()}://{parsed.hostname.lower()}:{port}"
 
     @staticmethod
     def _hostname(value: str | None) -> str:
@@ -78,7 +103,7 @@ class LocalHostMiddleware(BaseHTTPMiddleware):
                 content={"error": "untrusted request host", "code": "untrusted_host"},
             )
         origin = request.headers.get("origin")
-        if origin and self._hostname(origin) not in self.allowed_hosts:
+        if origin and self._normalize_origin(origin) not in self.allowed_origins:
             return JSONResponse(
                 status_code=403,
                 content={"error": "untrusted request origin", "code": "untrusted_origin"},
@@ -111,15 +136,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         LocalHostMiddleware,
         allowed_hosts=settings.allowed_hosts,
         allow_remote=settings.allow_remote,
+        allowed_origins=_TRUSTED_ORIGINS,
     )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://127.0.0.1:5173",
-            "http://localhost:5173",
-            "http://127.0.0.1:8090",
-            "http://localhost:8090",
-        ],
+        allow_origins=list(_TRUSTED_ORIGINS),
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
