@@ -144,6 +144,10 @@ def project_root(tmp_path: Path) -> Path:
         'kind: !!str "Se\\u0063ret"\nstringData:\n  foo: synthetic-tagged-escaped\n',
         encoding="utf-8",
     )
+    (root / "config" / "escaped-attribute.xml").write_text(
+        '<property name="pass&#119;ord" value="synthetic-escaped-attribute"/>\n',
+        encoding="utf-8",
+    )
     (root / "config" / "tagged-block-kind-secret.yaml").write_text(
         "kind: !!str |-\n  Secret\nstringData: {foo: synthetic-tagged-block}\n",
         encoding="utf-8",

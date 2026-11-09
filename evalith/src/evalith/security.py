@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import html
 import json
 import logging
 import os
@@ -200,7 +201,7 @@ def _redact_xml_credential_elements(text: str) -> str:
             continue
         name = match.group(2)
         attrs = match.group(3) or ""
-        if not _XML_CREDENTIAL_TERM.search(name + attrs):
+        if not _XML_CREDENTIAL_TERM.search(html.unescape(name + attrs)):
             continue
         if attrs.rstrip().endswith("/"):
             end = match.end()
