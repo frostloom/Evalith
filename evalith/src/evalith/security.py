@@ -494,12 +494,36 @@ _K8S_SECRET_ALIAS_KIND = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
     r"\*([A-Za-z0-9_-]+)"
 )
+_K8S_SECRET_BLOCK_KIND = re.compile(
+    r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
+    r"[|>][-+0-9]*[ \t]*(?:#[^\r\n]*)?\r?\n"
+    r"(?:[ \t]*\r?\n)*[ \t]+[\"']?Secret[\"']?[ \t]*$"
+)
+_K8S_SECRET_DATA_ALIAS = re.compile(
+    r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?data[\"']?[ \t]*:[ \t]*"
+    r"\*([A-Za-z0-9_-]+)"
+)
 _K8S_SECRET_DATA = re.compile(
     r"(?im)^(?P<indent>[ \t]*)(?:-[ \t]+)?[\"']?"
     r"(?P<key>data|stringData)[\"']?:[ \t]*"
     r"[^\r\n]*\r?\n"
     r"(?:(?:[ \t]*\r?\n)|(?P=indent)[ \t]+[^\r\n]*(?:\r?\n|$))*"
 )
+
+
+def _redact_anchored_secret_data(text: str, anchor: str) -> str:
+    pattern = re.compile(rf"&{re.escape(anchor)}\b[ \t]*")
+    match = pattern.search(text)
+    if match is None:
+        return text
+    start = match.end()
+    if start < len(text) and text[start] == "{":
+        end = _flow_mapping_end(text, start)
+        return text[: match.start()] + f"&{anchor} {_REDACTED}" + text[end:]
+    line_end = text.find("\n", start)
+    if line_end < 0:
+        line_end = len(text)
+    return text[: match.start()] + f"&{anchor} {_REDACTED}" + text[line_end:]
 
 
 def _redact_kubernetes_secret_data(text: str) -> str:
@@ -512,8 +536,12 @@ def _redact_kubernetes_secret_data(text: str) -> str:
         _K8S_SECRET_FLOW_KIND.search(text)
         or _K8S_SECRET_FLOW_OPEN.search(text)
     )
-    if not flow and not alias_kind and not _K8S_SECRET_KIND.search(text):
+    block_kind = bool(_K8S_SECRET_BLOCK_KIND.search(text))
+    if not flow and not alias_kind and not block_kind and not _K8S_SECRET_KIND.search(text):
         return text
+
+    for alias_match in _K8S_SECRET_DATA_ALIAS.finditer(text):
+        text = _redact_anchored_secret_data(text, alias_match.group(1))
 
     def replace(match: re.Match[str]) -> str:
         return f"{match.group('indent')}{match.group('key')}: {_REDACTED}\n"

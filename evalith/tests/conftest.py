@@ -98,6 +98,15 @@ def project_root(tmp_path: Path) -> Path:
         'env: [{"name": "API_KEY", "value": "synthetic-quoted-flow-env"}]\n',
         encoding="utf-8",
     )
+    (root / "config" / "block-kind-secret.yaml").write_text(
+        "kind: >-\n  Secret\nstringData:\n  value: synthetic-block-kind-secret\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "anchored-data-secret.yaml").write_text(
+        "kind: Secret\nmetadata: {labels: &payload {foo: c2VjcmV0}}\n"
+        "data: *payload\n",
+        encoding="utf-8",
+    )
     (root / "config" / "alias-secret.yaml").write_text(
         "x-kind: &k Secret\nkind: *k\ndata:\n  value: synthetic-alias-secret\n",
         encoding="utf-8",
