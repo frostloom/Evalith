@@ -108,6 +108,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "ghp_exampleclassictoken" not in request["body"]
     assert "glpat-examplegitlabtoken" not in request["body"]
     assert "rk_live_exampleStripeKey123" not in request["body"]
+    assert "npm_0123456789abcdefghijklmnopqrstuvwxyz" not in request["body"]
     assert "c2VjcmV0LXN5bnRoZXRpYw==" not in request["body"]
     assert "hunter2" not in request["body"]
     assert "synthetic-anchor-block-secret" not in request["body"]
@@ -743,6 +744,13 @@ def test_kubernetes_client_key_data_is_redacted() -> None:
 
     redacted = redact_text("client-key-data: c2VjcmV0LXN5bnRoZXRpYw==")
     assert "c2VjcmV0LXN5bnRoZXRpYw==" not in redacted
+
+
+def test_npm_access_token_is_redacted() -> None:
+    from evalith.security import redact_text
+
+    redacted = redact_text("npm_0123456789abcdefghijklmnopqrstuvwxyz")
+    assert "npm_0123456789abcdefghijklmnopqrstuvwxyz" not in redacted
 
 
 def test_stripe_restricted_key_is_redacted() -> None:

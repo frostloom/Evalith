@@ -1017,11 +1017,12 @@ class WorkspaceService:
             if (
                 content_changed
                 and current is not None
-                and current.get("sufficient")
+                and (current.get("sufficient") or current.get("user_continued"))
                 and not current.get("error")
             ):
                 invalidated = dict(current)
                 invalidated["sufficient"] = False
+                invalidated["user_continued"] = False
                 invalidated["sufficient_reason"] = (
                     "资料快照已变化，需重新确认依据；未知项保留，推进门保持关闭。"
                 )

@@ -608,6 +608,26 @@ def test_prior_fact_keeps_source_but_new_fact_needs_transmission(
         )
 
 
+def test_snapshot_change_clears_continuation_consent(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    continued = client.post(
+        f"/api/projects/{project_id}/messages",
+        json={"content": "请继续，保留未知项。"},
+    )
+    assert continued.status_code == 200, continued.text
+    assert continued.json()["understanding"]["user_continued"] is True
+    (project_root / "README.md").write_text("# changed\n", encoding="utf-8")
+    rescanned = client.post(f"/api/projects/{project_id}/rescan")
+    assert rescanned.status_code == 200, rescanned.text
+    refreshed = rescanned.json()
+    assert refreshed["understanding"]["user_continued"] is False
+    assert refreshed["readiness"]["generation_allowed"] is False
+
+
 def test_ordinary_explicit_continuation_phrases_are_accepted(
     client: TestClient, project_root: Path
 ) -> None:

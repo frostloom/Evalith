@@ -82,6 +82,9 @@ def project_root(tmp_path: Path) -> Path:
     (root / "config" / "kube.yaml").write_text(
         "client-key-data: c2VjcmV0LXN5bnRoZXRpYw==", encoding="utf-8"
     )
+    (root / "config" / "npm-token.txt").write_text(
+        "npm_0123456789abcdefghijklmnopqrstuvwxyz\n", encoding="utf-8"
+    )
     (root / "config" / "stripe.txt").write_text(
         "new Stripe('rk_live_exampleStripeKey123')\n", encoding="utf-8"
     )
