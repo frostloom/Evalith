@@ -175,11 +175,19 @@ _XML_CREDENTIAL_TERM = re.compile(
 )
 
 
+_XML_CDATA = re.compile(r"(?s)<!\[CDATA\[.*?\]\]>")
+
+
 def _redact_xml_credential_elements(text: str) -> str:
     out: list[str] = []
     cursor = 0
+    cdata = [(item.start(), item.end()) for item in _XML_CDATA.finditer(text)]
+
+    def in_cdata(position: int) -> bool:
+        return any(start <= position < end for start, end in cdata)
+
     for match in _XML_TAG.finditer(text):
-        if match.start() < cursor or match.group(1):
+        if match.start() < cursor or match.group(1) or in_cdata(match.start()):
             continue
         name = match.group(2)
         attrs = match.group(3) or ""
@@ -191,6 +199,8 @@ def _redact_xml_credential_elements(text: str) -> str:
             depth = 1
             end = len(text)
             for tag in _XML_TAG.finditer(text, match.end()):
+                if in_cdata(tag.start()):
+                    continue
                 if (tag.group(2) or "").casefold() != name.casefold():
                     continue
                 if tag.group(1):

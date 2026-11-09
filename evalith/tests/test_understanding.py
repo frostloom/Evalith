@@ -572,6 +572,12 @@ def test_continuation_with_context_is_accepted(
     assert response.json()["understanding"]["user_continued"] is True
     assert response.json()["readiness"]["generation_allowed"] is True
     assert response.json()["understanding"]["unknowns"]
+    next_step = client.post(
+        f"/api/projects/{detail['project']['id']}/messages",
+        json={"content": "请继续下一步"},
+    )
+    assert next_step.status_code == 200, next_step.text
+    assert next_step.json()["understanding"]["user_continued"] is True
 
 
 def test_provider_accepts_explicit_continuation_phrases(
