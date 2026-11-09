@@ -96,6 +96,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-tag-anchor" not in request["body"]
     assert "synthetic-xml-password" not in request["body"]
     assert "synthetic-xml-attribute" not in request["body"]
+    assert "synthetic-xml-text" not in request["body"]
     assert "sk-example-project-credential" not in request["body"]
     assert "synthetic-signing-secret" not in request["body"]
     assert "sk-yaml-project-secret" not in request["body"]
@@ -463,6 +464,7 @@ def test_tagged_yaml_and_multiline_quoted_values_are_redacted() -> None:
     assert "tag-anchor" not in tagged
     assert "xml-password" not in tagged
     assert "xml-attribute" not in tagged
+    assert "xml-text" not in tagged
     assert "sk-example-project-credential" not in tagged
     multiline = redact_text(
         'password = """\nmultiline-secret\n"""\n'

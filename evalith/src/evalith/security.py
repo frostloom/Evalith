@@ -92,11 +92,19 @@ _SECRET_PATTERNS.insert(
     re.compile(
         r"(?is)<[^>]*\b(?:name|key|id)\s*=\s*[\"'][^\"']*"
         r"(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|"
-        r"pass|auth|authorization)[^\"']*[\"'][^>]*>"
+        r"pass|auth|authorization)[^\"']*[\"'][^>]*>.*?</[A-Za-z0-9_.:-]+\s*>"
     ),
 )
 _SECRET_PATTERNS.insert(
     2,
+    re.compile(
+        r"(?is)<[^>]*\b(?:name|key|id)\s*=\s*[\"'][^\"']*"
+        r"(?:private[_-]?key|credential|secret|token|key|password|passwd|pwd|"
+        r"pass|auth|authorization)[^\"']*[\"'][^>]*>"
+    ),
+)
+_SECRET_PATTERNS.insert(
+    3,
     re.compile(r"\bsk-[A-Za-z0-9_-]{8,}\b"),
 )
 
