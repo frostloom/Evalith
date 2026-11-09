@@ -379,7 +379,8 @@ def _redact_kubernetes_env_values(text: str) -> str:
 
 
 _K8S_SECRET_KIND = re.compile(
-    r"(?im)^[ \t]*kind:[ \t]*[\"']?Secret[\"']?[ \t]*$"
+    r"(?im)^[ \t]*kind:[ \t]*[\"']?Secret[\"']?[ \t]*"
+    r"(?:#[^\r\n]*)?$"
 )
 _K8S_SECRET_DATA = re.compile(
     r"(?im)^(?P<indent>[ \t]*)(?P<key>data|stringData):[ \t]*"
