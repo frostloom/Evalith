@@ -193,6 +193,12 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-nested-name-alias" not in request["body"]
     assert "synthetic-merge-sequence-block" not in request["body"]
     assert "synthetic-merge-sequence-flow" not in request["body"]
+    assert "synthetic-reused-anchor" not in request["body"]
+    assert "synthetic-transitive-merge" not in request["body"]
+    assert "synthetic-prefixed-pass" not in request["body"]
+    assert "synthetic-app-prefixed-pass" not in request["body"]
+    assert "synthetic-prefixed-pwd" not in request["body"]
+    assert "synthetic-json-prefixed-pass" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -292,6 +298,12 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-nested-name-alias" not in request["body"]
     assert "synthetic-merge-sequence-block" not in request["body"]
     assert "synthetic-merge-sequence-flow" not in request["body"]
+    assert "synthetic-reused-anchor" not in request["body"]
+    assert "synthetic-transitive-merge" not in request["body"]
+    assert "synthetic-prefixed-pass" not in request["body"]
+    assert "synthetic-app-prefixed-pass" not in request["body"]
+    assert "synthetic-prefixed-pwd" not in request["body"]
+    assert "synthetic-json-prefixed-pass" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1244,6 +1256,23 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "merge-sequence-flow" not in redact_text(
         "template: &entry {name: DB_PASSWORD}\n"
         "env: [{<<: [*entry], value: merge-sequence-flow}]\n"
+    )
+    assert "reused-anchor" not in redact_text(
+        "a: &entry {name: MODE}\nb: &entry {name: DB_PASSWORD}\n"
+        "env: [{<<: *entry, value: reused-anchor}]\n"
+    )
+    assert "transitive-merge" not in redact_text(
+        "a: &base {name: DB_PASSWORD}\nb: &entry {<<: *base}\n"
+        "env: [{<<: *entry, value: transitive-merge}]\n"
+    )
+    assert "prefixed-pass" not in redact_text(
+        "env:\n  - name: DB_PASS\n    value: prefixed-pass\n"
+    )
+    assert "prefixed-pwd" not in redact_text(
+        "env:\n  - name: DB_PWD\n    value: prefixed-pwd\n"
+    )
+    assert "json-prefixed-pass" not in redact_text(
+        '{"env": [{"name": "DB_PASS", "value": "json-prefixed-pass"}]}'
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

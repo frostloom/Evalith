@@ -104,6 +104,27 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "reused-anchor-env.yaml").write_text(
+        "a: &entry {name: MODE}\nb: &entry {name: DB_PASSWORD}\n"
+        "env: [{<<: *entry, value: synthetic-reused-anchor}]\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "transitive-merge-env.yaml").write_text(
+        "a: &base {name: DB_PASSWORD}\nb: &entry {<<: *base}\n"
+        "env: [{<<: *entry, value: synthetic-transitive-merge}]\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "prefixed-pass-env.yaml").write_text(
+        "env:\n  - name: DB_PASS\n    value: synthetic-prefixed-pass\n"
+        "  - name: APP_DB_PASS\n    value: synthetic-app-prefixed-pass\n"
+        "  - name: DB_PWD\n    value: synthetic-prefixed-pwd\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "prefixed-pass-env.json").write_text(
+        '{"env": [{"name": "DB_PASS", "value": '
+        '"synthetic-json-prefixed-pass"}]}\n',
+        encoding="utf-8",
+    )
     (root / "config" / "merge-sequence-block-env.yaml").write_text(
         "template: &entry {name: DB_PASSWORD}\nenv:\n"
         "  - <<: [*entry]\n    value: synthetic-merge-sequence-block\n",

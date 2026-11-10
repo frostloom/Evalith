@@ -268,6 +268,8 @@ _JSON_CREDENTIAL_SUFFIXES = (
     "password",
     "passphrase",
     "passwd",
+    "pass",
+    "pwd",
     "token",
     "secret",
     "credential",
@@ -677,7 +679,9 @@ def _redact_kubernetes_env_values(text: str) -> str:
                 continue
             name = ""
             for alias in _merge_aliases(merge_match.group("value")):
-                merged = _anchor_mapping_name(text, alias)
+                merged = _anchor_mapping_name(
+                    text, alias, match.start() + merge_match.start()
+                )
                 if merged is not None:
                     name = merged
                     break
@@ -706,7 +710,9 @@ def _redact_kubernetes_env_values(text: str) -> str:
                 continue
             name = ""
             for alias in _merge_aliases(inner[merge_field[0] : merge_field[1]]):
-                merged = _anchor_mapping_name(text, alias)
+                merged = _anchor_mapping_name(
+                    text, alias, start + 1 + merge_field[0]
+                )
                 if merged is not None:
                     name = merged
                     break
@@ -746,7 +752,9 @@ def _redact_kubernetes_env_values(text: str) -> str:
                 return block
             name = ""
             for alias in _merge_aliases(merge_match.group("value")):
-                merged = _anchor_mapping_name(text, alias)
+                merged = _anchor_mapping_name(
+                    text, alias, match.start() + merge_match.start()
+                )
                 if merged is not None:
                     name = merged
                     break
@@ -844,8 +852,8 @@ def _anchor_scalar(rest: str) -> str:
     return _decode_yaml_scalar(token.split()[0] if token else "")
 
 
-def _yaml_anchor_positions(text: str) -> dict[str, int]:
-    positions: dict[str, int] = {}
+def _yaml_anchor_positions(text: str) -> dict[str, list[int]]:
+    positions: dict[str, list[int]] = {}
     quote: str | None = None
     escaped = False
     in_comment = False
@@ -879,11 +887,22 @@ def _yaml_anchor_positions(text: str) -> dict[str, int]:
         if char == "&":
             match = re.match(r"&([A-Za-z0-9_.-]+)[ \t]*", text[index:])
             if match is not None:
-                positions.setdefault(match.group(1), index)
+                positions.setdefault(match.group(1), []).append(index)
                 index += match.end()
                 continue
         index += 1
     return positions
+
+
+def _anchor_position(
+    text: str, anchor: str, before: int | None = None
+) -> int | None:
+    candidates = [
+        position
+        for position in _yaml_anchor_positions(text).get(anchor, [])
+        if before is None or position < before
+    ]
+    return max(candidates) if candidates else None
 
 
 def _yaml_anchor_values(text: str, before: int | None = None) -> dict[str, str]:
@@ -939,29 +958,61 @@ def _resolve_env_name(
     return raw
 
 
-def _anchor_mapping_name(text: str, anchor: str) -> str | None:
-    position = _yaml_anchor_positions(text).get(anchor)
+def _anchor_mapping_name(
+    text: str,
+    anchor: str,
+    before: int | None = None,
+    seen: set[tuple[str, int]] | None = None,
+) -> str | None:
+    position = _anchor_position(text, anchor, before)
     if position is None:
         return None
-    rest = text[position + 1 + len(anchor) :].lstrip(" \t")
+    seen = set() if seen is None else seen
+    key = (anchor, position)
+    if key in seen:
+        return None
+    seen.add(key)
+    rest_start = position + 1 + len(anchor)
+    rest = text[rest_start:].lstrip(" \t")
+    offset = len(text) - len(rest)
     if rest.startswith("{"):
         end = _flow_mapping_end(rest, 0)
         fields = _flow_segment_fields(rest[1 : end - 1])
         name_field = fields.get("name")
-        if name_field is None:
+        if name_field is not None:
+            return _resolve_env_name(
+                text,
+                rest[1 + name_field[0] : 1 + name_field[1]],
+                offset + 1 + name_field[0],
+            )
+        merge_field = fields.get("<<")
+        if merge_field is None:
             return None
-        return _resolve_env_name(
-            text,
-            rest[1 + name_field[0] : 1 + name_field[1]],
-            len(text) - len(rest) + 1 + name_field[0],
-        )
-    return _anchor_block_name(text, anchor)
+        for alias in _merge_aliases(rest[1 + merge_field[0] : 1 + merge_field[1]]):
+            resolved = _anchor_mapping_name(
+                text, alias, offset + 1 + merge_field[0], seen
+            )
+            if resolved is not None:
+                return resolved
+        return None
+    seen.discard(key)
+    return _anchor_block_name(text, anchor, before, seen)
 
 
-def _anchor_block_name(text: str, anchor: str) -> str | None:
-    position = _yaml_anchor_positions(text).get(anchor)
+def _anchor_block_name(
+    text: str,
+    anchor: str,
+    before: int | None = None,
+    seen: set[tuple[str, int]] | None = None,
+) -> str | None:
+    position = _anchor_position(text, anchor, before)
     if position is None:
         return None
+    seen = set() if seen is None else seen
+    key = (anchor, position)
+    if key in seen:
+        return None
+    seen.add(key)
     line_start = text.rfind("\n", 0, position) + 1
     line_end = text.find("\n", position)
     if line_end < 0:
@@ -978,15 +1029,28 @@ def _anchor_block_name(text: str, anchor: str) -> str | None:
         if line.strip() and not line.startswith(indent + " "):
             break
         body_end = next_end + 1
-    name_match = _K8S_ITEM_NAME.search(text[body_start:body_end])
-    if name_match is None:
-        return None
-    return _resolve_env_name(
-        text,
-        name_match.group("name"),
-        body_start + name_match.start("name"),
+    body = text[body_start:body_end]
+    name_match = _K8S_ITEM_NAME.search(body)
+    if name_match is not None:
+        return _resolve_env_name(
+            text, name_match.group("name"), body_start + name_match.start("name")
+        )
+    merge_match = re.search(
+        r"(?m)^[ \t]*(?:-[ \t]+)?<<[ \t]*:[ \t]*(?P<value>[^\r\n]+)",
+        body,
     )
-
+    if merge_match is None:
+        return None
+    for alias in _merge_aliases(merge_match.group("value")):
+        resolved = _anchor_mapping_name(
+            text,
+            alias,
+            body_start + merge_match.start(),
+            seen,
+        )
+        if resolved is not None:
+            return resolved
+    return None
 
 def _flow_mapping_end(text: str, start: int) -> int:
     depth = 0
@@ -1203,7 +1267,7 @@ def _normalize_escaped_secret_keys(text: str) -> str:
 
 
 def _redact_anchored_secret_data(text: str, anchor: str) -> str:
-    position = _yaml_anchor_positions(text).get(anchor)
+    position = _anchor_position(text, anchor)
     if position is None:
         return text
     start = position + 1 + len(anchor)
