@@ -207,6 +207,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-unicode-anchor" not in request["body"]
     assert "synthetic-reused-secret" not in request["body"]
     assert "synthetic-reused-payload" not in request["body"]
+    assert "opaque#credential" not in request["body"]
+    assert "opaque-value" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -320,6 +322,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-unicode-anchor" not in request["body"]
     assert "synthetic-reused-secret" not in request["body"]
     assert "synthetic-reused-payload" not in request["body"]
+    assert "opaque#credential" not in request["body"]
+    assert "opaque-value" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1323,6 +1327,15 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
         "old: &p {opaque: harmless}\nold_ref: *p\n"
         "current: &p {opaque: reused-payload}\n"
         "kind: Secret\ndata: *p\n"
+    )
+    assert "properties-hash" not in redact_text(
+        "db.password properties#hash\n"
+    )
+    assert "properties-crlf" not in redact_text(
+        "db.password properties-crlf\r\n"
+    )
+    assert "properties-continued" not in redact_text(
+        "db.password first\\\r\n  properties-continued\r\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

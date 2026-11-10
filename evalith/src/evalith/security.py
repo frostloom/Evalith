@@ -1426,7 +1426,7 @@ def _redact_kubernetes_secret_data(text: str) -> str:
 
 _JAVA_PROPERTIES_ENTRY = re.compile(
     r"(?im)^(?P<prefix>[ \t]*)(?P<key>[A-Za-z0-9_.\\-]+)"
-    r"(?P<sep>[ \t]*[=:][ \t]*|[ \t]+)(?P<value>[^#\r\n]+)$"
+    r"(?P<sep>[ \t]*[=:][ \t]*|[ \t]+)(?P<value>[^\r\n]*)(?=\r?\n|\Z)"
 )
 _JAVA_UNICODE_ESCAPE = re.compile(r"\\u([0-9A-Fa-f]{4})")
 
@@ -1456,12 +1456,17 @@ def _redact_java_properties(text: str) -> str:
         end = match.end()
         physical = match.group("value").rstrip()
         while physical.endswith("\\") and end < len(text):
-            start = end + 1 if text[end] == "\n" else end
+            if text.startswith("\r\n", end):
+                start = end + 2
+            elif text[end] == "\n":
+                start = end + 1
+            else:
+                break
             newline = text.find("\n", start)
             if newline < 0:
                 end = len(text)
                 break
-            physical = text[start:newline].rstrip()
+            physical = text[start:newline].rstrip("\r")
             end = newline + 1
         out.append(text[cursor : match.start()])
         replacement = f"{match.group('prefix')}{raw_key} {_REDACTED}"

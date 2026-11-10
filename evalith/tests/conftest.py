@@ -104,6 +104,11 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "java-properties-special.properties").write_bytes(
+        b"db.password opaque#credential\r\n"
+        b"api.token opaque-value\r\n"
+        b"db.pass first-part\\\r\n  second-part\r\n"
+    )
     (root / "config" / "reused-secret-alias.yaml").write_text(
         "first: &v harmless\ncopy: *v\nsecond: &v synthetic-reused-secret\n"
         "kind: Secret\nstringData:\n  field: *v\n",
