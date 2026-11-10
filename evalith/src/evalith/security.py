@@ -593,7 +593,9 @@ def _redact_flow_map_block(
         if merge_field is not None:
             raw_merge = inner[merge_field[0] : merge_field[1]]
             for alias in _merge_aliases(raw_merge):
-                resolved = _anchor_mapping_name(source, alias)
+                resolved = _anchor_mapping_name(
+                    source, alias, base_offset + 1 + merge_field[0]
+                )
                 if resolved is not None:
                     name = resolved
                     break
@@ -1266,8 +1268,10 @@ def _normalize_escaped_secret_keys(text: str) -> str:
     return _ESCAPED_SECRET_KEY.sub(replace, text)
 
 
-def _redact_anchored_secret_data(text: str, anchor: str) -> str:
-    position = _anchor_position(text, anchor)
+def _redact_anchored_secret_data(
+    text: str, anchor: str, before: int | None = None
+) -> str:
+    position = _anchor_position(text, anchor, before)
     if position is None:
         return text
     start = position + 1 + len(anchor)
@@ -1332,10 +1336,13 @@ def _redact_kubernetes_secret_data(text: str) -> str:
         return text
 
     text = _normalize_escaped_secret_keys(text)
-    data_aliases = set(_K8S_SECRET_DATA_ALIAS.findall(text))
-    data_aliases.update(_K8S_SECRET_FLOW_DATA_ALIAS.findall(text))
-    for alias in data_aliases:
-        text = _redact_anchored_secret_data(text, alias)
+    data_aliases: dict[str, int] = {}
+    for match in _K8S_SECRET_DATA_ALIAS.finditer(text):
+        data_aliases[match.group(1)] = match.start()
+    for match in _K8S_SECRET_FLOW_DATA_ALIAS.finditer(text):
+        data_aliases[match.group(1)] = match.start()
+    for alias, reference in data_aliases.items():
+        text = _redact_anchored_secret_data(text, alias, reference)
 
     def replace(match: re.Match[str]) -> str:
         return f"{match.group('indent')}{match.group('key')}: {_REDACTED}\n"

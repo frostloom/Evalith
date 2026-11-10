@@ -104,6 +104,17 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "later-redefined-anchor-env.yaml").write_text(
+        "a: &entry {name: DB_PASSWORD}\n"
+        "env: [{<<: *entry, value: synthetic-later-redefined-anchor}]\n"
+        "b: &entry {name: MODE}\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "secret-anchor-redefinition.yaml").write_text(
+        "shared: &d {neutral: synthetic-secret-anchor-redefinition}\n"
+        "kind: Secret\ndata: *d\nlater: &d {neutral: harmless}\n",
+        encoding="utf-8",
+    )
     (root / "config" / "reused-anchor-env.yaml").write_text(
         "a: &entry {name: MODE}\nb: &entry {name: DB_PASSWORD}\n"
         "env: [{<<: *entry, value: synthetic-reused-anchor}]\n",
