@@ -104,6 +104,16 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "comment-brace-end-env.yaml").write_text(
+        "env: [{name: DB_PASSWORD, # }\n"
+        "  value: synthetic-comment-brace-end}]\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "escaped-env-keys.yaml").write_text(
+        'env:\n  - "\\u006eame": OPENAI_API_KEY\n'
+        '    "\\u0076alue": synthetic-escaped-env-key\n',
+        encoding="utf-8",
+    )
     (root / "config" / "multiline-flow-env.yaml").write_text(
         "env: [{name: SMTP_PASSWORD,\n  value: synthetic-multiline-flow}]\n"
         "extra_flow: [{\n  name: DB_PASSWORD,\n  value: synthetic-multiline-db\n}]\n",

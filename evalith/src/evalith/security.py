@@ -586,6 +586,15 @@ def _redact_kubernetes_flow_env(text: str) -> str:
     return "".join(out)
 
 def _redact_kubernetes_env_values(text: str) -> str:
+    stripped = text.strip()
+    if stripped.startswith(("{", "[")):
+        try:
+            json.loads(text)
+        except ValueError:
+            pass
+        else:
+            return text
+    text = _normalize_escaped_env_keys(text)
     aliases: set[str] = set()
     for match in _K8S_ENV_ENTRY.finditer(text):
         if is_credential_key(_yaml_key_name(match.group("name"))):
@@ -669,8 +678,13 @@ def _flow_mapping_end(text: str, start: int) -> int:
     depth = 0
     quote: str | None = None
     escaped = False
+    in_comment = False
     for index in range(start, len(text)):
         char = text[index]
+        if in_comment:
+            if char == "\n":
+                in_comment = False
+            continue
         if quote is not None:
             if escaped:
                 escaped = False
@@ -679,7 +693,9 @@ def _flow_mapping_end(text: str, start: int) -> int:
             elif char == quote:
                 quote = None
             continue
-        if char in "\"'":
+        if char == "#" and (index == start or text[index - 1] in " \t\n"):
+            in_comment = True
+        elif char in "\"'":
             quote = char
         elif char == "{":
             depth += 1
@@ -797,6 +813,17 @@ _ESCAPED_KIND_KEY = re.compile(
     r"\"(?P<key>(?:[^\"\\]|\\.)*)\""
     r"(?P<colon>[ \t]*:[ \t]*)"
 )
+_ESCAPED_ENV_KEY = _ESCAPED_KIND_KEY
+
+
+def _normalize_escaped_env_keys(text: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        key = _decode_yaml_scalar(f'"{match.group("key")}"')
+        if key not in ("name", "value"):
+            return match.group(0)
+        return f"{match.group('prefix')}{key}{match.group('colon')}"
+
+    return _ESCAPED_ENV_KEY.sub(replace, text)
 
 
 def _normalize_escaped_kind_key(text: str) -> str:
