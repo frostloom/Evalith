@@ -175,6 +175,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-tagged-anchor-kind" not in request["body"]
     assert "synthetic-yaml-annotation" not in request["body"]
     assert "synthetic-later-anchor" not in request["body"]
+    assert "synthetic-tagged-block-name" not in request["body"]
+    assert "synthetic-reordered-block-name" not in request["body"]
+    assert "c3ludGhldGljLWxhdGVyLWtpbmQ=" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -256,6 +259,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-tagged-anchor-kind" not in request["body"]
     assert "synthetic-yaml-annotation" not in request["body"]
     assert "synthetic-later-anchor" not in request["body"]
+    assert "synthetic-tagged-block-name" not in request["body"]
+    assert "synthetic-reordered-block-name" not in request["body"]
+    assert "c3ludGhldGljLWxhdGVyLWtpbmQ=" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1139,7 +1145,19 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "later-anchor" not in redact_text(
         "label: &n DB_PASSWORD\nenv:\n- name: *n\n"
-        "  value: later-anchor\nother: &n PORT\n"
+        "  value: later-anchor\nlater: &n PORT\n"
+    )
+    assert "tagged-block-name" not in redact_text(
+        "env:\n  - name: !!str >-\n      DB_PASSWORD\n"
+        "    value: tagged-block-name\n"
+    )
+    assert "reordered-block-name" not in redact_text(
+        "env:\n  - value: reordered-block-name\n"
+        "    name: >-\n      OPENAI_API_KEY\n"
+    )
+    assert "c3ludGhldGljLWxhdGVyLWtpbmQ=" not in redact_text(
+        "x-kind: &k Secret\nkind: *k\ndata:\n"
+        "  config: c3ludGhldGljLWxhdGVyLWtpbmQ=\nlater: &k ConfigMap\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

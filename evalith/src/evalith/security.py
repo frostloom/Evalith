@@ -969,26 +969,46 @@ _ESCAPED_ENV_KEY = _ESCAPED_KIND_KEY
 
 
 _BLOCK_ENV_NAME = re.compile(
-    r"(?m)^(?P<prefix>[ \t]*(?:-[ \t]+)?[\"']?name[\"']?[ \t]*:[ \t]*)"
+    r"(?m)^(?P<indent>[ \t]*)(?P<dash>-[ \t]+)?"
+    r"[\"']?name[\"']?[ \t]*:[ \t]*"
+    r"(?:(?:![^\s#]+|&[^\s#]+)[ \t]+)*"
     r"(?P<indicator>[|>][-+0-9]*)[ \t]*(?:#[^\r\n]*)?\r?\n"
-    r"(?P<body>(?:[ \t]+[^\r\n]*(?:\r?\n|$))*?)"
-    r"(?=[ \t]*(?:[\"']?value[\"']?)[ \t]*:)"
 )
+_BLOCK_ENV_KEY = re.compile(r"^[A-Za-z0-9_.\"'-]+[ \t]*:")
 
 
 def _normalize_block_env_names(text: str) -> str:
-    def replace(match: re.Match[str]) -> str:
-        lines = [
-            line.strip()
-            for line in match.group("body").splitlines()
-            if line.strip()
-        ]
+    out: list[str] = []
+    cursor = 0
+    for match in _BLOCK_ENV_NAME.finditer(text):
+        if match.start() < cursor:
+            continue
+        lines: list[str] = []
+        position = match.end()
+        while position < len(text):
+            line_end = text.find("\n", position)
+            if line_end < 0:
+                line_end = len(text)
+            line = text[position:line_end]
+            stripped = line.strip()
+            if not stripped:
+                break
+            if line[0] not in " \t":
+                break
+            if _BLOCK_ENV_KEY.match(stripped):
+                break
+            lines.append(stripped)
+            position = line_end + 1
         if not lines:
-            return match.group(0)
-        return f"{match.group('prefix')}{' '.join(lines)}\n"
-
-    return _BLOCK_ENV_NAME.sub(replace, text)
-
+            continue
+        out.append(text[cursor : match.start()])
+        out.append(
+            f"{match.group('indent')}{match.group('dash') or ''}"
+            f"name: {' '.join(lines)}\n"
+        )
+        cursor = position
+    out.append(text[cursor:])
+    return "".join(out)
 
 def _normalize_escaped_env_keys(text: str) -> str:
     def replace(match: re.Match[str]) -> str:
@@ -1060,9 +1080,11 @@ def _redact_kubernetes_secret_data(text: str) -> str:
             return text
     text = _normalize_escaped_kind_key(text)
     text = _normalize_escaped_secret_kind(text)
-    anchor_values = _yaml_anchor_values(text)
     alias_kind = any(
-        anchor_values.get(match.group(1), "").casefold() == "secret"
+        _yaml_anchor_values(text, before=match.start())
+        .get(match.group(1), "")
+        .casefold()
+        == "secret"
         for match in _K8S_SECRET_ALIAS_KIND.finditer(text)
     )
     flow = bool(

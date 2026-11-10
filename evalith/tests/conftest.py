@@ -104,6 +104,21 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "tagged-block-name-env.yaml").write_text(
+        "env:\n  - name: !!str >-\n      DB_PASSWORD\n"
+        "    value: synthetic-tagged-block-name\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "reordered-block-name-env.yaml").write_text(
+        "env:\n  - value: synthetic-reordered-block-name\n"
+        "    name: >-\n      OPENAI_API_KEY\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "later-kind-alias-secret.yaml").write_text(
+        "x-kind: &k Secret\nkind: *k\ndata:\n"
+        "  config: c3ludGhldGljLWxhdGVyLWtpbmQ=\nlater: &k ConfigMap\n",
+        encoding="utf-8",
+    )
     (root / "config" / "tagged-anchor-kind-secret.yaml").write_text(
         "type: &k !!str Secret\nkind: *k\nstringData:\n"
         "  payload: synthetic-tagged-anchor-kind\n",
@@ -575,7 +590,7 @@ def settings(tmp_path: Path) -> Settings:
         database_path=tmp_path / "data" / "evalith.db",
         secret_key="test-secret-key",
         static_dir=tmp_path / "no-static",
-        max_files=100,
+        max_files=400,
         allow_paid_models=True,
     )
 
