@@ -104,6 +104,25 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "access-key-env.yaml").write_text(
+        "env:\n  - name: ACCESS_KEY\n    value: synthetic-access-key-block\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "access-key-flow.yaml").write_text(
+        "env: [{name: ACCESS_KEY, value: synthetic-access-key-flow}]\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "access-key-env.json").write_text(
+        '{"env": [{"name": "ACCESS_KEY", "value": '
+        '"synthetic-access-key-json"}]}\n',
+        encoding="utf-8",
+    )
+    (root / "config" / "merge-alias-env.yaml").write_text(
+        "defaults: &entry {name: DB_PASSWORD}\n"
+        "shared: &pw synthetic-merge-alias-anchor\n"
+        "env: [{<<: *entry, value: *pw}]\n",
+        encoding="utf-8",
+    )
     (root / "config" / "flow-merge-env.yaml").write_text(
         "defaults: &entry {name: DB_PASSWORD}\n"
         "env: [{<<: *entry, value: synthetic-flow-merge}]\n",

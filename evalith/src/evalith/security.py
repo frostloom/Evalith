@@ -229,6 +229,7 @@ def _redact_xml_credential_elements(text: str) -> str:
 
 _JSON_EXACT_CREDENTIAL_KEYS = {
     "apikey",
+    "accesskey",
     "accesstoken",
     "refreshtoken",
     "clientsecret",
@@ -248,6 +249,7 @@ _JSON_EXACT_CREDENTIAL_KEYS = {
     "credentials",
     "githubpat",
     "accountkey",
+    "accesskey",
     "clientkeydata",
     "awsaccesskeyid",
     "awssecretaccesskey",
@@ -256,6 +258,7 @@ _JSON_EXACT_CREDENTIAL_KEYS = {
 }
 _JSON_CREDENTIAL_SUFFIXES = (
     "apikey",
+    "accesskey",
     "accesstoken",
     "refreshtoken",
     "clientsecret",
@@ -271,6 +274,7 @@ _JSON_CREDENTIAL_SUFFIXES = (
     "authorization",
     "auth",
     "accountkey",
+    "accesskey",
     "clientkeydata",
 )
 _JSON_CREDENTIAL_PREFIXES = {
@@ -669,9 +673,22 @@ def _redact_kubernetes_env_values(text: str) -> str:
         fields = _flow_segment_fields(inner)
         name_field = fields.get("name")
         value_field = fields.get("value")
-        if name_field is None or value_field is None:
+        if value_field is None:
             continue
-        name = _resolve_env_name(text, inner[name_field[0] : name_field[1]])
+        if name_field is not None:
+            name = _resolve_env_name(
+                text, inner[name_field[0] : name_field[1]]
+            )
+        else:
+            merge_field = fields.get("<<")
+            if merge_field is None:
+                continue
+            merged = _yaml_key_name(
+                _strip_yaml_comment(inner[merge_field[0] : merge_field[1]])
+            )
+            if not merged.startswith("*") or len(merged) <= 1:
+                continue
+            name = _anchor_mapping_name(text, merged[1:]) or ""
         if not is_credential_key(name):
             continue
         value = inner[value_field[0] : value_field[1]].strip().strip("\"'")

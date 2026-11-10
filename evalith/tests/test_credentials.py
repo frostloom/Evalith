@@ -182,6 +182,10 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-merge-first" not in request["body"]
     assert "synthetic-merge-second" not in request["body"]
     assert "synthetic-flow-merge" not in request["body"]
+    assert "synthetic-access-key-block" not in request["body"]
+    assert "synthetic-access-key-flow" not in request["body"]
+    assert "synthetic-access-key-json" not in request["body"]
+    assert "synthetic-merge-alias-anchor" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -270,6 +274,10 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-merge-first" not in request["body"]
     assert "synthetic-merge-second" not in request["body"]
     assert "synthetic-flow-merge" not in request["body"]
+    assert "synthetic-access-key-block" not in request["body"]
+    assert "synthetic-access-key-flow" not in request["body"]
+    assert "synthetic-access-key-json" not in request["body"]
+    assert "synthetic-merge-alias-anchor" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1179,6 +1187,20 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "flow-merge" not in redact_text(
         "defaults: &entry {name: DB_PASSWORD}\n"
         "env: [{<<: *entry, value: flow-merge}]\n"
+    )
+    assert "access-key-block" not in redact_text(
+        "env:\n  - name: ACCESS_KEY\n    value: access-key-block\n"
+    )
+    assert "access-key-flow" not in redact_text(
+        "env: [{name: ACCESS_KEY, value: access-key-flow}]\n"
+    )
+    assert "access-key-json" not in redact_text(
+        '{"env": [{"name": "ACCESS_KEY", "value": "access-key-json"}]}'
+    )
+    assert "merge-alias-anchor" not in redact_text(
+        "defaults: &entry {name: DB_PASSWORD}\n"
+        "shared: &pw merge-alias-anchor\n"
+        "env: [{<<: *entry, value: *pw}]\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'
