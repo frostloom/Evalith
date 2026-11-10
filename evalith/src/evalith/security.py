@@ -552,6 +552,15 @@ def _unquoted_brace_starts(text: str) -> list[int]:
     return starts
 
 
+def _merge_aliases(value: str) -> list[str]:
+    stripped = value.strip()
+    if stripped.startswith("["):
+        return re.findall(r"\*([A-Za-z0-9_.-]+)", stripped)
+    if stripped.startswith("*") and len(stripped) > 1:
+        return [stripped[1:].strip()]
+    return []
+
+
 def _redact_flow_map_block(
     block: str, source: str | None = None, base_offset: int = 0
 ) -> str:
@@ -578,16 +587,14 @@ def _redact_flow_map_block(
     value_field = fields.get("value")
     if name_field is None and value_field is not None:
         merge_field = fields.get("<<")
+        name = ""
         if merge_field is not None:
-            merged = _yaml_key_name(
-                _strip_yaml_comment(inner[merge_field[0] : merge_field[1]])
-            )
-            if merged.startswith("*") and len(merged) > 1:
-                name = _anchor_mapping_name(source, merged[1:]) or ""
-            else:
-                name = ""
-        else:
-            name = ""
+            raw_merge = inner[merge_field[0] : merge_field[1]]
+            for alias in _merge_aliases(raw_merge):
+                resolved = _anchor_mapping_name(source, alias)
+                if resolved is not None:
+                    name = resolved
+                    break
     elif name_field is not None:
         name = _resolve_env_name(
             source,
@@ -650,17 +657,31 @@ def _redact_kubernetes_env_values(text: str) -> str:
             if value.startswith("*") and len(value) > 1:
                 aliases.add(value[1:].strip())
     for match in _K8S_ITEM.finditer(text):
-        name_match = _K8S_ITEM_NAME.search(match.group(0))
-        value_match = _K8S_ITEM_VALUE.search(match.group(0))
-        if name_match is None or value_match is None:
+        block = match.group(0)
+        name_match = _K8S_ITEM_NAME.search(block)
+        value_match = _K8S_ITEM_VALUE.search(block)
+        if value_match is None:
             continue
-        if not is_credential_key(
-            _resolve_env_name(
+        if name_match is not None:
+            name = _resolve_env_name(
                 text,
                 name_match.group("name"),
                 match.start() + name_match.start("name"),
             )
-        ):
+        else:
+            merge_match = re.search(
+                r"(?m)^[ \t]*(?:-[ \t]+)?<<[ \t]*:[ \t]*(?P<value>[^\r\n]+)",
+                block,
+            )
+            if merge_match is None:
+                continue
+            name = ""
+            for alias in _merge_aliases(merge_match.group("value")):
+                merged = _anchor_mapping_name(text, alias)
+                if merged is not None:
+                    name = merged
+                    break
+        if not is_credential_key(name):
             continue
         value = value_match.group("value").lstrip()
         if value.startswith("*") and len(value) > 1:
@@ -683,12 +704,12 @@ def _redact_kubernetes_env_values(text: str) -> str:
             merge_field = fields.get("<<")
             if merge_field is None:
                 continue
-            merged = _yaml_key_name(
-                _strip_yaml_comment(inner[merge_field[0] : merge_field[1]])
-            )
-            if not merged.startswith("*") or len(merged) <= 1:
-                continue
-            name = _anchor_mapping_name(text, merged[1:]) or ""
+            name = ""
+            for alias in _merge_aliases(inner[merge_field[0] : merge_field[1]]):
+                merged = _anchor_mapping_name(text, alias)
+                if merged is not None:
+                    name = merged
+                    break
         if not is_credential_key(name):
             continue
         value = inner[value_field[0] : value_field[1]].strip().strip("\"'")
@@ -718,15 +739,19 @@ def _redact_kubernetes_env_values(text: str) -> str:
             )
         else:
             merge_match = re.search(
-                r"(?m)^[ \t]*(?:-[ \t]+)?<<[ \t]*:[ \t]*\*([A-Za-z0-9_.-]+)",
+                r"(?m)^[ \t]*(?:-[ \t]+)?<<[ \t]*:[ \t]*(?P<value>[^\r\n]+)",
                 block,
             )
             if merge_match is None:
                 return block
-            merged = _anchor_mapping_name(text, merge_match.group(1))
-            if merged is None:
+            name = ""
+            for alias in _merge_aliases(merge_match.group("value")):
+                merged = _anchor_mapping_name(text, alias)
+                if merged is not None:
+                    name = merged
+                    break
+            else:
                 return block
-            name = merged
         if not is_credential_key(name):
             return block
         value_match = _K8S_ITEM_VALUE.search(block)

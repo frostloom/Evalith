@@ -104,6 +104,16 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "merge-sequence-block-env.yaml").write_text(
+        "template: &entry {name: DB_PASSWORD}\nenv:\n"
+        "  - <<: [*entry]\n    value: synthetic-merge-sequence-block\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "merge-sequence-flow-env.yaml").write_text(
+        "template: &entry {name: DB_PASSWORD}\n"
+        "env: [{<<: [*entry], value: synthetic-merge-sequence-flow}]\n",
+        encoding="utf-8",
+    )
     (root / "config" / "flow-anchor-block-env.yaml").write_text(
         "defaults: &entry {name: DB_PASSWORD}\nenv:\n"
         "  - <<: *entry\n    value: synthetic-flow-anchor-block\n",

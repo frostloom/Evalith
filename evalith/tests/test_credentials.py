@@ -191,6 +191,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-flow-anchor-block" not in request["body"]
     assert "synthetic-dotted-anchor" not in request["body"]
     assert "synthetic-nested-name-alias" not in request["body"]
+    assert "synthetic-merge-sequence-block" not in request["body"]
+    assert "synthetic-merge-sequence-flow" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -288,6 +290,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-flow-anchor-block" not in request["body"]
     assert "synthetic-dotted-anchor" not in request["body"]
     assert "synthetic-nested-name-alias" not in request["body"]
+    assert "synthetic-merge-sequence-block" not in request["body"]
+    assert "synthetic-merge-sequence-flow" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1232,6 +1236,14 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
         "label: &env.name DB_PASSWORD\n"
         "defaults: &entry {name: *env.name}\nenv:\n"
         "  - <<: *entry\n    value: nested-name-alias\n"
+    )
+    assert "merge-sequence-block" not in redact_text(
+        "template: &entry {name: DB_PASSWORD}\nenv:\n"
+        "  - <<: [*entry]\n    value: merge-sequence-block\n"
+    )
+    assert "merge-sequence-flow" not in redact_text(
+        "template: &entry {name: DB_PASSWORD}\n"
+        "env: [{<<: [*entry], value: merge-sequence-flow}]\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'
