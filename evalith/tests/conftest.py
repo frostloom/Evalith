@@ -104,6 +104,15 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "comment-brace-env.yaml").write_text(
+        "# don't\nenv: [{name: API_KEY, value: synthetic-comment-brace}]\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "escaped-flow-alias-env.yaml").write_text(
+        'shared: &v synthetic-escaped-flow-alias\nenv: '
+        '[{name: "API\\u005fKEY", value: *v}]\n',
+        encoding="utf-8",
+    )
     (root / "config" / "quoted-brace-env.yaml").write_text(
         'container: {marker: "{", env: [{name: PASSWORD, '
         'value: synthetic-quoted-brace-env}]}\n',

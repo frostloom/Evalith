@@ -466,9 +466,14 @@ def _flow_segment_fields(inner: str) -> dict[str, tuple[int, int]]:
     depth = 0
     quote: str | None = None
     escaped = False
+    in_comment = False
     start = 0
     segments: list[tuple[int, int]] = []
     for index, char in enumerate(inner):
+        if in_comment:
+            if char == "\n":
+                in_comment = False
+            continue
         if quote is not None:
             if escaped:
                 escaped = False
@@ -477,7 +482,9 @@ def _flow_segment_fields(inner: str) -> dict[str, tuple[int, int]]:
             elif char == quote:
                 quote = None
             continue
-        if char in "\"'":
+        if char == "#" and (index == 0 or inner[index - 1] in " \t\n"):
+            in_comment = True
+        elif char in "\"'":
             quote = char
         elif char in "[{":
             depth += 1
@@ -502,7 +509,12 @@ def _unquoted_brace_starts(text: str) -> list[int]:
     starts: list[int] = []
     quote: str | None = None
     escaped = False
+    in_comment = False
     for index, char in enumerate(text):
+        if in_comment:
+            if char == "\n":
+                in_comment = False
+            continue
         if quote is not None:
             if escaped:
                 escaped = False
@@ -511,7 +523,9 @@ def _unquoted_brace_starts(text: str) -> list[int]:
             elif char == quote:
                 quote = None
             continue
-        if char in "\"'":
+        if char == "#" and (index == 0 or text[index - 1] in " \t\n"):
+            in_comment = True
+        elif char in "\"'":
             quote = char
         elif char == "{":
             starts.append(index)
@@ -597,7 +611,7 @@ def _redact_kubernetes_env_values(text: str) -> str:
         value_field = fields.get("value")
         if name_field is None or value_field is None:
             continue
-        name = inner[name_field[0] : name_field[1]].strip(" \t\"'")
+        name = _yaml_key_name(inner[name_field[0] : name_field[1]])
         if not is_credential_key(name):
             continue
         value = inner[value_field[0] : value_field[1]].strip().strip("\"'")
