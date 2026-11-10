@@ -416,10 +416,10 @@ def _redact_json_credentials(text: str) -> str:
 
 _YAML_ALIAS_REFERENCE = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?([^:\r\n\"']+?)[\"']?"
-    r"[ \t]*:[ \t]*\*([A-Za-z0-9_-]+)"
+    r"[ \t]*:[ \t]*\*([A-Za-z0-9_.-]+)"
 )
 _YAML_FLOW_ALIAS_REFERENCE = re.compile(
-    r"(?i)[,{]\s*[\"']?([^:\r\n\"',}]+?)[\"']?\s*:\s*\*([A-Za-z0-9_-]+)"
+    r"(?i)[,{]\s*[\"']?([^:\r\n\"',}]+?)[\"']?\s*:\s*\*([A-Za-z0-9_.-]+)"
 )
 
 
@@ -718,12 +718,12 @@ def _redact_kubernetes_env_values(text: str) -> str:
             )
         else:
             merge_match = re.search(
-                r"(?m)^[ \t]*(?:-[ \t]+)?<<[ \t]*:[ \t]*\*([A-Za-z0-9_-]+)",
+                r"(?m)^[ \t]*(?:-[ \t]+)?<<[ \t]*:[ \t]*\*([A-Za-z0-9_.-]+)",
                 block,
             )
             if merge_match is None:
                 return block
-            merged = _anchor_block_name(text, merge_match.group(1))
+            merged = _anchor_mapping_name(text, merge_match.group(1))
             if merged is None:
                 return block
             name = merged
@@ -752,7 +752,7 @@ _K8S_SECRET_FLOW_KIND = re.compile(
 )
 _K8S_SECRET_FLOW_ALIAS_KIND = re.compile(
     r"(?i)[{,][ \t]*[\"']?kind[\"']?[ \t]*:[ \t]*"
-    r"\*([A-Za-z0-9_-]+)"
+    r"\*([A-Za-z0-9_.-]+)"
 )
 _K8S_SECRET_FLOW_OPEN = re.compile(
     r"(?im)(?:^|[{,])[ \t]*"
@@ -852,7 +852,7 @@ def _yaml_anchor_positions(text: str) -> dict[str, int]:
             index += 1
             continue
         if char == "&":
-            match = re.match(r"&([A-Za-z0-9_-]+)[ \t]*", text[index:])
+            match = re.match(r"&([A-Za-z0-9_.-]+)[ \t]*", text[index:])
             if match is not None:
                 positions.setdefault(match.group(1), index)
                 index += match.end()
@@ -894,7 +894,7 @@ def _yaml_anchor_values(text: str, before: int | None = None) -> dict[str, str]:
             index += 1
             continue
         if char == "&" and (before is None or index < before):
-            match = re.match(r"&([A-Za-z0-9_-]+)[ \t]*", text[index:])
+            match = re.match(r"&([A-Za-z0-9_.-]+)[ \t]*", text[index:])
             if match is not None:
                 values[match.group(1)] = _anchor_scalar(
                     text[index + match.end() :]
@@ -921,11 +921,15 @@ def _anchor_mapping_name(text: str, anchor: str) -> str | None:
     rest = text[position + 1 + len(anchor) :].lstrip(" \t")
     if rest.startswith("{"):
         end = _flow_mapping_end(rest, 0)
-        fields = _flow_segment_fields(rest[1:end])
+        fields = _flow_segment_fields(rest[1 : end - 1])
         name_field = fields.get("name")
         if name_field is None:
             return None
-        return _yaml_key_name(rest[1 + name_field[0] : 1 + name_field[1]])
+        return _resolve_env_name(
+            text,
+            rest[1 + name_field[0] : 1 + name_field[1]],
+            len(text) - len(rest) + 1 + name_field[0],
+        )
     return _anchor_block_name(text, anchor)
 
 
@@ -952,7 +956,11 @@ def _anchor_block_name(text: str, anchor: str) -> str | None:
     name_match = _K8S_ITEM_NAME.search(text[body_start:body_end])
     if name_match is None:
         return None
-    return _yaml_key_name(name_match.group("name"))
+    return _resolve_env_name(
+        text,
+        name_match.group("name"),
+        body_start + name_match.start("name"),
+    )
 
 
 def _flow_mapping_end(text: str, start: int) -> int:
@@ -986,11 +994,11 @@ def _flow_mapping_end(text: str, start: int) -> int:
                 return index + 1
     return len(text)
 _K8S_SECRET_ANCHOR = re.compile(
-    r"(?i)&([A-Za-z0-9_-]+)[ \t]+[\"']?Secret\b"
+    r"(?i)&([A-Za-z0-9_.-]+)[ \t]+[\"']?Secret\b"
 )
 _K8S_SECRET_ALIAS_KIND = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
-    r"\*([A-Za-z0-9_-]+)"
+    r"\*([A-Za-z0-9_.-]+)"
 )
 _K8S_SECRET_BLOCK_KIND = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
@@ -1000,11 +1008,11 @@ _K8S_SECRET_BLOCK_KIND = re.compile(
 )
 _K8S_SECRET_DATA_ALIAS = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?(?:data|stringData)[\"']?[ \t]*:[ \t]*"
-    r"\*([A-Za-z0-9_-]+)"
+    r"\*([A-Za-z0-9_.-]+)"
 )
 _K8S_SECRET_FLOW_DATA_ALIAS = re.compile(
     r"(?i)[{,][ \t]*[\"']?(?:data|stringData)[\"']?[ \t]*:[ \t]*"
-    r"\*([A-Za-z0-9_-]+)"
+    r"\*([A-Za-z0-9_.-]+)"
 )
 _ESCAPED_SECRET_KIND = re.compile(
     r"(?im)^(?P<prefix>[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"

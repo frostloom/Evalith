@@ -188,6 +188,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-merge-alias-anchor" not in request["body"]
     assert "synthetic-mapping-key-anchor" not in request["body"]
     assert "synthetic-comment-anchor" not in request["body"]
+    assert "synthetic-flow-anchor-block" not in request["body"]
+    assert "synthetic-dotted-anchor" not in request["body"]
+    assert "synthetic-nested-name-alias" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -282,6 +285,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-merge-alias-anchor" not in request["body"]
     assert "synthetic-mapping-key-anchor" not in request["body"]
     assert "synthetic-comment-anchor" not in request["body"]
+    assert "synthetic-flow-anchor-block" not in request["body"]
+    assert "synthetic-dotted-anchor" not in request["body"]
+    assert "synthetic-nested-name-alias" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1213,6 +1219,19 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "comment-anchor" not in redact_text(
         "# &v example\nshared: &v comment-anchor\n"
         "env:\n- name: DB_PASSWORD\n  value: *v\n"
+    )
+    assert "flow-anchor-block" not in redact_text(
+        "defaults: &entry {name: DB_PASSWORD}\nenv:\n"
+        "  - <<: *entry\n    value: flow-anchor-block\n"
+    )
+    assert "dotted-anchor" not in redact_text(
+        "label: &env.name DB_PASSWORD\nenv:\n"
+        "- name: *env.name\n  value: dotted-anchor\n"
+    )
+    assert "nested-name-alias" not in redact_text(
+        "label: &env.name DB_PASSWORD\n"
+        "defaults: &entry {name: *env.name}\nenv:\n"
+        "  - <<: *entry\n    value: nested-name-alias\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

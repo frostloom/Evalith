@@ -104,6 +104,22 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "flow-anchor-block-env.yaml").write_text(
+        "defaults: &entry {name: DB_PASSWORD}\nenv:\n"
+        "  - <<: *entry\n    value: synthetic-flow-anchor-block\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "dotted-anchor-env.yaml").write_text(
+        "label: &env.name DB_PASSWORD\nenv:\n"
+        "- name: *env.name\n  value: synthetic-dotted-anchor\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "nested-name-alias-env.yaml").write_text(
+        "label: &env.name DB_PASSWORD\n"
+        "defaults: &entry {name: *env.name}\nenv:\n"
+        "  - <<: *entry\n    value: synthetic-nested-name-alias\n",
+        encoding="utf-8",
+    )
     (root / "config" / "mapping-key-anchor-env.yaml").write_text(
         "defaults: &entry\n  name: DB_PASSWORD\nenv:\n"
         "  - <<: *entry\n    value: synthetic-mapping-key-anchor\n",
