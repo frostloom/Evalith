@@ -104,6 +104,30 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "anchor-comment-env.yaml").write_text(
+        "label: &n DB_PASSWORD\n# &n PORT\nenv:\n- name: *n\n"
+        "  value: synthetic-anchor-comment\n",
+        encoding="utf-8",
+    )
+    inner = {
+        "kind": "Secret",
+        "data": {"config": "c3ludGhldGljLWFubm90YXRpb24="},
+    }
+    (root / "config" / "secret-annotation.json").write_text(
+        json.dumps(
+            {
+                "kind": "Secret",
+                "metadata": {
+                    "annotations": {
+                        "kubectl.kubernetes.io/last-applied-configuration": json.dumps(inner)
+                    }
+                },
+                "data": {"x": "eA=="},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     (root / "config" / "tagged-anchor-env.yaml").write_text(
         "label: &n !!str DB_PASSWORD\nenv:\n- name: *n\n"
         "  value: synthetic-tagged-anchor\n",

@@ -365,6 +365,15 @@ def _redact_json_credentials(text: str) -> str:
     except ValueError:
         return text
 
+    def clean_annotation(item):
+        if isinstance(item, str) and item.lstrip().startswith(("{", "[")):
+            try:
+                inner = json.loads(item)
+            except ValueError:
+                return item
+            return json.dumps(walk(inner), ensure_ascii=False)
+        return item
+
     def walk(value):
         if isinstance(value, dict):
             if (
@@ -376,15 +385,21 @@ def _redact_json_credentials(text: str) -> str:
                 cleaned["value"] = _REDACTED
                 return cleaned
             if str(value.get("kind", "")).casefold() == "secret":
-                cleaned = dict(value)
-                for secret_key in ("data", "stringData"):
-                    if secret_key in cleaned:
-                        cleaned[secret_key] = _REDACTED
+                cleaned = {}
+                for key, item in value.items():
+                    if key in ("data", "stringData"):
+                        cleaned[key] = _REDACTED
+                    elif str(key).endswith("last-applied-configuration"):
+                        cleaned[key] = clean_annotation(item)
+                    else:
+                        cleaned[key] = walk(item)
                 return cleaned
             cleaned = {}
             for key, item in value.items():
                 if is_credential_key(key):
                     cleaned[key] = _REDACTED
+                elif str(key).endswith("last-applied-configuration"):
+                    cleaned[key] = clean_annotation(item)
                 else:
                     cleaned[key] = walk(item)
             return cleaned
@@ -740,8 +755,45 @@ def _anchor_scalar(rest: str) -> str:
 
 def _yaml_anchor_values(text: str) -> dict[str, str]:
     values: dict[str, str] = {}
-    for match in re.finditer(r"&([A-Za-z0-9_-]+)[ \t]*", text):
-        values[match.group(1)] = _anchor_scalar(text[match.end() :])
+    quote: str | None = None
+    escaped = False
+    in_comment = False
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if in_comment:
+            if char == "\n":
+                in_comment = False
+            index += 1
+            continue
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            index += 1
+            continue
+        if char == "#" and (
+            index == 0 or text[index - 1] in " \t\n"
+        ):
+            in_comment = True
+            index += 1
+            continue
+        if char in "\"'" and _starts_yaml_quoted_scalar(text, index):
+            quote = char
+            index += 1
+            continue
+        if char == "&":
+            match = re.match(r"&([A-Za-z0-9_-]+)[ \t]*", text[index:])
+            if match is not None:
+                values[match.group(1)] = _anchor_scalar(
+                    text[index + match.end() :]
+                )
+                index += match.end()
+                continue
+        index += 1
     return values
 
 
@@ -976,6 +1028,14 @@ def _redact_anchored_secret_data(text: str, anchor: str) -> str:
 
 
 def _redact_kubernetes_secret_data(text: str) -> str:
+    stripped = text.strip()
+    if stripped.startswith(("{", "[")):
+        try:
+            json.loads(text)
+        except ValueError:
+            pass
+        else:
+            return text
     text = _normalize_escaped_kind_key(text)
     text = _normalize_escaped_secret_kind(text)
     anchors = {match.group(1) for match in _K8S_SECRET_ANCHOR.finditer(text)}
