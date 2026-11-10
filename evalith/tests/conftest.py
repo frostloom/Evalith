@@ -104,6 +104,15 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "quoted-env.yaml").write_text(
+        'env:\n  - "name": AWS_SECRET_ACCESS_KEY\n'
+        '    "value": synthetic-quoted-env\n',
+        encoding="utf-8",
+    )
+    (root / "config" / "eof-reordered-env.yaml").write_text(
+        "env:\n- value: synthetic-eof-reordered\n  name: PASSWORD",
+        encoding="utf-8",
+    )
     (root / "config" / "aws-session-env.yaml").write_text(
         "- name: AWS_SESSION_TOKEN\n  value: synthetic-aws-session\n",
         encoding="utf-8",
