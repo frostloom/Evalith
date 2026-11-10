@@ -104,6 +104,11 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "flow-merge-env.yaml").write_text(
+        "defaults: &entry {name: DB_PASSWORD}\n"
+        "env: [{<<: *entry, value: synthetic-flow-merge}]\n",
+        encoding="utf-8",
+    )
     (root / "config" / "flow-alias-kind-secret.yaml").write_text(
         "x-kind: &k Secret\nshared: &d {foo: c2VjcmV0LWZsb3ctYWxpYXM=}\n"
         "resource: {kind: *k, data: *d}\n",

@@ -181,6 +181,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "c2VjcmV0LWZsb3ctYWxpYXM=" not in request["body"]
     assert "synthetic-merge-first" not in request["body"]
     assert "synthetic-merge-second" not in request["body"]
+    assert "synthetic-flow-merge" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -268,6 +269,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "c2VjcmV0LWZsb3ctYWxpYXM=" not in request["body"]
     assert "synthetic-merge-first" not in request["body"]
     assert "synthetic-merge-second" not in request["body"]
+    assert "synthetic-flow-merge" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1173,6 +1175,10 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
         "env:\n  - &entry\n    name: DB_PASSWORD\n"
         "    value: merge-first\n  - <<: *entry\n"
         "    value: merge-second\n"
+    )
+    assert "flow-merge" not in redact_text(
+        "defaults: &entry {name: DB_PASSWORD}\n"
+        "env: [{<<: *entry, value: flow-merge}]\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

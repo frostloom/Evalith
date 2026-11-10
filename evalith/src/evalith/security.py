@@ -472,7 +472,7 @@ _K8S_ITEM_VALUE = re.compile(
 
 _FLOW_FIELD_SEGMENT = re.compile(
     r"^[ \t\r\n]*(?:#[^\r\n]*(?:\r?\n|$)[ \t\r\n]*)*"
-    r"[\"']?([A-Za-z0-9_-]+)[\"']?[ \t\r\n]*:[ \t\r\n]*(.*)$",
+    r"[\"']?([A-Za-z0-9_<>-]+)[\"']?[ \t\r\n]*:[ \t\r\n]*(.*)$",
     re.S,
 )
 
@@ -572,12 +572,27 @@ def _redact_flow_map_block(
     fields = _flow_segment_fields(inner)
     name_field = fields.get("name")
     value_field = fields.get("value")
-    if name_field is not None and value_field is not None:
+    if name_field is None and value_field is not None:
+        merge_field = fields.get("<<")
+        if merge_field is not None:
+            merged = _yaml_key_name(
+                _strip_yaml_comment(inner[merge_field[0] : merge_field[1]])
+            )
+            if merged.startswith("*") and len(merged) > 1:
+                name = _anchor_mapping_name(source, merged[1:]) or ""
+            else:
+                name = ""
+        else:
+            name = ""
+    elif name_field is not None:
         name = _resolve_env_name(
             source,
             inner[name_field[0] : name_field[1]],
             base_offset + 1 + name_field[0],
         )
+    else:
+        name = ""
+    if value_field is not None:
         if is_credential_key(name):
             inner = (
                 inner[: value_field[0]]
@@ -838,6 +853,21 @@ def _resolve_env_name(
     if raw.startswith("*") and len(raw) > 1:
         return _yaml_anchor_values(text, before=position).get(raw[1:], raw)
     return raw
+
+
+def _anchor_mapping_name(text: str, anchor: str) -> str | None:
+    match = re.search(rf"&{re.escape(anchor)}\b", text)
+    if match is None:
+        return None
+    rest = text[match.end() :].lstrip(" \t")
+    if rest.startswith("{"):
+        end = _flow_mapping_end(rest, 0)
+        fields = _flow_segment_fields(rest[1:end])
+        name_field = fields.get("name")
+        if name_field is None:
+            return None
+        return _yaml_key_name(rest[1 + name_field[0] : 1 + name_field[1]])
+    return _anchor_block_name(text, anchor)
 
 
 def _anchor_block_name(text: str, anchor: str) -> str | None:
