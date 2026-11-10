@@ -104,6 +104,15 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "invalid-unicode.yaml").write_text(
+        'kind: "\\U00110000"\nkind: "\\u12"\n',
+        encoding="utf-8",
+    )
+    (root / "config" / "flow-name-redefinition-env.yaml").write_text(
+        "label: &n API_KEY\nshared: &v synthetic-redefined-flow-value\n"
+        "env: [{name: *n, value: *v}]\nlater: &n PORT\n",
+        encoding="utf-8",
+    )
     (root / "config" / "java-properties-newline.properties").write_text(
         "db.password: synthetic-alpha,synthetic-private-tail\n",
         encoding="utf-8",

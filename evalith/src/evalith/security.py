@@ -706,7 +706,9 @@ def _redact_kubernetes_env_values(text: str) -> str:
             continue
         if name_field is not None:
             name = _resolve_env_name(
-                text, inner[name_field[0] : name_field[1]]
+                text,
+                inner[name_field[0] : name_field[1]],
+                start + 1 + name_field[0],
             )
         else:
             merge_field = fields.get("<<")
@@ -1194,7 +1196,10 @@ def _decode_yaml_scalar(raw: str) -> str:
         def replace(match: re.Match[str]) -> str:
             token = match.group(1)
             if token[0] in "xuU":
-                return chr(int(token[1:], 16))
+                try:
+                    return chr(int(token[1:], 16))
+                except (ValueError, OverflowError):
+                    return _REDACTED
             return _YAML_ESCAPE_CHARS.get(token, token)
 
         return _YAML_ESCAPE.sub(replace, body)
