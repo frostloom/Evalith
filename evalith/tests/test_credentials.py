@@ -149,6 +149,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-nested-env" not in request["body"]
     assert "synthetic-smtp-env" not in request["body"]
     assert "synthetic-redis-json" not in request["body"]
+    assert "synthetic-alias-env" not in request["body"]
+    assert "synthetic-flow-brace-env" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -204,6 +206,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-nested-env" not in request["body"]
     assert "synthetic-smtp-env" not in request["body"]
     assert "synthetic-redis-json" not in request["body"]
+    assert "synthetic-alias-env" not in request["body"]
+    assert "synthetic-flow-brace-env" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -999,6 +1003,13 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "redis-json" not in redact_text(
         '{"name": "REDIS_PASSWORD", "value": "redis-json"}'
+    )
+    alias_env = (
+        "shared: &v alias-env\nenv:\n- name: API_KEY\n  value: *v\n"
+    )
+    assert "alias-env" not in redact_text(alias_env)
+    assert "flow-brace-env" not in redact_text(
+        'env: [{name: PASSWORD, value: "abc{flow-brace-env}xyz"}]'
     )
     assert "escaped-flow" not in redact_text(
         'env: [{"name": "API\\u005fKEY", "value": "escaped-flow"}]'

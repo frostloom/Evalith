@@ -104,6 +104,16 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "alias-env.yaml").write_text(
+        "shared: &v synthetic-alias-env\nenv:\n"
+        "- name: API_KEY\n  value: *v\n"
+        "env: [{name: API_KEY, value: *v}]\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "flow-brace-env.yaml").write_text(
+        'env: [{name: PASSWORD, value: "abc{synthetic-flow-brace-env}xyz"}]\n',
+        encoding="utf-8",
+    )
     (root / "config" / "nested-env.yaml").write_text(
         "containers:\n- name: app\n  env:\n"
         "  - value: synthetic-nested-env\n    name: PASSWORD\n",

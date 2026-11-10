@@ -460,8 +460,7 @@ _K8S_FLOW_FIELD = re.compile(
 
 
 def _redact_kubernetes_flow_env(text: str) -> str:
-    def replace(match: re.Match[str]) -> str:
-        block = match.group(0)
+    def redact_block(block: str) -> str:
         fields = {
             field.group(1): field for field in _K8S_FLOW_FIELD.finditer(block)
         }
@@ -478,10 +477,60 @@ def _redact_kubernetes_flow_env(text: str) -> str:
             + block[value_field.end(2) :]
         )
 
-    return _K8S_FLOW_MAP.sub(replace, text)
+    out: list[str] = []
+    cursor = 0
+    for match in re.finditer(r"\{", text):
+        if match.start() < cursor:
+            continue
+        end = _flow_mapping_end(text, match.start())
+        if end <= match.start() + 1:
+            continue
+        out.append(text[cursor : match.start()])
+        out.append(redact_block(text[match.start() : end]))
+        cursor = end
+    out.append(text[cursor:])
+    return "".join(out)
 
 
 def _redact_kubernetes_env_values(text: str) -> str:
+    aliases: set[str] = set()
+    for match in _K8S_ENV_ENTRY.finditer(text):
+        if is_credential_key(_yaml_key_name(match.group("name"))):
+            value = match.group("value").lstrip()
+            if value.startswith("*") and len(value) > 1:
+                aliases.add(value[1:].strip())
+    for match in _K8S_ITEM.finditer(text):
+        name_match = _K8S_ITEM_NAME.search(match.group(0))
+        value_match = _K8S_ITEM_VALUE.search(match.group(0))
+        if name_match is None or value_match is None:
+            continue
+        if not is_credential_key(_yaml_key_name(name_match.group("name"))):
+            continue
+        value = value_match.group("value").lstrip()
+        if value.startswith("*") and len(value) > 1:
+            aliases.add(value[1:].strip())
+    for flow_match in re.finditer(r"\{", text):
+        end = _flow_mapping_end(text, flow_match.start())
+        if end <= flow_match.start() + 1:
+            continue
+        fields = {
+            field.group(1): field
+            for field in _K8S_FLOW_FIELD.finditer(
+                text[flow_match.start() : end]
+            )
+        }
+        name_field = fields.get("name")
+        value_field = fields.get("value")
+        if name_field is None or value_field is None:
+            continue
+        if not is_credential_key(_yaml_key_name(name_field.group(2))):
+            continue
+        value = value_field.group(2).strip().strip("\"'")
+        if value.startswith("*") and len(value) > 1:
+            aliases.add(value[1:].strip())
+    for alias in aliases:
+        text = _redact_anchored_secret_data(text, alias)
+
     def replace(match: re.Match[str]) -> str:
         name = _yaml_key_name(match.group("name"))
         if not is_credential_key(name):
