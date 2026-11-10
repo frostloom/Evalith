@@ -164,6 +164,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-multiline-db" not in request["body"]
     assert "synthetic-comment-brace-end" not in request["body"]
     assert "synthetic-escaped-env-key" not in request["body"]
+    assert "synthetic-apostrophe-env" not in request["body"]
+    assert "synthetic-name-alias" not in request["body"]
+    assert "synthetic-name-comment" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -234,6 +237,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-multiline-db" not in request["body"]
     assert "synthetic-comment-brace-end" not in request["body"]
     assert "synthetic-escaped-env-key" not in request["body"]
+    assert "synthetic-apostrophe-env" not in request["body"]
+    assert "synthetic-name-alias" not in request["body"]
+    assert "synthetic-name-comment" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1079,6 +1085,16 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "escaped-env-key" not in redact_text(
         'env:\n  - "\\u006eame": OPENAI_API_KEY\n'
         '    "\\u0076alue": escaped-env-key\n'
+    )
+    assert "apostrophe-env" not in redact_text(
+        "description: user's agent\n"
+        "env: [{name: DB_PASSWORD, value: apostrophe-env}]"
+    )
+    assert "name-alias" not in redact_text(
+        "label: &n DB_PASSWORD\nenv:\n- name: *n\n  value: name-alias\n"
+    )
+    assert "name-comment" not in redact_text(
+        "env: [{name: DB_PASSWORD # production\n, value: name-comment}]"
     )
     assert "escaped-flow" not in redact_text(
         'env: [{"name": "API\\u005fKEY", "value": "escaped-flow"}]'

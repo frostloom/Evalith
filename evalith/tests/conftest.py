@@ -104,6 +104,21 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "apostrophe-env.yaml").write_text(
+        "description: user's agent\n"
+        "env: [{name: DB_PASSWORD, value: synthetic-apostrophe-env}]\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "name-alias-env.yaml").write_text(
+        "label: &n DB_PASSWORD\nenv:\n- name: *n\n"
+        "  value: synthetic-name-alias\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "name-comment-env.yaml").write_text(
+        "env: [{name: DB_PASSWORD # production\n"
+        ", value: synthetic-name-comment}]\n",
+        encoding="utf-8",
+    )
     (root / "config" / "comment-brace-end-env.yaml").write_text(
         "env: [{name: DB_PASSWORD, # }\n"
         "  value: synthetic-comment-brace-end}]\n",

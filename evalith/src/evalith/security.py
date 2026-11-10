@@ -485,7 +485,7 @@ def _flow_segment_fields(inner: str) -> dict[str, tuple[int, int]]:
             continue
         if char == "#" and (index == 0 or inner[index - 1] in " \t\n"):
             in_comment = True
-        elif char in "\"'":
+        elif char in "\"'" and _starts_yaml_quoted_scalar(inner, index):
             quote = char
         elif char in "[{":
             depth += 1
@@ -526,16 +526,17 @@ def _unquoted_brace_starts(text: str) -> list[int]:
             continue
         if char == "#" and (index == 0 or text[index - 1] in " \t\n"):
             in_comment = True
-        elif char in "\"'":
+        elif char in "\"'" and _starts_yaml_quoted_scalar(text, index):
             quote = char
         elif char == "{":
             starts.append(index)
     return starts
 
 
-def _redact_flow_map_block(block: str) -> str:
+def _redact_flow_map_block(block: str, source: str | None = None) -> str:
     if len(block) < 2 or not block.startswith("{") or not block.endswith("}"):
         return block
+    source = source if source is not None else block
     inner = block[1:-1]
     out: list[str] = []
     cursor = 0
@@ -544,14 +545,16 @@ def _redact_flow_map_block(block: str) -> str:
             continue
         end = _flow_mapping_end(inner, start)
         out.append(inner[cursor:start])
-        out.append(_redact_flow_map_block(inner[start:end]))
+        out.append(_redact_flow_map_block(inner[start:end], source))
         cursor = end
     inner = "".join(out) + inner[cursor:]
     fields = _flow_segment_fields(inner)
     name_field = fields.get("name")
     value_field = fields.get("value")
     if name_field is not None and value_field is not None:
-        name = _yaml_key_name(inner[name_field[0] : name_field[1]])
+        name = _resolve_env_name(
+            source, inner[name_field[0] : name_field[1]]
+        )
         if is_credential_key(name):
             inner = (
                 inner[: value_field[0]]
@@ -580,7 +583,7 @@ def _redact_kubernetes_flow_env(text: str) -> str:
         if end <= start + 1:
             continue
         out.append(text[cursor:start])
-        out.append(_redact_flow_map_block(text[start:end]))
+        out.append(_redact_flow_map_block(text[start:end], text))
         cursor = end
     out.append(text[cursor:])
     return "".join(out)
@@ -606,7 +609,9 @@ def _redact_kubernetes_env_values(text: str) -> str:
         value_match = _K8S_ITEM_VALUE.search(match.group(0))
         if name_match is None or value_match is None:
             continue
-        if not is_credential_key(_yaml_key_name(name_match.group("name"))):
+        if not is_credential_key(
+            _resolve_env_name(text, name_match.group("name"))
+        ):
             continue
         value = value_match.group("value").lstrip()
         if value.startswith("*") and len(value) > 1:
@@ -621,7 +626,7 @@ def _redact_kubernetes_env_values(text: str) -> str:
         value_field = fields.get("value")
         if name_field is None or value_field is None:
             continue
-        name = _yaml_key_name(inner[name_field[0] : name_field[1]])
+        name = _resolve_env_name(text, inner[name_field[0] : name_field[1]])
         if not is_credential_key(name):
             continue
         value = inner[value_field[0] : value_field[1]].strip().strip("\"'")
@@ -631,7 +636,7 @@ def _redact_kubernetes_env_values(text: str) -> str:
         text = _redact_anchored_secret_data(text, alias)
 
     def replace(match: re.Match[str]) -> str:
-        name = _yaml_key_name(match.group("name"))
+        name = _resolve_env_name(text, match.group("name"))
         if not is_credential_key(name):
             return match.group(0)
         return text[match.start() : match.start("body")] + match.group("body") + _REDACTED
@@ -674,6 +679,45 @@ _K8S_SECRET_FLOW_OPEN = re.compile(
 )
 
 
+def _starts_yaml_quoted_scalar(text: str, index: int) -> bool:
+    return index == 0 or text[index - 1] in " \t\r\n[{,:=-"
+
+
+def _strip_yaml_comment(value: str) -> str:
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(value):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in "\"'" and _starts_yaml_quoted_scalar(value, index):
+            quote = char
+        elif char == "#" and (index == 0 or value[index - 1] in " \t"):
+            return value[:index].rstrip()
+    return value.strip()
+
+
+def _yaml_anchor_values(text: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for match in re.finditer(
+        r"&([A-Za-z0-9_-]+)[ \t]+([^\s#]+)", text
+    ):
+        values[match.group(1)] = match.group(2)
+    return values
+
+
+def _resolve_env_name(text: str, value: str) -> str:
+    raw = _yaml_key_name(_strip_yaml_comment(value))
+    if raw.startswith("*") and len(raw) > 1:
+        return _yaml_anchor_values(text).get(raw[1:], raw)
+    return raw
+
+
 def _flow_mapping_end(text: str, start: int) -> int:
     depth = 0
     quote: str | None = None
@@ -695,7 +739,7 @@ def _flow_mapping_end(text: str, start: int) -> int:
             continue
         if char == "#" and (index == start or text[index - 1] in " \t\n"):
             in_comment = True
-        elif char in "\"'":
+        elif char in "\"'" and _starts_yaml_quoted_scalar(text, index):
             quote = char
         elif char == "{":
             depth += 1
