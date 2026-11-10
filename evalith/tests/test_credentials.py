@@ -151,6 +151,11 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-redis-json" not in request["body"]
     assert "synthetic-alias-env" not in request["body"]
     assert "synthetic-flow-brace-env" not in request["body"]
+    assert "synthetic-nested-flow" not in request["body"]
+    assert "synthetic-json-alpha" not in request["body"]
+    assert "synthetic-json-beta" not in request["body"]
+    assert "synthetic-sendgrid" not in request["body"]
+    assert "synthetic-twilio" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -208,6 +213,11 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-redis-json" not in request["body"]
     assert "synthetic-alias-env" not in request["body"]
     assert "synthetic-flow-brace-env" not in request["body"]
+    assert "synthetic-nested-flow" not in request["body"]
+    assert "synthetic-json-alpha" not in request["body"]
+    assert "synthetic-json-beta" not in request["body"]
+    assert "synthetic-sendgrid" not in request["body"]
+    assert "synthetic-twilio" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1010,6 +1020,22 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "alias-env" not in redact_text(alias_env)
     assert "flow-brace-env" not in redact_text(
         'env: [{name: PASSWORD, value: "abc{flow-brace-env}xyz"}]'
+    )
+    assert "nested-flow" not in redact_text(
+        "{env: [{name: API_KEY, value: nested-flow}, "
+        "{name: APP_NAME, value: ordinary}]}"
+    )
+    nested_json = redact_text(
+        '{"env":[{"name":"PASSWORD","value":"json-alpha"},'
+        '{"name":"API_KEY","value":"json-beta"}]}'
+    )
+    assert "json-alpha" not in nested_json
+    assert "json-beta" not in nested_json
+    assert "vendor-sendgrid" not in redact_text(
+        "- name: SENDGRID_API_KEY\n  value: vendor-sendgrid\n"
+    )
+    assert "vendor-twilio" not in redact_text(
+        "- name: TWILIO_AUTH_TOKEN\n  value: vendor-twilio\n"
     )
     assert "escaped-flow" not in redact_text(
         'env: [{"name": "API\\u005fKEY", "value": "escaped-flow"}]'

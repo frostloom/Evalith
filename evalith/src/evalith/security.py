@@ -308,13 +308,16 @@ _JSON_CREDENTIAL_PREFIXES = {
 
 
 def is_credential_key(key: object) -> bool:
-    normalized = re.sub(r"[^a-z0-9]", "", str(key).casefold())
+    raw_key = str(key)
+    normalized = re.sub(r"[^a-z0-9]", "", raw_key.casefold())
     if normalized in _JSON_EXACT_CREDENTIAL_KEYS:
         return True
     for suffix in _JSON_CREDENTIAL_SUFFIXES:
         if not normalized.endswith(suffix):
             continue
         prefix = normalized[: -len(suffix)]
+        if prefix and re.search(r"[^A-Za-z0-9]", raw_key):
+            return True
         while prefix:
             if prefix in _JSON_CREDENTIAL_PREFIXES or re.fullmatch(
                 r"[a-z]+[0-9]+", prefix
@@ -452,30 +455,86 @@ _K8S_ITEM_VALUE = re.compile(
 )
 
 
-_K8S_FLOW_MAP = re.compile(r"\{[^{}]*\}")
-_K8S_FLOW_FIELD = re.compile(
-    r"(?:^|[{,])[ \t]*[\"']?([A-Za-z0-9_-]+)[\"']?[ \t]*:[ \t]*"
-    r"(\"[^\"]*\"|'[^']*'|[^,}]*)"
+_FLOW_FIELD_SEGMENT = re.compile(
+    r"^[ \t]*[\"']?([A-Za-z0-9_-]+)[\"']?[ \t]*:[ \t]*(.*)$",
+    re.S,
 )
 
 
+def _flow_segment_fields(inner: str) -> dict[str, tuple[int, int]]:
+    fields: dict[str, tuple[int, int]] = {}
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    start = 0
+    segments: list[tuple[int, int]] = []
+    for index, char in enumerate(inner):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in "\"'":
+            quote = char
+        elif char in "[{":
+            depth += 1
+        elif char in "]}":
+            depth -= 1
+        elif char == "," and depth == 0:
+            segments.append((start, index))
+            start = index + 1
+    segments.append((start, len(inner)))
+    for seg_start, seg_end in segments:
+        raw = inner[seg_start:seg_end]
+        match = _FLOW_FIELD_SEGMENT.match(raw)
+        if match is None:
+            continue
+        value_start = seg_start + match.start(2)
+        value_end = seg_start + match.end(2)
+        fields[match.group(1)] = (value_start, value_end)
+    return fields
+
+
+def _redact_flow_map_block(block: str) -> str:
+    if len(block) < 2 or not block.startswith("{") or not block.endswith("}"):
+        return block
+    inner = block[1:-1]
+    out: list[str] = []
+    cursor = 0
+    for match in re.finditer(r"\{", inner):
+        if match.start() < cursor:
+            continue
+        end = _flow_mapping_end(inner, match.start())
+        out.append(inner[cursor : match.start()])
+        out.append(_redact_flow_map_block(inner[match.start() : end]))
+        cursor = end
+    inner = "".join(out) + inner[cursor:]
+    fields = _flow_segment_fields(inner)
+    name_field = fields.get("name")
+    value_field = fields.get("value")
+    if name_field is not None and value_field is not None:
+        name = _yaml_key_name(inner[name_field[0] : name_field[1]])
+        if is_credential_key(name):
+            inner = (
+                inner[: value_field[0]]
+                + _REDACTED
+                + inner[value_field[1] :]
+            )
+    return "{" + inner + "}"
+
+
 def _redact_kubernetes_flow_env(text: str) -> str:
-    def redact_block(block: str) -> str:
-        fields = {
-            field.group(1): field for field in _K8S_FLOW_FIELD.finditer(block)
-        }
-        name_field = fields.get("name")
-        value_field = fields.get("value")
-        if name_field is None or value_field is None:
-            return block
-        name = _yaml_key_name(name_field.group(2))
-        if not is_credential_key(name):
-            return block
-        return (
-            block[: value_field.start(2)]
-            + _REDACTED
-            + block[value_field.end(2) :]
-        )
+    stripped = text.strip()
+    if stripped.startswith(("{", "[")):
+        try:
+            json.loads(text)
+        except ValueError:
+            pass
+        else:
+            return text
 
     out: list[str] = []
     cursor = 0
@@ -486,11 +545,10 @@ def _redact_kubernetes_flow_env(text: str) -> str:
         if end <= match.start() + 1:
             continue
         out.append(text[cursor : match.start()])
-        out.append(redact_block(text[match.start() : end]))
+        out.append(_redact_flow_map_block(text[match.start() : end]))
         cursor = end
     out.append(text[cursor:])
     return "".join(out)
-
 
 def _redact_kubernetes_env_values(text: str) -> str:
     aliases: set[str] = set()
@@ -510,22 +568,20 @@ def _redact_kubernetes_env_values(text: str) -> str:
         if value.startswith("*") and len(value) > 1:
             aliases.add(value[1:].strip())
     for flow_match in re.finditer(r"\{", text):
-        end = _flow_mapping_end(text, flow_match.start())
-        if end <= flow_match.start() + 1:
+        start = flow_match.start()
+        end = _flow_mapping_end(text, start)
+        if end <= start + 1:
             continue
-        fields = {
-            field.group(1): field
-            for field in _K8S_FLOW_FIELD.finditer(
-                text[flow_match.start() : end]
-            )
-        }
+        inner = text[start + 1 : end - 1]
+        fields = _flow_segment_fields(inner)
         name_field = fields.get("name")
         value_field = fields.get("value")
         if name_field is None or value_field is None:
             continue
-        if not is_credential_key(_yaml_key_name(name_field.group(2))):
+        name = inner[name_field[0] : name_field[1]].strip(" \t\"'")
+        if not is_credential_key(name):
             continue
-        value = value_field.group(2).strip().strip("\"'")
+        value = inner[value_field[0] : value_field[1]].strip().strip("\"'")
         if value.startswith("*") and len(value) > 1:
             aliases.add(value[1:].strip())
     for alias in aliases:

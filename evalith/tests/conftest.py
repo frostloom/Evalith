@@ -104,6 +104,21 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "nested-flow-env.yaml").write_text(
+        '{env: [{name: API_KEY, value: synthetic-nested-flow}, '
+        '{name: APP_NAME, value: ordinary}]}\n',
+        encoding="utf-8",
+    )
+    (root / "config" / "multi-json-env.json").write_text(
+        '{"env": [{"name": "PASSWORD", "value": "synthetic-json-alpha"}, '
+        '{"name": "API_KEY", "value": "synthetic-json-beta"}]}\n',
+        encoding="utf-8",
+    )
+    (root / "config" / "vendor-env.yaml").write_text(
+        "- name: SENDGRID_API_KEY\n  value: synthetic-sendgrid\n"
+        "- name: TWILIO_AUTH_TOKEN\n  value: synthetic-twilio\n",
+        encoding="utf-8",
+    )
     (root / "config" / "alias-env.yaml").write_text(
         "shared: &v synthetic-alias-env\nenv:\n"
         "- name: API_KEY\n  value: *v\n"
