@@ -536,6 +536,12 @@ def _read_gitignore(root_fd: int) -> list[tuple[str, bool]]:
             "项目 .gitignore 不是普通文件，不能读取",
             code="gitignore_not_regular",
         )
+    if info.st_nlink > 1:
+        os.close(fd)
+        raise AccessError(
+            "项目 .gitignore 是硬链接，不会读取",
+            code="gitignore_hard_link",
+        )
     try:
         chunks: list[bytes] = []
         total = 0

@@ -972,6 +972,29 @@ def test_explicit_selection_overrides_noise_not_sensitive(tmp_path: Path) -> Non
     assert ".kube/config" not in traversed
 
 
+def test_hard_linked_gitignore_is_rejected(tmp_path: Path) -> None:
+    root = tmp_path / "gitignore-hardlink-root"
+    root.mkdir()
+    outside = tmp_path / "outside.gitignore"
+    outside.write_text("secret\n", encoding="utf-8")
+    os.link(outside, root / ".gitignore")
+    with pytest.raises(AccessError) as excinfo:
+        scan_project(root, [], [])
+    assert excinfo.value.code == "gitignore_hard_link"
+
+
+def test_nested_hard_linked_gitignore_is_rejected(tmp_path: Path) -> None:
+    root = tmp_path / "nested-gitignore-hardlink-root"
+    sub = root / "sub"
+    sub.mkdir(parents=True)
+    outside = tmp_path / "nested-outside.gitignore"
+    outside.write_text("secret\n", encoding="utf-8")
+    os.link(outside, sub / ".gitignore")
+    with pytest.raises(AccessError) as excinfo:
+        scan_project(root, ["sub"], [])
+    assert excinfo.value.code in {"gitignore_hard_link", "hard_link_denied"}
+
+
 def test_hard_linked_file_is_never_read(tmp_path: Path) -> None:
     root = tmp_path / "hardlink-root"
     root.mkdir()

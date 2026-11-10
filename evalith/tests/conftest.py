@@ -104,6 +104,15 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "prefixed-env.yaml").write_text(
+        "- name: PROD_DB_PASSWORD\n  value: synthetic-prefixed-env\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "prefixed-env.json").write_text(
+        '{"env": [{"name": "PROD_DB_PASSWORD", '
+        '"value": "synthetic-prefixed-json"}]}\n',
+        encoding="utf-8",
+    )
     (root / "config" / "escaped-env.yaml").write_text(
         '- name: "API\\u005fKEY"\n  value: synthetic-escaped-env\n'
         '- name: "API\\u005fKEY"\n  value: synthetic-escaped-flow\n',

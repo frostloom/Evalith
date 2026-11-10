@@ -288,6 +288,19 @@ _JSON_CREDENTIAL_PREFIXES = {
     "service",
     "svc",
     "database",
+    "prod",
+    "production",
+    "dev",
+    "development",
+    "stage",
+    "staging",
+    "test",
+    "qa",
+    "uat",
+    "local",
+    "primary",
+    "replica",
+    "readonly",
 }
 
 
@@ -299,10 +312,19 @@ def is_credential_key(key: object) -> bool:
         if not normalized.endswith(suffix):
             continue
         prefix = normalized[: -len(suffix)]
-        if prefix in _JSON_CREDENTIAL_PREFIXES or re.fullmatch(
-            r"[a-z]+[0-9]+", prefix
-        ):
-            return True
+        while prefix:
+            if prefix in _JSON_CREDENTIAL_PREFIXES or re.fullmatch(
+                r"[a-z]+[0-9]+", prefix
+            ):
+                return True
+            stripped = False
+            for known in sorted(_JSON_CREDENTIAL_PREFIXES, key=len, reverse=True):
+                if prefix.endswith(known) and len(prefix) > len(known):
+                    prefix = prefix[: -len(known)]
+                    stripped = True
+                    break
+            if not stripped:
+                break
     return False
 
 
