@@ -109,6 +109,11 @@ def project_root(tmp_path: Path) -> Path:
         "env: [{name: DB_PASSWORD, value: synthetic-apostrophe-env}]\n",
         encoding="utf-8",
     )
+    (root / "config" / "reordered-name-alias-env.yaml").write_text(
+        "label: &n DB_PASSWORD\nenv:\n- value: synthetic-reordered-alias\n"
+        "  name: *n\n",
+        encoding="utf-8",
+    )
     (root / "config" / "name-alias-env.yaml").write_text(
         "label: &n DB_PASSWORD\nenv:\n- name: *n\n"
         "  value: synthetic-name-alias\n",

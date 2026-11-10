@@ -648,7 +648,7 @@ def _redact_kubernetes_env_values(text: str) -> str:
         name_match = _K8S_ITEM_NAME.search(block)
         if name_match is None:
             return block
-        name = _yaml_key_name(name_match.group("name"))
+        name = _resolve_env_name(text, name_match.group("name"))
         if not is_credential_key(name):
             return block
         value_match = _K8S_ITEM_VALUE.search(block)
