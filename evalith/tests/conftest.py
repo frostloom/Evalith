@@ -104,6 +104,12 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "java-properties-punctuation.properties").write_text(
+        "password=:prefix\\\n  synthetic-punctuation-tail\n"
+        'db.password "synthetic-quoted-password"\n'
+        'api.token "first\\\n  synthetic-quoted-tail"\n',
+        encoding="utf-8",
+    )
     (root / "config" / "java-properties-colon-continuation.properties").write_bytes(
         b"db.password: first\\\n  second\\\n  synthetic-colon-tail\n"
         b"api.token: second\\\r\n  more\\\r\n  synthetic-colon-crlf-tail\r\n"

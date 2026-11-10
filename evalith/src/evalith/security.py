@@ -1456,7 +1456,16 @@ def _redact_java_properties(text: str) -> str:
         ):
             continue
         value = match.group("value").lstrip()
-        if value.startswith((":", "=", '"', "'", "{", "[", "&", "*", "|", ">")):
+        if value.startswith(('"""', "'''")):
+            continue
+        if value.startswith(('"', "'")):
+            quote = value[0]
+            if value.count(quote) < 2 and not physical_value.endswith("\\"):
+                continue
+        if (
+            value.startswith((":", "=", "{", "[", "&", "*", "|", ">"))
+            and not physical_value.endswith("\\")
+        ):
             continue
         end = match.end()
         physical = match.group("value").rstrip()
