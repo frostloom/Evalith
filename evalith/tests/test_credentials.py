@@ -172,6 +172,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-block-name" not in request["body"]
     assert "synthetic-anchor-comment" not in request["body"]
     assert "c3ludGhldGljLWFubm90YXRpb24=" not in request["body"]
+    assert "synthetic-tagged-anchor-kind" not in request["body"]
+    assert "synthetic-yaml-annotation" not in request["body"]
+    assert "synthetic-later-anchor" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -250,6 +253,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-block-name" not in request["body"]
     assert "synthetic-anchor-comment" not in request["body"]
     assert "c3ludGhldGljLWFubm90YXRpb24=" not in request["body"]
+    assert "synthetic-tagged-anchor-kind" not in request["body"]
+    assert "synthetic-yaml-annotation" not in request["body"]
+    assert "synthetic-later-anchor" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1120,6 +1126,20 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "anchor-comment" not in redact_text(
         "label: &n DB_PASSWORD\n# &n PORT\nenv:\n- name: *n\n"
         "  value: anchor-comment\n"
+    )
+    assert "tagged-anchor-kind" not in redact_text(
+        "type: &k !!str Secret\nkind: *k\nstringData:\n"
+        "  payload: tagged-anchor-kind\n"
+    )
+    assert "c3ludGhldGljLXlhbWw=" not in redact_text(
+        "kind: Secret\nmetadata:\n  annotations:\n"
+        "    kubectl.kubernetes.io/last-applied-configuration: "
+        '\'{"kind":"Secret","data":{"config":"c3ludGhldGljLXlhbWw="}}\'\n'
+        "stringData:\n  value: yaml-annotation\n"
+    )
+    assert "later-anchor" not in redact_text(
+        "label: &n DB_PASSWORD\nenv:\n- name: *n\n"
+        "  value: later-anchor\nother: &n PORT\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

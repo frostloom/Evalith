@@ -548,7 +548,9 @@ def _unquoted_brace_starts(text: str) -> list[int]:
     return starts
 
 
-def _redact_flow_map_block(block: str, source: str | None = None) -> str:
+def _redact_flow_map_block(
+    block: str, source: str | None = None, base_offset: int = 0
+) -> str:
     if len(block) < 2 or not block.startswith("{") or not block.endswith("}"):
         return block
     source = source if source is not None else block
@@ -560,7 +562,11 @@ def _redact_flow_map_block(block: str, source: str | None = None) -> str:
             continue
         end = _flow_mapping_end(inner, start)
         out.append(inner[cursor:start])
-        out.append(_redact_flow_map_block(inner[start:end], source))
+        out.append(
+            _redact_flow_map_block(
+                inner[start:end], source, base_offset + 1 + start
+            )
+        )
         cursor = end
     inner = "".join(out) + inner[cursor:]
     fields = _flow_segment_fields(inner)
@@ -568,7 +574,9 @@ def _redact_flow_map_block(block: str, source: str | None = None) -> str:
     value_field = fields.get("value")
     if name_field is not None and value_field is not None:
         name = _resolve_env_name(
-            source, inner[name_field[0] : name_field[1]]
+            source,
+            inner[name_field[0] : name_field[1]],
+            base_offset + 1 + name_field[0],
         )
         if is_credential_key(name):
             inner = (
@@ -598,7 +606,9 @@ def _redact_kubernetes_flow_env(text: str) -> str:
         if end <= start + 1:
             continue
         out.append(text[cursor:start])
-        out.append(_redact_flow_map_block(text[start:end], text))
+        out.append(
+            _redact_flow_map_block(text[start:end], text, start)
+        )
         cursor = end
     out.append(text[cursor:])
     return "".join(out)
@@ -626,7 +636,11 @@ def _redact_kubernetes_env_values(text: str) -> str:
         if name_match is None or value_match is None:
             continue
         if not is_credential_key(
-            _resolve_env_name(text, name_match.group("name"))
+            _resolve_env_name(
+                text,
+                name_match.group("name"),
+                match.start() + name_match.start("name"),
+            )
         ):
             continue
         value = value_match.group("value").lstrip()
@@ -652,7 +666,9 @@ def _redact_kubernetes_env_values(text: str) -> str:
         text = _redact_anchored_secret_data(text, alias)
 
     def replace(match: re.Match[str]) -> str:
-        name = _resolve_env_name(text, match.group("name"))
+        name = _resolve_env_name(
+            text, match.group("name"), match.start("name")
+        )
         if not is_credential_key(name):
             return match.group(0)
         return text[match.start() : match.start("body")] + match.group("body") + _REDACTED
@@ -664,7 +680,11 @@ def _redact_kubernetes_env_values(text: str) -> str:
         name_match = _K8S_ITEM_NAME.search(block)
         if name_match is None:
             return block
-        name = _resolve_env_name(text, name_match.group("name"))
+        name = _resolve_env_name(
+            text,
+            name_match.group("name"),
+            match.start() + name_match.start("name"),
+        )
         if not is_credential_key(name):
             return block
         value_match = _K8S_ITEM_VALUE.search(block)
@@ -753,7 +773,7 @@ def _anchor_scalar(rest: str) -> str:
     return _decode_yaml_scalar(token.split()[0] if token else "")
 
 
-def _yaml_anchor_values(text: str) -> dict[str, str]:
+def _yaml_anchor_values(text: str, before: int | None = None) -> dict[str, str]:
     values: dict[str, str] = {}
     quote: str | None = None
     escaped = False
@@ -785,7 +805,7 @@ def _yaml_anchor_values(text: str) -> dict[str, str]:
             quote = char
             index += 1
             continue
-        if char == "&":
+        if char == "&" and (before is None or index < before):
             match = re.match(r"&([A-Za-z0-9_-]+)[ \t]*", text[index:])
             if match is not None:
                 values[match.group(1)] = _anchor_scalar(
@@ -797,10 +817,12 @@ def _yaml_anchor_values(text: str) -> dict[str, str]:
     return values
 
 
-def _resolve_env_name(text: str, value: str) -> str:
+def _resolve_env_name(
+    text: str, value: str, position: int | None = None
+) -> str:
     raw = _yaml_key_name(_strip_yaml_comment(value))
     if raw.startswith("*") and len(raw) > 1:
-        return _yaml_anchor_values(text).get(raw[1:], raw)
+        return _yaml_anchor_values(text, before=position).get(raw[1:], raw)
     return raw
 
 
@@ -1038,9 +1060,9 @@ def _redact_kubernetes_secret_data(text: str) -> str:
             return text
     text = _normalize_escaped_kind_key(text)
     text = _normalize_escaped_secret_kind(text)
-    anchors = {match.group(1) for match in _K8S_SECRET_ANCHOR.finditer(text)}
+    anchor_values = _yaml_anchor_values(text)
     alias_kind = any(
-        match.group(1) in anchors
+        anchor_values.get(match.group(1), "").casefold() == "secret"
         for match in _K8S_SECRET_ALIAS_KIND.finditer(text)
     )
     flow = bool(
@@ -1062,6 +1084,7 @@ def _redact_kubernetes_secret_data(text: str) -> str:
         return f"{match.group('indent')}{match.group('key')}: {_REDACTED}\n"
 
     text = _K8S_SECRET_DATA.sub(replace, text)
+    text = _redact_yaml_last_applied(text)
     if flow:
         out: list[str] = []
         cursor = 0
@@ -1125,6 +1148,18 @@ def _redact_java_properties(text: str) -> str:
         cursor = end
     out.append(text[cursor:])
     return "".join(out)
+
+
+_YAML_LAST_APPLIED = re.compile(
+    r"(?im)^(?P<prefix>[ \t]*[\"']?kubectl\.kubernetes\.io/"
+    r"last-applied-configuration[\"']?[ \t]*:[ \t]*)(?P<value>.*)$"
+)
+
+
+def _redact_yaml_last_applied(text: str) -> str:
+    return _YAML_LAST_APPLIED.sub(
+        lambda match: f"{match.group('prefix')}\"[REDACTED]\"", text
+    )
 
 
 def redact_text(value: str) -> str:

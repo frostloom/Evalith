@@ -104,6 +104,23 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "tagged-anchor-kind-secret.yaml").write_text(
+        "type: &k !!str Secret\nkind: *k\nstringData:\n"
+        "  payload: synthetic-tagged-anchor-kind\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "yaml-secret-annotation.yaml").write_text(
+        "kind: Secret\nmetadata:\n  annotations:\n"
+        "    kubectl.kubernetes.io/last-applied-configuration: "
+        "'{\"kind\":\"Secret\",\"data\":{\"config\":\"c3ludGhldGljLXlhbWw=\"}}'\n"
+        "stringData:\n  value: synthetic-yaml-annotation\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "later-anchor-env.yaml").write_text(
+        "label: &n DB_PASSWORD\nenv:\n- name: *n\n"
+        "  value: synthetic-later-anchor\nlater: &n PORT\n",
+        encoding="utf-8",
+    )
     (root / "config" / "anchor-comment-env.yaml").write_text(
         "label: &n DB_PASSWORD\n# &n PORT\nenv:\n- name: *n\n"
         "  value: synthetic-anchor-comment\n",
