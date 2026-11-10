@@ -178,6 +178,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-tagged-block-name" not in request["body"]
     assert "synthetic-reordered-block-name" not in request["body"]
     assert "c3ludGhldGljLWxhdGVyLWtpbmQ=" not in request["body"]
+    assert "c2VjcmV0LWZsb3ctYWxpYXM=" not in request["body"]
+    assert "synthetic-merge-first" not in request["body"]
+    assert "synthetic-merge-second" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -262,6 +265,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-tagged-block-name" not in request["body"]
     assert "synthetic-reordered-block-name" not in request["body"]
     assert "c3ludGhldGljLWxhdGVyLWtpbmQ=" not in request["body"]
+    assert "c2VjcmV0LWZsb3ctYWxpYXM=" not in request["body"]
+    assert "synthetic-merge-first" not in request["body"]
+    assert "synthetic-merge-second" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1158,6 +1164,15 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "c3ludGhldGljLWxhdGVyLWtpbmQ=" not in redact_text(
         "x-kind: &k Secret\nkind: *k\ndata:\n"
         "  config: c3ludGhldGljLWxhdGVyLWtpbmQ=\nlater: &k ConfigMap\n"
+    )
+    assert "c2VjcmV0LWZsb3ctYWxpYXM=" not in redact_text(
+        "x-kind: &k Secret\nshared: &d {foo: c2VjcmV0LWZsb3ctYWxpYXM=}\n"
+        "resource: {kind: *k, data: *d}\n"
+    )
+    assert "merge-second" not in redact_text(
+        "env:\n  - &entry\n    name: DB_PASSWORD\n"
+        "    value: merge-first\n  - <<: *entry\n"
+        "    value: merge-second\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

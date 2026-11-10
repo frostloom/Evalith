@@ -104,6 +104,17 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "flow-alias-kind-secret.yaml").write_text(
+        "x-kind: &k Secret\nshared: &d {foo: c2VjcmV0LWZsb3ctYWxpYXM=}\n"
+        "resource: {kind: *k, data: *d}\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "merge-env.yaml").write_text(
+        "env:\n  - &entry\n    name: DB_PASSWORD\n"
+        "    value: synthetic-merge-first\n  - <<: *entry\n"
+        "    value: synthetic-merge-second\n",
+        encoding="utf-8",
+    )
     (root / "config" / "tagged-block-name-env.yaml").write_text(
         "env:\n  - name: !!str >-\n      DB_PASSWORD\n"
         "    value: synthetic-tagged-block-name\n",
@@ -591,6 +602,7 @@ def settings(tmp_path: Path) -> Settings:
         secret_key="test-secret-key",
         static_dir=tmp_path / "no-static",
         max_files=400,
+        context_budget_chars=24_000,
         allow_paid_models=True,
     )
 

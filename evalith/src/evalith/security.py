@@ -97,7 +97,7 @@ _SECRET_PATTERNS.insert(
 _SECRET_PATTERNS.insert(
     1,
     re.compile(
-        r"(?is)<[^>]*\b(?:name|key|id)\s*=\s*[\"'][^\"']*"
+        r"(?is)<[A-Za-z][A-Za-z0-9_.:-]*[^>]*\b(?:name|key|id)\s*=\s*[\"'][^\"']*"
         r"(?:private[_-]?key|credential|secret|token|key|password|passphrase|passwd|pwd|"
         r"pass|auth|authorization|github[_-]?pat|githubToken)[^\"']*[\"'][^>]*>.*?</[A-Za-z0-9_.:-]+\s*>"
     ),
@@ -105,7 +105,7 @@ _SECRET_PATTERNS.insert(
 _SECRET_PATTERNS.insert(
     2,
     re.compile(
-        r"(?is)<[^>]*\b(?:name|key|id)\s*=\s*[\"'][^\"']*"
+        r"(?is)<[A-Za-z][A-Za-z0-9_.:-]*[^>]*\b(?:name|key|id)\s*=\s*[\"'][^\"']*"
         r"(?:private[_-]?key|credential|secret|token|key|password|passphrase|passwd|pwd|"
         r"pass|auth|authorization|github[_-]?pat|githubToken)[^\"']*[\"'][^>]*>"
     ),
@@ -178,7 +178,7 @@ def _redact_structured_values(text: str) -> str:
     return "".join(out)
 
 
-_XML_TAG = re.compile(r"(?is)<\s*(/)?\s*([A-Za-z0-9_.:-]+)([^>]*)>")
+_XML_TAG = re.compile(r"(?is)<\s*(/)?\s*([A-Za-z][A-Za-z0-9_.:-]*)([^>]*)>")
 _XML_CREDENTIAL_TERM = re.compile(
     r"(?i)(?:private[_-]?key|credential|secret|token|key|password|passphrase|passwd|pwd|"
     r"pass|auth|authorization|github[_-]?pat)"
@@ -678,13 +678,23 @@ def _redact_kubernetes_env_values(text: str) -> str:
     def replace_item(match: re.Match[str]) -> str:
         block = match.group(0)
         name_match = _K8S_ITEM_NAME.search(block)
-        if name_match is None:
-            return block
-        name = _resolve_env_name(
-            text,
-            name_match.group("name"),
-            match.start() + name_match.start("name"),
-        )
+        if name_match is not None:
+            name = _resolve_env_name(
+                text,
+                name_match.group("name"),
+                match.start() + name_match.start("name"),
+            )
+        else:
+            merge_match = re.search(
+                r"(?m)^[ \t]*(?:-[ \t]+)?<<[ \t]*:[ \t]*\*([A-Za-z0-9_-]+)",
+                block,
+            )
+            if merge_match is None:
+                return block
+            merged = _anchor_block_name(text, merge_match.group(1))
+            if merged is None:
+                return block
+            name = merged
         if not is_credential_key(name):
             return block
         value_match = _K8S_ITEM_VALUE.search(block)
@@ -707,6 +717,10 @@ _K8S_SECRET_KIND = re.compile(
 _K8S_SECRET_FLOW_KIND = re.compile(
     r"(?i)[{,][ \t]*[\"']?kind[\"']?[ \t]*:[ \t]*"
     r"(?:(?:![^\s,}]+|&[^\s,}]+)[ \t]+)*[\"']?Secret\b"
+)
+_K8S_SECRET_FLOW_ALIAS_KIND = re.compile(
+    r"(?i)[{,][ \t]*[\"']?kind[\"']?[ \t]*:[ \t]*"
+    r"\*([A-Za-z0-9_-]+)"
 )
 _K8S_SECRET_FLOW_OPEN = re.compile(
     r"(?im)(?:^|[{,])[ \t]*"
@@ -824,6 +838,20 @@ def _resolve_env_name(
     if raw.startswith("*") and len(raw) > 1:
         return _yaml_anchor_values(text, before=position).get(raw[1:], raw)
     return raw
+
+
+def _anchor_block_name(text: str, anchor: str) -> str | None:
+    pattern = re.compile(
+        rf"(?m)^[ \t]*(?:-[ \t]+)?&{re.escape(anchor)}\b[^\r\n]*\r?\n"
+        r"(?P<body>(?:[ \t]+[^\r\n]*(?:\r?\n|$))*)"
+    )
+    match = pattern.search(text)
+    if match is None:
+        return None
+    name_match = _K8S_ITEM_NAME.search(match.group("body"))
+    if name_match is None:
+        return None
+    return _yaml_key_name(name_match.group("name"))
 
 
 def _flow_mapping_end(text: str, start: int) -> int:
@@ -1087,9 +1115,17 @@ def _redact_kubernetes_secret_data(text: str) -> str:
         == "secret"
         for match in _K8S_SECRET_ALIAS_KIND.finditer(text)
     )
+    flow_alias_kind = any(
+        _yaml_anchor_values(text, before=match.start())
+        .get(match.group(1), "")
+        .casefold()
+        == "secret"
+        for match in _K8S_SECRET_FLOW_ALIAS_KIND.finditer(text)
+    )
     flow = bool(
         _K8S_SECRET_FLOW_KIND.search(text)
         or _K8S_SECRET_FLOW_OPEN.search(text)
+        or flow_alias_kind
     )
     block_kind = bool(_K8S_SECRET_BLOCK_KIND.search(text))
     line_kind = bool(_K8S_SECRET_KIND.search(text))
