@@ -1448,7 +1448,12 @@ def _redact_java_properties(text: str) -> str:
         if not is_credential_key(key):
             continue
         separator = match.group("sep")
-        if ":" in separator and "\\u" not in raw_key.casefold():
+        physical_value = match.group("value").rstrip()
+        if (
+            ":" in separator
+            and "\\u" not in raw_key.casefold()
+            and not physical_value.endswith("\\")
+        ):
             continue
         value = match.group("value").lstrip()
         if value.startswith((":", "=", '"', "'", "{", "[", "&", "*", "|", ">")):
