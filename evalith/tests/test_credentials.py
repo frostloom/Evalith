@@ -218,6 +218,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-quoted-tail" not in request["body"]
     assert "synthetic-eof-beta" not in request["body"]
     assert "synthetic-escaped-key-value" not in request["body"]
+    assert "synthetic-private-tail" not in request["body"]
+    assert "synthetic-continued-key" not in request["body"]
+    assert "synthetic-continued-crlf" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -342,6 +345,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-quoted-tail" not in request["body"]
     assert "synthetic-eof-beta" not in request["body"]
     assert "synthetic-escaped-key-value" not in request["body"]
+    assert "synthetic-private-tail" not in request["body"]
+    assert "synthetic-continued-key" not in request["body"]
+    assert "synthetic-continued-crlf" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1381,6 +1387,15 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "escaped-key-value" not in redact_text(
         "db\\:password escaped-key-value\n"
+    )
+    assert "private-tail" not in redact_text(
+        "db.password: alpha,private-tail\n"
+    )
+    assert "continued-key" not in redact_text(
+        "pass\\\nword=continued-key\n"
+    )
+    assert "continued-crlf" not in redact_text(
+        "api\\\r\ntoken=continued-crlf\r\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

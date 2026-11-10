@@ -104,6 +104,15 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "java-properties-newline.properties").write_text(
+        "db.password: synthetic-alpha,synthetic-private-tail\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "java-properties-continued-key.properties").write_text(
+        "pass\\\nword=synthetic-continued-key\n"
+        "api\\\r\ntoken=synthetic-continued-crlf\r\n",
+        encoding="utf-8",
+    )
     (root / "config" / "java-properties-eof.properties").write_bytes(
         b"password: synthetic-eof-alpha,synthetic-eof-beta"
     )

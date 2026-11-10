@@ -1425,13 +1425,14 @@ def _redact_kubernetes_secret_data(text: str) -> str:
 
 
 _JAVA_PROPERTIES_ENTRY = re.compile(
-    r"(?im)^(?P<prefix>[ \t]*)(?P<key>(?:\\[^\r\n]|[A-Za-z0-9_.\-])+)"
+    r"(?im)^(?P<prefix>[ \t]*)(?P<key>(?:\\\r?\n|\\[^\r\n]|[A-Za-z0-9_.\-])+)"
     r"(?P<sep>[ \t]*[=:][ \t]*|[ \t]+)(?P<value>[^\r\n]*)(?=\r?\n|\Z)"
 )
 _JAVA_UNICODE_ESCAPE = re.compile(r"\\u([0-9A-Fa-f]{4})")
 
 
 def _decode_java_key(key: str) -> str:
+    key = re.sub(r"\\\r?\n", "", key)
     key = _JAVA_UNICODE_ESCAPE.sub(
         lambda match: chr(int(match.group(1), 16)), key
     )
@@ -1456,7 +1457,11 @@ def _redact_java_properties(text: str) -> str:
             and not physical_value.endswith("\\")
             and match.end() < len(text)
         ):
-            continue
+            after = text[match.end() :]
+            newline = after.find("\n")
+            next_line = after[newline + 1 :] if newline >= 0 else ""
+            if next_line[:1] in (" ", "\t"):
+                continue
         value = match.group("value").lstrip()
         if value.startswith(('"""', "'''")):
             continue
@@ -1465,7 +1470,7 @@ def _redact_java_properties(text: str) -> str:
             if value.count(quote) < 2 and not physical_value.endswith("\\"):
                 continue
         if (
-            value.startswith((":", "=", "{", "[", "&", "*", "|", ">"))
+            value.startswith((":", "=", "{", "[", "&", "*", "|", ">", "!"))
             and not physical_value.endswith("\\")
         ):
             continue
@@ -1487,7 +1492,8 @@ def _redact_java_properties(text: str) -> str:
             physical = text[start:newline].rstrip("\r")
             end = newline + 1
         out.append(text[cursor : match.start()])
-        replacement = f"{match.group('prefix')}{raw_key} {_REDACTED}"
+        display_key = re.sub(r"\\\r?\n", "", raw_key)
+        replacement = f"{match.group('prefix')}{display_key} {_REDACTED}"
         if end > match.end():
             replacement += "\n"
         out.append(replacement)
