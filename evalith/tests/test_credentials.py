@@ -156,6 +156,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-json-beta" not in request["body"]
     assert "synthetic-sendgrid" not in request["body"]
     assert "synthetic-twilio" not in request["body"]
+    assert "synthetic-quoted-brace-env" not in request["body"]
+    assert "synthetic-x-escape" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -218,6 +220,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-json-beta" not in request["body"]
     assert "synthetic-sendgrid" not in request["body"]
     assert "synthetic-twilio" not in request["body"]
+    assert "synthetic-quoted-brace-env" not in request["body"]
+    assert "synthetic-x-escape" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1036,6 +1040,13 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "vendor-twilio" not in redact_text(
         "- name: TWILIO_AUTH_TOKEN\n  value: vendor-twilio\n"
+    )
+    assert "quoted-brace-env" not in redact_text(
+        'container: {marker: "{", env: [{name: PASSWORD, '
+        'value: quoted-brace-env}]}'
+    )
+    assert "x-escape" not in redact_text(
+        'kind: "Sec\\x72et"\nstringData:\n  neutral: x-escape\n'
     )
     assert "escaped-flow" not in redact_text(
         'env: [{"name": "API\\u005fKEY", "value": "escaped-flow"}]'

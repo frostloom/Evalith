@@ -498,18 +498,38 @@ def _flow_segment_fields(inner: str) -> dict[str, tuple[int, int]]:
     return fields
 
 
+def _unquoted_brace_starts(text: str) -> list[int]:
+    starts: list[int] = []
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(text):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in "\"'":
+            quote = char
+        elif char == "{":
+            starts.append(index)
+    return starts
+
+
 def _redact_flow_map_block(block: str) -> str:
     if len(block) < 2 or not block.startswith("{") or not block.endswith("}"):
         return block
     inner = block[1:-1]
     out: list[str] = []
     cursor = 0
-    for match in re.finditer(r"\{", inner):
-        if match.start() < cursor:
+    for start in _unquoted_brace_starts(inner):
+        if start < cursor:
             continue
-        end = _flow_mapping_end(inner, match.start())
-        out.append(inner[cursor : match.start()])
-        out.append(_redact_flow_map_block(inner[match.start() : end]))
+        end = _flow_mapping_end(inner, start)
+        out.append(inner[cursor:start])
+        out.append(_redact_flow_map_block(inner[start:end]))
         cursor = end
     inner = "".join(out) + inner[cursor:]
     fields = _flow_segment_fields(inner)
@@ -538,14 +558,14 @@ def _redact_kubernetes_flow_env(text: str) -> str:
 
     out: list[str] = []
     cursor = 0
-    for match in re.finditer(r"\{", text):
-        if match.start() < cursor:
+    for start in _unquoted_brace_starts(text):
+        if start < cursor:
             continue
-        end = _flow_mapping_end(text, match.start())
-        if end <= match.start() + 1:
+        end = _flow_mapping_end(text, start)
+        if end <= start + 1:
             continue
-        out.append(text[cursor : match.start()])
-        out.append(_redact_flow_map_block(text[match.start() : end]))
+        out.append(text[cursor:start])
+        out.append(_redact_flow_map_block(text[start:end]))
         cursor = end
     out.append(text[cursor:])
     return "".join(out)
@@ -567,8 +587,7 @@ def _redact_kubernetes_env_values(text: str) -> str:
         value = value_match.group("value").lstrip()
         if value.startswith("*") and len(value) > 1:
             aliases.add(value[1:].strip())
-    for flow_match in re.finditer(r"\{", text):
-        start = flow_match.start()
+    for start in _unquoted_brace_starts(text):
         end = _flow_mapping_end(text, start)
         if end <= start + 1:
             continue
@@ -683,29 +702,60 @@ _ESCAPED_SECRET_KIND = re.compile(
 _YAML_NAME_PREFIX = re.compile(r"^(?:(?:![^\s]+|&[^\s]+)[ \t]+)+")
 
 
-def _yaml_key_name(value: str) -> str:
-    raw = _YAML_NAME_PREFIX.sub("", value.strip()).strip()
+_YAML_ESCAPE = re.compile(
+    r"\\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8}|.)",
+    re.S,
+)
+_YAML_ESCAPE_CHARS = {
+    "0": "\0",
+    "a": "\a",
+    "b": "\b",
+    "t": "\t",
+    "n": "\n",
+    "v": "\v",
+    "f": "\f",
+    "r": "\r",
+    "e": "\x1b",
+    " ": " ",
+    '"': '"',
+    "/": "/",
+    "\\": "\\",
+    "N": "\x85",
+    "_": "\xa0",
+    "L": "\u2028",
+    "P": "\u2029",
+}
+
+
+def _decode_yaml_scalar(raw: str) -> str:
     if raw.startswith('"') and raw.endswith('"'):
         try:
             return str(json.loads(raw))
         except ValueError:
             pass
+        body = raw[1:-1]
+
+        def replace(match: re.Match[str]) -> str:
+            token = match.group(1)
+            if token[0] in "xuU":
+                return chr(int(token[1:], 16))
+            return _YAML_ESCAPE_CHARS.get(token, token)
+
+        return _YAML_ESCAPE.sub(replace, body)
     if raw.startswith("'") and raw.endswith("'"):
         return raw[1:-1].replace("''", "'")
     return raw.strip(" \t\"'")
 
 
+def _yaml_key_name(value: str) -> str:
+    raw = _YAML_NAME_PREFIX.sub("", value.strip()).strip()
+    return _decode_yaml_scalar(raw)
+
+
 def _normalize_escaped_secret_kind(text: str) -> str:
     def replace(match: re.Match[str]) -> str:
         raw = match.group("value")
-        try:
-            value = (
-                json.loads(raw)
-                if raw.startswith('"')
-                else raw[1:-1].replace("''", "'")
-            )
-        except ValueError:
-            return match.group(0)
+        value = _decode_yaml_scalar(raw) if raw else ""
         if value.casefold() == "secret":
             return f"{match.group('prefix')}\"Secret\""
         return match.group(0)
@@ -736,10 +786,7 @@ _ESCAPED_KIND_KEY = re.compile(
 
 def _normalize_escaped_kind_key(text: str) -> str:
     def replace(match: re.Match[str]) -> str:
-        try:
-            key = json.loads(f'"{match.group("key")}"')
-        except ValueError:
-            return match.group(0)
+        key = _decode_yaml_scalar(f'"{match.group("key")}"')
         if key != "kind":
             return match.group(0)
         return f"{match.group('prefix')}kind{match.group('colon')}"
@@ -749,10 +796,7 @@ def _normalize_escaped_kind_key(text: str) -> str:
 
 def _normalize_escaped_secret_keys(text: str) -> str:
     def replace(match: re.Match[str]) -> str:
-        try:
-            key = json.loads(f'"{match.group("key")}"')
-        except ValueError:
-            return match.group(0)
+        key = _decode_yaml_scalar(f'"{match.group("key")}"')
         if key not in ("data", "stringData"):
             return match.group(0)
         return f"{match.group('prefix')}{key}{match.group('colon')}"

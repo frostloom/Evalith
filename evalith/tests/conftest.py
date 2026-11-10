@@ -104,6 +104,15 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "quoted-brace-env.yaml").write_text(
+        'container: {marker: "{", env: [{name: PASSWORD, '
+        'value: synthetic-quoted-brace-env}]}\n',
+        encoding="utf-8",
+    )
+    (root / "config" / "x-escape-kind-secret.yaml").write_text(
+        'kind: "Sec\\x72et"\nstringData:\n  neutral: synthetic-x-escape\n',
+        encoding="utf-8",
+    )
     (root / "config" / "nested-flow-env.yaml").write_text(
         '{env: [{name: API_KEY, value: synthetic-nested-flow}, '
         '{name: APP_NAME, value: ordinary}]}\n',

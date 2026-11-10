@@ -914,7 +914,11 @@ class WorkspaceService:
             result["known"] = merged
             result["sources"] = sources
             result["snapshot_id"] = project["snapshot_id"]
-            result["user_continued"] = bool(current and current.get("user_continued"))
+            result["user_continued"] = bool(
+                current
+                and current.get("user_continued")
+                and current.get("snapshot_id") == project["snapshot_id"]
+            )
             self._store_understanding(project, result, error=None)
             readable = (
                 f"{result['summary']}\n\n"

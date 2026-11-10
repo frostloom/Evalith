@@ -1455,6 +1455,28 @@ def test_failed_understanding_is_not_cleared_by_reply_only_response(
     assert recovered.json()["project"]["analysis_error"] is None
 
 
+def test_sources_update_clears_previous_continuation(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    continued = client.post(f"/api/projects/{project_id}/continue")
+    assert continued.status_code == 200, continued.text
+    assert continued.json()["readiness"]["generation_allowed"] is True
+    updated = client.put(
+        f"/api/projects/{project_id}/sources",
+        json={
+            "include_paths": ["README.md"],
+            "exclude_patterns": [],
+            "supplemental": [],
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["understanding"]["user_continued"] is False
+    assert updated.json()["readiness"]["generation_allowed"] is False
+
+
 def test_supplemental_update_keeps_chat_correction(
     client: TestClient, project_root: Path
 ) -> None:
