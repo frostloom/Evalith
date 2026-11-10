@@ -1032,6 +1032,19 @@ def test_nested_sensitive_multi_component_path_is_excluded(tmp_path: Path) -> No
         scan_project(root, ["sub/.config/gcloud/creds"], [])
 
 
+def test_root_components_are_used_for_sensitive_paths(tmp_path: Path) -> None:
+    root = tmp_path / ".config"
+    target = root / "gcloud"
+    target.mkdir(parents=True)
+    (target / "access_tokens.db").write_text("synthetic-token\n", encoding="utf-8")
+    result = scan_project(root, [], [])
+    assert "gcloud/access_tokens.db" not in {item.path for item in result.files}
+    assert any(
+        item["path"] == "gcloud/" and "gcloud" in item["reason"]
+        for item in result.excluded
+    )
+
+
 def test_sensitive_multi_component_root_is_rejected(tmp_path: Path) -> None:
     root = tmp_path / ".config" / "gcloud"
     root.mkdir(parents=True)

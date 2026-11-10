@@ -104,6 +104,16 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "secret-nested-alias.yaml").write_text(
+        "shared: &v c2VjcmV0LW5lc3RlZA==\nkind: Secret\n"
+        "data:\n  config: *v\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "env-alias-redefinition.yaml").write_text(
+        "a: &shared synthetic-env-alias-first\nenv:\n"
+        "- name: API_KEY\n  value: *shared\nb: &shared harmless\n",
+        encoding="utf-8",
+    )
     (root / "config" / "later-redefined-anchor-env.yaml").write_text(
         "a: &entry {name: DB_PASSWORD}\n"
         "env: [{<<: *entry, value: synthetic-later-redefined-anchor}]\n"

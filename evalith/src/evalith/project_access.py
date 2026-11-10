@@ -194,7 +194,9 @@ def _matches(name: str, relpath: str, patterns: list[str]) -> str | None:
     return None
 
 
-def _always_excluded(name: str, relpath: str) -> str | None:
+def _always_excluded(
+    name: str, relpath: str, root_parts: tuple[str, ...] = ()
+) -> str | None:
     # Case-insensitive filesystems (macOS by default) resolve .ENV to .env and
     # SECRETS/ to secrets/.  Denylist checks must use the same equivalence.
     folded_name = name.casefold()
@@ -204,6 +206,13 @@ def _always_excluded(name: str, relpath: str) -> str | None:
         folded = pattern.casefold()
         if _path_pattern_matches(folded_name, folded_relpath, parts, folded):
             return pattern
+        for index in range(len(root_parts)):
+            candidate = [part.casefold() for part in root_parts[index:]] + parts
+            candidate_rel = "/".join(candidate)
+            if _path_pattern_matches(
+                folded_name, candidate_rel, candidate, folded
+            ):
+                return pattern
     return None
 
 
@@ -826,6 +835,7 @@ def scan_project(
     root_fd, root_stat = _open_root(root, expected_dev, expected_ino)
     result.root_dev = root_stat.st_dev
     result.root_ino = root_stat.st_ino
+    root_parts = tuple(Path(result.root).parts)
 
     seen_paths: set[str] = set()
 
@@ -842,7 +852,7 @@ def scan_project(
             os.close(fd)
             return
         seen_paths.add(relative)
-        always = _always_excluded(name, relative)
+        always = _always_excluded(name, relative, root_parts)
         if always:
             os.close(fd)
             result.excluded.append(
@@ -941,6 +951,15 @@ def scan_project(
                 if ignored and not force:
                     result.excluded.append(
                         {"path": relative + "/", "reason": f"gitignore: {ignored}"}
+                    )
+                    continue
+                always_dir = _always_excluded(name, relative, root_parts)
+                if always_dir:
+                    result.excluded.append(
+                        {
+                            "path": relative + "/",
+                            "reason": f"excluded: {always_dir}",
+                        }
                     )
                     continue
                 matched = _matches(

@@ -724,7 +724,9 @@ def _redact_kubernetes_env_values(text: str) -> str:
         if value.startswith("*") and len(value) > 1:
             aliases.add(value[1:].strip())
     for alias in aliases:
-        text = _redact_anchored_secret_data(text, alias)
+        reference = text.find(f"*{alias}")
+        if reference >= 0:
+            text = _redact_anchored_secret_data(text, alias, reference)
 
     def replace(match: re.Match[str]) -> str:
         name = _resolve_env_name(
@@ -1336,13 +1338,13 @@ def _redact_kubernetes_secret_data(text: str) -> str:
         return text
 
     text = _normalize_escaped_secret_keys(text)
-    data_aliases: dict[str, int] = {}
-    for match in _K8S_SECRET_DATA_ALIAS.finditer(text):
-        data_aliases[match.group(1)] = match.start()
-    for match in _K8S_SECRET_FLOW_DATA_ALIAS.finditer(text):
-        data_aliases[match.group(1)] = match.start()
-    for alias, reference in data_aliases.items():
-        text = _redact_anchored_secret_data(text, alias, reference)
+    payload_aliases = {
+        match.group(1) for match in re.finditer(r"\*([A-Za-z0-9_.-]+)", text)
+    }
+    for alias in payload_aliases:
+        reference = text.find(f"*{alias}")
+        if reference >= 0:
+            text = _redact_anchored_secret_data(text, alias, reference)
 
     def replace(match: re.Match[str]) -> str:
         return f"{match.group('indent')}{match.group('key')}: {_REDACTED}\n"
