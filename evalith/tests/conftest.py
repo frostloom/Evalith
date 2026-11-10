@@ -104,6 +104,16 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "mapping-key-anchor-env.yaml").write_text(
+        "defaults: &entry\n  name: DB_PASSWORD\nenv:\n"
+        "  - <<: *entry\n    value: synthetic-mapping-key-anchor\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "comment-anchor-env.yaml").write_text(
+        "# &v example\nshared: &v synthetic-comment-anchor\n"
+        "env:\n- name: DB_PASSWORD\n  value: *v\n",
+        encoding="utf-8",
+    )
     (root / "config" / "access-key-env.yaml").write_text(
         "env:\n  - name: ACCESS_KEY\n    value: synthetic-access-key-block\n",
         encoding="utf-8",

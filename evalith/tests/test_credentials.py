@@ -186,6 +186,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-access-key-flow" not in request["body"]
     assert "synthetic-access-key-json" not in request["body"]
     assert "synthetic-merge-alias-anchor" not in request["body"]
+    assert "synthetic-mapping-key-anchor" not in request["body"]
+    assert "synthetic-comment-anchor" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -278,6 +280,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-access-key-flow" not in request["body"]
     assert "synthetic-access-key-json" not in request["body"]
     assert "synthetic-merge-alias-anchor" not in request["body"]
+    assert "synthetic-mapping-key-anchor" not in request["body"]
+    assert "synthetic-comment-anchor" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1201,6 +1205,14 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
         "defaults: &entry {name: DB_PASSWORD}\n"
         "shared: &pw merge-alias-anchor\n"
         "env: [{<<: *entry, value: *pw}]\n"
+    )
+    assert "mapping-key-anchor" not in redact_text(
+        "defaults: &entry\n  name: DB_PASSWORD\nenv:\n"
+        "  - <<: *entry\n    value: mapping-key-anchor\n"
+    )
+    assert "comment-anchor" not in redact_text(
+        "# &v example\nshared: &v comment-anchor\n"
+        "env:\n- name: DB_PASSWORD\n  value: *v\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

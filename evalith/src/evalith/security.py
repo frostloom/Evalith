@@ -819,6 +819,48 @@ def _anchor_scalar(rest: str) -> str:
     return _decode_yaml_scalar(token.split()[0] if token else "")
 
 
+def _yaml_anchor_positions(text: str) -> dict[str, int]:
+    positions: dict[str, int] = {}
+    quote: str | None = None
+    escaped = False
+    in_comment = False
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if in_comment:
+            if char == "\n":
+                in_comment = False
+            index += 1
+            continue
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            index += 1
+            continue
+        if char == "#" and (
+            index == 0 or text[index - 1] in " \t\n"
+        ):
+            in_comment = True
+            index += 1
+            continue
+        if char in "\"'" and _starts_yaml_quoted_scalar(text, index):
+            quote = char
+            index += 1
+            continue
+        if char == "&":
+            match = re.match(r"&([A-Za-z0-9_-]+)[ \t]*", text[index:])
+            if match is not None:
+                positions.setdefault(match.group(1), index)
+                index += match.end()
+                continue
+        index += 1
+    return positions
+
+
 def _yaml_anchor_values(text: str, before: int | None = None) -> dict[str, str]:
     values: dict[str, str] = {}
     quote: str | None = None
@@ -873,10 +915,10 @@ def _resolve_env_name(
 
 
 def _anchor_mapping_name(text: str, anchor: str) -> str | None:
-    match = re.search(rf"&{re.escape(anchor)}\b", text)
-    if match is None:
+    position = _yaml_anchor_positions(text).get(anchor)
+    if position is None:
         return None
-    rest = text[match.end() :].lstrip(" \t")
+    rest = text[position + 1 + len(anchor) :].lstrip(" \t")
     if rest.startswith("{"):
         end = _flow_mapping_end(rest, 0)
         fields = _flow_segment_fields(rest[1:end])
@@ -888,14 +930,26 @@ def _anchor_mapping_name(text: str, anchor: str) -> str | None:
 
 
 def _anchor_block_name(text: str, anchor: str) -> str | None:
-    pattern = re.compile(
-        rf"(?m)^[ \t]*(?:-[ \t]+)?&{re.escape(anchor)}\b[^\r\n]*\r?\n"
-        r"(?P<body>(?:[ \t]+[^\r\n]*(?:\r?\n|$))*)"
-    )
-    match = pattern.search(text)
-    if match is None:
+    position = _yaml_anchor_positions(text).get(anchor)
+    if position is None:
         return None
-    name_match = _K8S_ITEM_NAME.search(match.group("body"))
+    line_start = text.rfind("\n", 0, position) + 1
+    line_end = text.find("\n", position)
+    if line_end < 0:
+        return None
+    indent_match = re.match(r"[ \t]*", text[line_start:])
+    indent = indent_match.group(0) if indent_match else ""
+    body_start = line_end + 1
+    body_end = body_start
+    while body_end < len(text):
+        next_end = text.find("\n", body_end)
+        if next_end < 0:
+            next_end = len(text)
+        line = text[body_end:next_end]
+        if line.strip() and not line.startswith(indent + " "):
+            break
+        body_end = next_end + 1
+    name_match = _K8S_ITEM_NAME.search(text[body_start:body_end])
     if name_match is None:
         return None
     return _yaml_key_name(name_match.group("name"))
@@ -1116,20 +1170,21 @@ def _normalize_escaped_secret_keys(text: str) -> str:
 
 
 def _redact_anchored_secret_data(text: str, anchor: str) -> str:
-    pattern = re.compile(rf"&{re.escape(anchor)}\b[ \t]*")
-    match = pattern.search(text)
-    if match is None:
+    position = _yaml_anchor_positions(text).get(anchor)
+    if position is None:
         return text
-    start = match.end()
+    start = position + 1 + len(anchor)
+    while start < len(text) and text[start] in " \t":
+        start += 1
     if start < len(text) and text[start] == "{":
         end = _flow_mapping_end(text, start)
-        return text[: match.start()] + f"&{anchor} {_REDACTED}" + text[end:]
-    line_start = text.rfind("\n", 0, match.start()) + 1
+        return text[:position] + f"&{anchor} {_REDACTED}" + text[end:]
+    line_start = text.rfind("\n", 0, position) + 1
     indent_match = re.match(r"[ \t]*", text[line_start:])
     indent = indent_match.group(0) if indent_match else ""
     line_end = text.find("\n", start)
     if line_end < 0:
-        return text[: match.start()] + f"&{anchor} {_REDACTED}"
+        return text[:position] + f"&{anchor} {_REDACTED}"
     end = line_end + 1
     while end < len(text):
         next_end = text.find("\n", end)
@@ -1141,7 +1196,7 @@ def _redact_anchored_secret_data(text: str, anchor: str) -> str:
             end = len(text) if next_end < 0 else next_end + 1
             continue
         break
-    return text[: match.start()] + f"&{anchor} {_REDACTED}\n" + text[end:]
+    return text[:position] + f"&{anchor} {_REDACTED}\n" + text[end:]
 
 
 def _redact_kubernetes_secret_data(text: str) -> str:
