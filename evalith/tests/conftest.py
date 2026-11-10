@@ -104,6 +104,13 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "java-properties-eof.properties").write_bytes(
+        b"password: synthetic-eof-alpha,synthetic-eof-beta"
+    )
+    (root / "config" / "java-properties-escaped-key.properties").write_text(
+        "db\\:password synthetic-escaped-key-value\n",
+        encoding="utf-8",
+    )
     (root / "config" / "java-properties-punctuation.properties").write_text(
         "password=:prefix\\\n  synthetic-punctuation-tail\n"
         'db.password "synthetic-quoted-password"\n'

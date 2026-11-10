@@ -216,6 +216,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-punctuation-tail" not in request["body"]
     assert "synthetic-quoted-password" not in request["body"]
     assert "synthetic-quoted-tail" not in request["body"]
+    assert "synthetic-eof-beta" not in request["body"]
+    assert "synthetic-escaped-key-value" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -338,6 +340,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-punctuation-tail" not in request["body"]
     assert "synthetic-quoted-password" not in request["body"]
     assert "synthetic-quoted-tail" not in request["body"]
+    assert "synthetic-eof-beta" not in request["body"]
+    assert "synthetic-escaped-key-value" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1371,6 +1375,12 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "quoted-tail" not in redact_text(
         'api.token "first\\\n  quoted-tail"\n'
+    )
+    assert "eof-beta" not in redact_text(
+        "password: eof-alpha,eof-beta"
+    )
+    assert "escaped-key-value" not in redact_text(
+        "db\\:password escaped-key-value\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

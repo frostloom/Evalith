@@ -1425,16 +1425,17 @@ def _redact_kubernetes_secret_data(text: str) -> str:
 
 
 _JAVA_PROPERTIES_ENTRY = re.compile(
-    r"(?im)^(?P<prefix>[ \t]*)(?P<key>[A-Za-z0-9_.\\-]+)"
+    r"(?im)^(?P<prefix>[ \t]*)(?P<key>(?:\\[^\r\n]|[A-Za-z0-9_.\-])+)"
     r"(?P<sep>[ \t]*[=:][ \t]*|[ \t]+)(?P<value>[^\r\n]*)(?=\r?\n|\Z)"
 )
 _JAVA_UNICODE_ESCAPE = re.compile(r"\\u([0-9A-Fa-f]{4})")
 
 
 def _decode_java_key(key: str) -> str:
-    return _JAVA_UNICODE_ESCAPE.sub(
+    key = _JAVA_UNICODE_ESCAPE.sub(
         lambda match: chr(int(match.group(1), 16)), key
     )
+    return re.sub(r"\\(.)", r"\1", key)
 
 
 def _redact_java_properties(text: str) -> str:
@@ -1453,6 +1454,7 @@ def _redact_java_properties(text: str) -> str:
             ":" in separator
             and "\\u" not in raw_key.casefold()
             and not physical_value.endswith("\\")
+            and match.end() < len(text)
         ):
             continue
         value = match.group("value").lstrip()
