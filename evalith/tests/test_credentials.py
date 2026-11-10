@@ -205,6 +205,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-env-alias-first" not in request["body"]
     assert "synthetic-comment-alias" not in request["body"]
     assert "synthetic-unicode-anchor" not in request["body"]
+    assert "synthetic-reused-secret" not in request["body"]
+    assert "synthetic-reused-payload" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -316,6 +318,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-env-alias-first" not in request["body"]
     assert "synthetic-comment-alias" not in request["body"]
     assert "synthetic-unicode-anchor" not in request["body"]
+    assert "synthetic-reused-secret" not in request["body"]
+    assert "synthetic-reused-payload" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1310,6 +1314,15 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "unicode-anchor" not in redact_text(
         "shared: &凭据 API_KEY\nenv:\n"
         "- name: *凭据\n  value: unicode-anchor\n"
+    )
+    assert "reused-secret" not in redact_text(
+        "first: &v harmless\ncopy: *v\nsecond: &v reused-secret\n"
+        "kind: Secret\nstringData:\n  field: *v\n"
+    )
+    assert "reused-payload" not in redact_text(
+        "old: &p {opaque: harmless}\nold_ref: *p\n"
+        "current: &p {opaque: reused-payload}\n"
+        "kind: Secret\ndata: *p\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

@@ -725,10 +725,7 @@ def _redact_kubernetes_env_values(text: str) -> str:
         value = inner[value_field[0] : value_field[1]].strip().strip("\"'")
         if value.startswith("*") and len(value) > 1:
             aliases.add(value[1:].strip())
-    for alias in aliases:
-        reference = _yaml_alias_references(text).get(alias)
-        if reference is not None:
-            text = _redact_anchored_secret_data(text, alias, reference)
+    text = _redact_aliases_at_references(text, aliases)
 
     def replace(match: re.Match[str]) -> str:
         name = _resolve_env_name(
@@ -858,8 +855,8 @@ def _anchor_scalar(rest: str) -> str:
     return _decode_yaml_scalar(token.split()[0] if token else "")
 
 
-def _yaml_alias_references(text: str) -> dict[str, int]:
-    references: dict[str, int] = {}
+def _yaml_alias_references(text: str) -> dict[str, list[int]]:
+    references: dict[str, list[int]] = {}
     quote: str | None = None
     escaped = False
     in_comment = False
@@ -893,7 +890,7 @@ def _yaml_alias_references(text: str) -> dict[str, int]:
         if char == "*":
             match = re.match(r"\*([^\s\[\]{},]+)", text[index:])
             if match is not None:
-                references.setdefault(match.group(1), index)
+                references.setdefault(match.group(1), []).append(index)
                 index += match.end()
                 continue
         index += 1
@@ -1348,6 +1345,23 @@ def _redact_anchored_secret_data(
     return text[:position] + f"&{anchor} {_REDACTED}\n" + text[end:]
 
 
+def _redact_aliases_at_references(
+    text: str, aliases: set[str]
+) -> str:
+    references = _yaml_alias_references(text)
+    definitions: set[tuple[str, int]] = set()
+    for alias in aliases:
+        for reference in references.get(alias, []):
+            position = _anchor_position(text, alias, reference)
+            if position is not None:
+                definitions.add((alias, position))
+    for alias, position in sorted(
+        definitions, key=lambda item: item[1], reverse=True
+    ):
+        text = _redact_anchored_secret_data(text, alias, position + 1)
+    return text
+
+
 def _redact_kubernetes_secret_data(text: str) -> str:
     stripped = text.strip()
     if stripped.startswith(("{", "[")):
@@ -1387,10 +1401,7 @@ def _redact_kubernetes_secret_data(text: str) -> str:
     payload_aliases = {
         match.group(1) for match in re.finditer(r"\*([^\s\[\]{},]+)", text)
     }
-    for alias in payload_aliases:
-        reference = _yaml_alias_references(text).get(alias)
-        if reference is not None:
-            text = _redact_anchored_secret_data(text, alias, reference)
+    text = _redact_aliases_at_references(text, payload_aliases)
 
     def replace(match: re.Match[str]) -> str:
         return f"{match.group('indent')}{match.group('key')}: {_REDACTED}\n"

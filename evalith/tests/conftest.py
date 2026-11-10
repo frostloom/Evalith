@@ -104,6 +104,17 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "reused-secret-alias.yaml").write_text(
+        "first: &v harmless\ncopy: *v\nsecond: &v synthetic-reused-secret\n"
+        "kind: Secret\nstringData:\n  field: *v\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "reused-payload-alias.yaml").write_text(
+        "old: &p {opaque: harmless}\nold_ref: *p\n"
+        "current: &p {opaque: synthetic-reused-payload}\n"
+        "kind: Secret\ndata: *p\n",
+        encoding="utf-8",
+    )
     (root / "config" / "comment-alias-env.yaml").write_text(
         "# example *v\nshared: &v synthetic-comment-alias\n"
         "env:\n- name: API_KEY\n  value: *v\n",
