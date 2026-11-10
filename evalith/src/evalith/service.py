@@ -1365,8 +1365,30 @@ class WorkspaceService:
                     "text": f"用户方向：{direction}",
                     "source": "会话",
                 }
-                if direction_item not in understanding["known"]:
-                    understanding["known"].append(direction_item)
+                user_texts = [
+                    str(message.get("content", "")).casefold()
+                    for message in history
+                    if message.get("role") == "user"
+                ]
+                confirmed = direction_item in current.get("known", []) or any(
+                    direction.casefold() in message for message in user_texts
+                )
+                if confirmed:
+                    if direction_item not in understanding["known"]:
+                        understanding["known"].append(direction_item)
+                else:
+                    inferred = understanding.setdefault("inferred", [])
+                    if direction_item not in [
+                        item
+                        for item in inferred
+                        if isinstance(item, dict)
+                    ]:
+                        inferred.append(
+                            {
+                                "text": f"用户方向：{direction}",
+                                "basis": "模型从对话推断，尚未由用户明确确认",
+                            }
+                        )
             if result.get("continue_requested") and current.get("unknowns"):
                 unresolved = {
                     str(item.get("text", ""))

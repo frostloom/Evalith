@@ -598,6 +598,7 @@ def _redact_kubernetes_env_values(text: str) -> str:
         else:
             return text
     text = _normalize_escaped_env_keys(text)
+    text = _normalize_block_env_names(text)
     aliases: set[str] = set()
     for match in _K8S_ENV_ENTRY.finditer(text):
         if is_credential_key(_yaml_key_name(match.group("name"))):
@@ -702,12 +703,45 @@ def _strip_yaml_comment(value: str) -> str:
     return value.strip()
 
 
+def _anchor_scalar(rest: str) -> str:
+    stripped = rest.lstrip(" \t")
+    while stripped.startswith(("!", "&")):
+        parts = stripped.split(None, 1)
+        if len(parts) < 2:
+            return ""
+        stripped = parts[1].lstrip(" \t")
+    if not stripped:
+        return ""
+    if stripped[0] in "\"'":
+        quote = stripped[0]
+        escaped = False
+        for index in range(1, len(stripped)):
+            char = stripped[index]
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                return _decode_yaml_scalar(stripped[: index + 1])
+        return ""
+    if stripped[0] in "|>":
+        body = stripped.split("\n", 1)
+        lines: list[str] = []
+        for line in body[1].splitlines() if len(body) > 1 else []:
+            if not line.strip():
+                continue
+            if line[0] not in " \t":
+                break
+            lines.append(line.strip())
+        return " ".join(lines)
+    token = stripped.split("#", 1)[0].strip()
+    return _decode_yaml_scalar(token.split()[0] if token else "")
+
+
 def _yaml_anchor_values(text: str) -> dict[str, str]:
     values: dict[str, str] = {}
-    for match in re.finditer(
-        r"&([A-Za-z0-9_-]+)[ \t]+([^\s#]+)", text
-    ):
-        values[match.group(1)] = match.group(2)
+    for match in re.finditer(r"&([A-Za-z0-9_-]+)[ \t]*", text):
+        values[match.group(1)] = _anchor_scalar(text[match.end() :])
     return values
 
 
@@ -858,6 +892,28 @@ _ESCAPED_KIND_KEY = re.compile(
     r"(?P<colon>[ \t]*:[ \t]*)"
 )
 _ESCAPED_ENV_KEY = _ESCAPED_KIND_KEY
+
+
+_BLOCK_ENV_NAME = re.compile(
+    r"(?m)^(?P<prefix>[ \t]*(?:-[ \t]+)?[\"']?name[\"']?[ \t]*:[ \t]*)"
+    r"(?P<indicator>[|>][-+0-9]*)[ \t]*(?:#[^\r\n]*)?\r?\n"
+    r"(?P<body>(?:[ \t]+[^\r\n]*(?:\r?\n|$))*?)"
+    r"(?=[ \t]*(?:[\"']?value[\"']?)[ \t]*:)"
+)
+
+
+def _normalize_block_env_names(text: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        lines = [
+            line.strip()
+            for line in match.group("body").splitlines()
+            if line.strip()
+        ]
+        if not lines:
+            return match.group(0)
+        return f"{match.group('prefix')}{' '.join(lines)}\n"
+
+    return _BLOCK_ENV_NAME.sub(replace, text)
 
 
 def _normalize_escaped_env_keys(text: str) -> str:

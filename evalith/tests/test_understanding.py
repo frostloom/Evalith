@@ -1455,6 +1455,38 @@ def test_failed_understanding_is_not_cleared_by_reply_only_response(
     assert recovered.json()["project"]["analysis_error"] is None
 
 
+def test_unconfirmed_model_direction_is_not_a_known_user_fact(
+    client: TestClient, project_root: Path, recording_server
+) -> None:
+    model = client.post(
+        "/api/model-configs",
+        json={
+            "name": "direction-model",
+            "provider": "openai_compatible",
+            "base_url": f"http://127.0.0.1:{recording_server.server_port}/v1",
+            "model_name": "fake",
+        },
+    ).json()
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    _RecordingHandler.body_override = {
+        "reply": "你好。",
+        "continue_requested": False,
+        "direction_update": "提高发布覆盖率",
+    }
+    response = client.post(
+        f"/api/projects/{project_id}/messages", json={"content": "你好"}
+    )
+    assert response.status_code == 200, response.text
+    understanding = response.json()["understanding"]
+    assert not any(
+        "提高发布覆盖率" in str(item) for item in understanding["known"]
+    )
+    assert any(
+        "提高发布覆盖率" in str(item) for item in understanding["inferred"]
+    )
+
+
 def test_sources_update_clears_previous_continuation(
     client: TestClient, project_root: Path
 ) -> None:

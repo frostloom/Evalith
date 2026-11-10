@@ -168,6 +168,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-name-alias" not in request["body"]
     assert "synthetic-name-comment" not in request["body"]
     assert "synthetic-reordered-alias" not in request["body"]
+    assert "synthetic-tagged-anchor" not in request["body"]
+    assert "synthetic-block-name" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -242,6 +244,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-name-alias" not in request["body"]
     assert "synthetic-name-comment" not in request["body"]
     assert "synthetic-reordered-alias" not in request["body"]
+    assert "synthetic-tagged-anchor" not in request["body"]
+    assert "synthetic-block-name" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1100,6 +1104,14 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "reordered-alias" not in redact_text(
         "label: &n DB_PASSWORD\nenv:\n- value: reordered-alias\n  name: *n\n"
+    )
+    assert "tagged-anchor" not in redact_text(
+        "label: &n !!str DB_PASSWORD\nenv:\n- name: *n\n"
+        "  value: tagged-anchor\n"
+    )
+    assert "block-name" not in redact_text(
+        "env:\n  - name: >-\n      DB_PASSWORD\n"
+        "    value: block-name\n"
     )
     assert "escaped-flow" not in redact_text(
         'env: [{"name": "API\\u005fKEY", "value": "escaped-flow"}]'

@@ -104,6 +104,16 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "tagged-anchor-env.yaml").write_text(
+        "label: &n !!str DB_PASSWORD\nenv:\n- name: *n\n"
+        "  value: synthetic-tagged-anchor\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "block-name-env.yaml").write_text(
+        "env:\n  - name: >-\n      DB_PASSWORD\n"
+        "    value: synthetic-block-name\n",
+        encoding="utf-8",
+    )
     (root / "config" / "apostrophe-env.yaml").write_text(
         "description: user's agent\n"
         "env: [{name: DB_PASSWORD, value: synthetic-apostrophe-env}]\n",
