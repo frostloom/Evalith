@@ -104,6 +104,19 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "aws-session-env.yaml").write_text(
+        "- name: AWS_SESSION_TOKEN\n  value: synthetic-aws-session\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "aws-session-env.json").write_text(
+        '{"env": [{"name": "AWS_SESSION_TOKEN", '
+        '"value": "synthetic-aws-session-json"}]}\n',
+        encoding="utf-8",
+    )
+    (root / "config" / "blank-env.yaml").write_text(
+        "env:\n  - name: API_KEY\n\n    value: synthetic-blank-env\n",
+        encoding="utf-8",
+    )
     (root / "config" / "prefixed-env.yaml").write_text(
         "- name: PROD_DB_PASSWORD\n  value: synthetic-prefixed-env\n",
         encoding="utf-8",

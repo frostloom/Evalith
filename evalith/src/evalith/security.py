@@ -301,6 +301,7 @@ _JSON_CREDENTIAL_PREFIXES = {
     "primary",
     "replica",
     "readonly",
+    "awssession",
 }
 
 
@@ -423,7 +424,7 @@ def _redact_yaml_anchor_values(text: str) -> str:
 
 _K8S_ENV_ENTRY = re.compile(
     r"(?im)^(?P<indent>[ \t]*)-[ \t]+name:[ \t]*(?P<name>[^\r\n]+?)[ \t]*\r?\n"
-    r"(?P<body>(?:[ \t]+[^\r\n]*\r?\n){0,4}?[ \t]+value:[ \t]*)"
+    r"(?P<body>(?:(?:[ \t]+[^\r\n]*|[ \t]*)\r?\n){0,6}?[ \t]+value:[ \t]*)"
     r"(?P<value>(?:[|>][-+0-9]*[ \t]*(?:#[^\r\n]*)?\r?\n"
     r"(?:[ \t]+[^\r\n]*(?:\r?\n|$))*)|(?s:\"[^\"]*\")|(?s:'[^']*')|"
     r"[^\r\n]*)"
@@ -432,7 +433,7 @@ _K8S_ENV_ENTRY = re.compile(
 
 _K8S_ITEM = re.compile(
     r"(?m)^(?P<indent>[ \t]*)-[ \t]+(?P<first>[^\r\n]*)(?:\r?\n|$)"
-    r"(?P<rest>(?:(?P=indent)[ \t]+[^\r\n]*(?:\r?\n|$))*)"
+    r"(?P<rest>(?:(?:(?P=indent)[ \t]+[^\r\n]*|[ \t]*)\r?\n)*)"
 )
 _K8S_ITEM_NAME = re.compile(
     r"(?m)^(?P<prefix>[ \t]*(?:-[ \t]+)?name:[ \t]*)"
