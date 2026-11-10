@@ -146,6 +146,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-blank-env" not in request["body"]
     assert "synthetic-quoted-env" not in request["body"]
     assert "synthetic-eof-reordered" not in request["body"]
+    assert "synthetic-nested-env" not in request["body"]
+    assert "synthetic-smtp-env" not in request["body"]
+    assert "synthetic-redis-json" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -198,6 +201,9 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-blank-env" not in request["body"]
     assert "synthetic-quoted-env" not in request["body"]
     assert "synthetic-eof-reordered" not in request["body"]
+    assert "synthetic-nested-env" not in request["body"]
+    assert "synthetic-smtp-env" not in request["body"]
+    assert "synthetic-redis-json" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -983,6 +989,16 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "eof-reordered" not in redact_text(
         "env:\n- value: eof-reordered\n  name: PASSWORD"
+    )
+    assert "nested-env" not in redact_text(
+        "containers:\n- name: app\n  env:\n"
+        "  - value: nested-env\n    name: PASSWORD\n"
+    )
+    assert "smtp-env" not in redact_text(
+        "- name: SMTP_PASSWORD\n  value: smtp-env\n"
+    )
+    assert "redis-json" not in redact_text(
+        '{"name": "REDIS_PASSWORD", "value": "redis-json"}'
     )
     assert "escaped-flow" not in redact_text(
         'env: [{"name": "API\\u005fKEY", "value": "escaped-flow"}]'

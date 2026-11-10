@@ -302,6 +302,8 @@ _JSON_CREDENTIAL_PREFIXES = {
     "replica",
     "readonly",
     "awssession",
+    "smtp",
+    "redis",
 }
 
 
@@ -435,8 +437,8 @@ _K8S_ENV_ENTRY = re.compile(
 
 _K8S_ITEM = re.compile(
     r"(?m)^(?P<indent>[ \t]*)-[ \t]+(?P<first>[^\r\n]*)(?:\r?\n|$)"
-    r"(?P<rest>(?:(?:(?P=indent)[ \t]+[^\r\n]*|[ \t]*)\r?\n)*"
-    r"(?:(?P=indent)[ \t]+[^\r\n]*)?)"
+    r"(?P<rest>(?:(?:(?P=indent)[ \t]+(?![ \t]*-[ \t])[^\r\n]*|[ \t]*)\r?\n)*"
+    r"(?:(?P=indent)[ \t]+(?![ \t]*-[ \t])[^\r\n]*)?)"
 )
 _K8S_ITEM_NAME = re.compile(
     r"(?m)^(?P<prefix>[ \t]*(?:-[ \t]+)?[\"']?name[\"']?[ \t]*:[ \t]*)"

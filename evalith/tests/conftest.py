@@ -104,6 +104,20 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "nested-env.yaml").write_text(
+        "containers:\n- name: app\n  env:\n"
+        "  - value: synthetic-nested-env\n    name: PASSWORD\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "smtp-env.yaml").write_text(
+        "- name: SMTP_PASSWORD\n  value: synthetic-smtp-env\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "smtp-env.json").write_text(
+        '{"env": [{"name": "REDIS_PASSWORD", '
+        '"value": "synthetic-redis-json"}]}\n',
+        encoding="utf-8",
+    )
     (root / "config" / "quoted-env.yaml").write_text(
         'env:\n  - "name": AWS_SECRET_ACCESS_KEY\n'
         '    "value": synthetic-quoted-env\n',
