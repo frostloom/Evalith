@@ -211,6 +211,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "opaque-value" not in request["body"]
     assert "synthetic-colon-continuation" not in request["body"]
     assert "synthetic-colon-crlf" not in request["body"]
+    assert "synthetic-colon-tail" not in request["body"]
+    assert "synthetic-colon-crlf-tail" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -328,6 +330,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "opaque-value" not in request["body"]
     assert "synthetic-colon-continuation" not in request["body"]
     assert "synthetic-colon-crlf" not in request["body"]
+    assert "synthetic-colon-tail" not in request["body"]
+    assert "synthetic-colon-crlf-tail" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1346,6 +1350,12 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "colon-crlf" not in redact_text(
         "db.password: first\\\r\n  colon-crlf\r\n"
+    )
+    assert "colon-tail" not in redact_text(
+        "db.password: first\\\n  second\\\n  colon-tail\n"
+    )
+    assert "colon-crlf-tail" not in redact_text(
+        "db.password: first\\\r\n  second\\\r\n  colon-crlf-tail\r\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

@@ -105,8 +105,8 @@ def project_root(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (root / "config" / "java-properties-colon-continuation.properties").write_bytes(
-        b"db.password: first\\\n  synthetic-colon-continuation\n"
-        b"api.token: second\\\r\n  synthetic-colon-crlf\r\n"
+        b"db.password: first\\\n  second\\\n  synthetic-colon-tail\n"
+        b"api.token: second\\\r\n  more\\\r\n  synthetic-colon-crlf-tail\r\n"
     )
     (root / "config" / "java-properties-special.properties").write_bytes(
         b"db.password opaque#credential\r\n"

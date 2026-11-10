@@ -1465,8 +1465,10 @@ def _redact_java_properties(text: str) -> str:
                 start = end + 2
             elif text[end] == "\n":
                 start = end + 1
+            elif text[end] == "\r":
+                start = end + 1
             else:
-                break
+                start = end
             newline = text.find("\n", start)
             if newline < 0:
                 end = len(text)
