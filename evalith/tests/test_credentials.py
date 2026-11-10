@@ -160,6 +160,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-x-escape" not in request["body"]
     assert "synthetic-comment-brace" not in request["body"]
     assert "synthetic-escaped-flow-alias" not in request["body"]
+    assert "synthetic-multiline-flow" not in request["body"]
+    assert "synthetic-multiline-db" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -226,6 +228,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-x-escape" not in request["body"]
     assert "synthetic-comment-brace" not in request["body"]
     assert "synthetic-escaped-flow-alias" not in request["body"]
+    assert "synthetic-multiline-flow" not in request["body"]
+    assert "synthetic-multiline-db" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1058,6 +1062,12 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "escaped-flow-alias" not in redact_text(
         'shared: &v escaped-flow-alias\nenv: '
         '[{name: "API\\u005fKEY", value: *v}]'
+    )
+    assert "multiline-flow" not in redact_text(
+        "env: [{name: SMTP_PASSWORD,\n  value: multiline-flow}]"
+    )
+    assert "multiline-db" not in redact_text(
+        "env: [{\n  name: DB_PASSWORD,\n  value: multiline-db\n}]"
     )
     assert "escaped-flow" not in redact_text(
         'env: [{"name": "API\\u005fKEY", "value": "escaped-flow"}]'

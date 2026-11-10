@@ -104,6 +104,11 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "multiline-flow-env.yaml").write_text(
+        "env: [{name: SMTP_PASSWORD,\n  value: synthetic-multiline-flow}]\n"
+        "extra_flow: [{\n  name: DB_PASSWORD,\n  value: synthetic-multiline-db\n}]\n",
+        encoding="utf-8",
+    )
     (root / "config" / "comment-brace-env.yaml").write_text(
         "# don't\nenv: [{name: API_KEY, value: synthetic-comment-brace}]\n",
         encoding="utf-8",

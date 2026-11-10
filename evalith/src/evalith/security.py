@@ -456,7 +456,8 @@ _K8S_ITEM_VALUE = re.compile(
 
 
 _FLOW_FIELD_SEGMENT = re.compile(
-    r"^[ \t]*[\"']?([A-Za-z0-9_-]+)[\"']?[ \t]*:[ \t]*(.*)$",
+    r"^[ \t\r\n]*(?:#[^\r\n]*(?:\r?\n|$)[ \t\r\n]*)*"
+    r"[\"']?([A-Za-z0-9_-]+)[\"']?[ \t\r\n]*:[ \t\r\n]*(.*)$",
     re.S,
 )
 
