@@ -104,6 +104,16 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "comment-alias-env.yaml").write_text(
+        "# example *v\nshared: &v synthetic-comment-alias\n"
+        "env:\n- name: API_KEY\n  value: *v\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "unicode-anchor-env.yaml").write_text(
+        "shared: &凭据 API_KEY\nenv:\n"
+        "- name: *凭据\n  value: synthetic-unicode-anchor\n",
+        encoding="utf-8",
+    )
     (root / "config" / "secret-nested-alias.yaml").write_text(
         "shared: &v c2VjcmV0LW5lc3RlZA==\nkind: Secret\n"
         "data:\n  config: *v\n",

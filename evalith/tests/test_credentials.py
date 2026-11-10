@@ -203,6 +203,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-secret-anchor-redefinition" not in request["body"]
     assert "c2VjcmV0LW5lc3RlZA==" not in request["body"]
     assert "synthetic-env-alias-first" not in request["body"]
+    assert "synthetic-comment-alias" not in request["body"]
+    assert "synthetic-unicode-anchor" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -312,6 +314,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-secret-anchor-redefinition" not in request["body"]
     assert "c2VjcmV0LW5lc3RlZA==" not in request["body"]
     assert "synthetic-env-alias-first" not in request["body"]
+    assert "synthetic-comment-alias" not in request["body"]
+    assert "synthetic-unicode-anchor" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1298,6 +1302,14 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "env-alias-first" not in redact_text(
         "a: &shared env-alias-first\nenv:\n"
         "- name: API_KEY\n  value: *shared\nb: &shared harmless\n"
+    )
+    assert "comment-alias" not in redact_text(
+        "# example *v\nshared: &v comment-alias\n"
+        "env:\n- name: API_KEY\n  value: *v\n"
+    )
+    assert "unicode-anchor" not in redact_text(
+        "shared: &凭据 API_KEY\nenv:\n"
+        "- name: *凭据\n  value: unicode-anchor\n"
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

@@ -250,6 +250,7 @@ _JSON_EXACT_CREDENTIAL_KEYS = {
     "githubpat",
     "accountkey",
     "accesskey",
+    "unresolvedcredential",
     "clientkeydata",
     "awsaccesskeyid",
     "awssecretaccesskey",
@@ -277,6 +278,7 @@ _JSON_CREDENTIAL_SUFFIXES = (
     "auth",
     "accountkey",
     "accesskey",
+    "unresolvedcredential",
     "clientkeydata",
 )
 _JSON_CREDENTIAL_PREFIXES = {
@@ -418,10 +420,10 @@ def _redact_json_credentials(text: str) -> str:
 
 _YAML_ALIAS_REFERENCE = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?([^:\r\n\"']+?)[\"']?"
-    r"[ \t]*:[ \t]*\*([A-Za-z0-9_.-]+)"
+    r"[ \t]*:[ \t]*\*([^\s\[\]{},]+)"
 )
 _YAML_FLOW_ALIAS_REFERENCE = re.compile(
-    r"(?i)[,{]\s*[\"']?([^:\r\n\"',}]+?)[\"']?\s*:\s*\*([A-Za-z0-9_.-]+)"
+    r"(?i)[,{]\s*[\"']?([^:\r\n\"',}]+?)[\"']?\s*:\s*\*([^\s\[\]{},]+)"
 )
 
 
@@ -557,7 +559,7 @@ def _unquoted_brace_starts(text: str) -> list[int]:
 def _merge_aliases(value: str) -> list[str]:
     stripped = value.strip()
     if stripped.startswith("["):
-        return re.findall(r"\*([A-Za-z0-9_.-]+)", stripped)
+        return re.findall(r"\*([^\s\[\]{},]+)", stripped)
     if stripped.startswith("*") and len(stripped) > 1:
         return [stripped[1:].strip()]
     return []
@@ -724,8 +726,8 @@ def _redact_kubernetes_env_values(text: str) -> str:
         if value.startswith("*") and len(value) > 1:
             aliases.add(value[1:].strip())
     for alias in aliases:
-        reference = text.find(f"*{alias}")
-        if reference >= 0:
+        reference = _yaml_alias_references(text).get(alias)
+        if reference is not None:
             text = _redact_anchored_secret_data(text, alias, reference)
 
     def replace(match: re.Match[str]) -> str:
@@ -789,7 +791,7 @@ _K8S_SECRET_FLOW_KIND = re.compile(
 )
 _K8S_SECRET_FLOW_ALIAS_KIND = re.compile(
     r"(?i)[{,][ \t]*[\"']?kind[\"']?[ \t]*:[ \t]*"
-    r"\*([A-Za-z0-9_.-]+)"
+    r"\*([^\s\[\]{},]+)"
 )
 _K8S_SECRET_FLOW_OPEN = re.compile(
     r"(?im)(?:^|[{,])[ \t]*"
@@ -856,6 +858,48 @@ def _anchor_scalar(rest: str) -> str:
     return _decode_yaml_scalar(token.split()[0] if token else "")
 
 
+def _yaml_alias_references(text: str) -> dict[str, int]:
+    references: dict[str, int] = {}
+    quote: str | None = None
+    escaped = False
+    in_comment = False
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if in_comment:
+            if char == "\n":
+                in_comment = False
+            index += 1
+            continue
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            index += 1
+            continue
+        if char == "#" and (
+            index == 0 or text[index - 1] in " \t\n"
+        ):
+            in_comment = True
+            index += 1
+            continue
+        if char in "\"'" and _starts_yaml_quoted_scalar(text, index):
+            quote = char
+            index += 1
+            continue
+        if char == "*":
+            match = re.match(r"\*([^\s\[\]{},]+)", text[index:])
+            if match is not None:
+                references.setdefault(match.group(1), index)
+                index += match.end()
+                continue
+        index += 1
+    return references
+
+
 def _yaml_anchor_positions(text: str) -> dict[str, list[int]]:
     positions: dict[str, list[int]] = {}
     quote: str | None = None
@@ -889,7 +933,7 @@ def _yaml_anchor_positions(text: str) -> dict[str, list[int]]:
             index += 1
             continue
         if char == "&":
-            match = re.match(r"&([A-Za-z0-9_.-]+)[ \t]*", text[index:])
+            match = re.match(r"&([^\s\[\]{},]+)[ \t]*", text[index:])
             if match is not None:
                 positions.setdefault(match.group(1), []).append(index)
                 index += match.end()
@@ -942,7 +986,7 @@ def _yaml_anchor_values(text: str, before: int | None = None) -> dict[str, str]:
             index += 1
             continue
         if char == "&" and (before is None or index < before):
-            match = re.match(r"&([A-Za-z0-9_.-]+)[ \t]*", text[index:])
+            match = re.match(r"&([^\s\[\]{},]+)[ \t]*", text[index:])
             if match is not None:
                 values[match.group(1)] = _anchor_scalar(
                     text[index + match.end() :]
@@ -958,7 +1002,9 @@ def _resolve_env_name(
 ) -> str:
     raw = _yaml_key_name(_strip_yaml_comment(value))
     if raw.startswith("*") and len(raw) > 1:
-        return _yaml_anchor_values(text, before=position).get(raw[1:], raw)
+        return _yaml_anchor_values(text, before=position).get(
+            raw[1:], "unresolved-credential"
+        )
     return raw
 
 
@@ -1087,11 +1133,11 @@ def _flow_mapping_end(text: str, start: int) -> int:
                 return index + 1
     return len(text)
 _K8S_SECRET_ANCHOR = re.compile(
-    r"(?i)&([A-Za-z0-9_.-]+)[ \t]+[\"']?Secret\b"
+    r"(?i)&([^\s\[\]{},]+)[ \t]+[\"']?Secret\b"
 )
 _K8S_SECRET_ALIAS_KIND = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
-    r"\*([A-Za-z0-9_.-]+)"
+    r"\*([^\s\[\]{},]+)"
 )
 _K8S_SECRET_BLOCK_KIND = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
@@ -1101,11 +1147,11 @@ _K8S_SECRET_BLOCK_KIND = re.compile(
 )
 _K8S_SECRET_DATA_ALIAS = re.compile(
     r"(?im)^[ \t]*(?:-[ \t]+)?[\"']?(?:data|stringData)[\"']?[ \t]*:[ \t]*"
-    r"\*([A-Za-z0-9_.-]+)"
+    r"\*([^\s\[\]{},]+)"
 )
 _K8S_SECRET_FLOW_DATA_ALIAS = re.compile(
     r"(?i)[{,][ \t]*[\"']?(?:data|stringData)[\"']?[ \t]*:[ \t]*"
-    r"\*([A-Za-z0-9_.-]+)"
+    r"\*([^\s\[\]{},]+)"
 )
 _ESCAPED_SECRET_KIND = re.compile(
     r"(?im)^(?P<prefix>[ \t]*(?:-[ \t]+)?[\"']?kind[\"']?[ \t]*:[ \t]*"
@@ -1339,11 +1385,11 @@ def _redact_kubernetes_secret_data(text: str) -> str:
 
     text = _normalize_escaped_secret_keys(text)
     payload_aliases = {
-        match.group(1) for match in re.finditer(r"\*([A-Za-z0-9_.-]+)", text)
+        match.group(1) for match in re.finditer(r"\*([^\s\[\]{},]+)", text)
     }
     for alias in payload_aliases:
-        reference = text.find(f"*{alias}")
-        if reference >= 0:
+        reference = _yaml_alias_references(text).get(alias)
+        if reference is not None:
             text = _redact_anchored_secret_data(text, alias, reference)
 
     def replace(match: re.Match[str]) -> str:
