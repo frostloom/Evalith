@@ -17,6 +17,7 @@ The output is the input for ``workbench/run_local.sh`` and ``workbench/smoke.py`
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -25,6 +26,7 @@ import sys
 import tarfile
 import time
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 WORK = ROOT / ".workbench"
@@ -35,6 +37,8 @@ REPO = PIN["repository"]
 COMMIT = PIN["commit"]
 VERSION = PIN["version"]
 ASSETS = ROOT / "assets"
+LOCKS = ROOT / "locks"
+LOCK_TOOLS = json.loads((LOCKS / "tools.json").read_text(encoding="utf-8"))
 
 COPY_DIRS = ["sdk", "packages", "penelope", "skills", "apps/backend", "apps/frontend"]
 COPY_FILES = ["LICENSE", "NOTICE", "VERSION"]
@@ -735,6 +739,39 @@ def verify_tree() -> None:
         raise SystemExit("EE-free verification failed:\n- " + "\n- ".join(problems))
 
 
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def restore_locks() -> dict[str, Any]:
+    """Install the committed dependency locks and verify their hashes."""
+    restored: dict[str, Any] = {}
+    for name, entry in LOCK_TOOLS["locks"].items():
+        source = LOCKS / name
+        if not source.is_file():
+            raise SystemExit(f"missing committed lock input: {source}")
+        expected = entry["sha256"]
+        actual = _sha256(source)
+        if actual != expected:
+            raise SystemExit(
+                f"committed lock {name} hash mismatch: {actual} != {expected}"
+            )
+        target = OUT / entry["target"]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+        restored[entry["target"]] = {"sha256": actual, "source": str(source)}
+    return restored
+
+
+def verify_locks() -> None:
+    for entry in LOCK_TOOLS["locks"].values():
+        target = OUT / entry["target"]
+        if not target.is_file():
+            raise SystemExit(f"missing installed dependency lock: {target}")
+        if _sha256(target) != entry["sha256"]:
+            raise SystemExit(f"installed dependency lock was modified: {target}")
+
+
 def main() -> None:
     global OUT
     parser = argparse.ArgumentParser(description=__doc__)
@@ -758,13 +795,9 @@ def main() -> None:
         changes += patch_frontend()
         changes += patch_legal()
         verify_tree()
+        dependency_locks: dict[str, Any] = {}
         if not args.skip_lock:
-            run(["uv", "lock"], cwd=OUT / "apps/backend")
-            run(
-                ["npm", "install", "--package-lock-only", "--ignore-scripts", "--no-audit"],
-                cwd=OUT / "apps/frontend",
-                env={**dict(os.environ), "NODE_USE_ENV_PROXY": "1"},
-            )
+            dependency_locks = restore_locks()
         info = {
             "created_at": created_at,
             "upstream_repository": REPO,
@@ -774,6 +807,11 @@ def main() -> None:
             "source_worktree_dirty": dirty,
             "changes": changes,
             "builder": "workbench/build.py",
+            "dependency_locks": dependency_locks,
+            "tool_versions": {
+                key: LOCK_TOOLS[key]
+                for key in ("python", "uv", "node", "npm")
+            },
         }
         (OUT / "BUILD_INFO.json").write_text(
             json.dumps(info, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
@@ -784,6 +822,8 @@ def main() -> None:
         print(f"recorded {len(changes)} automated changes in BUILD_INFO.json")
 
     verify_tree()
+    if not args.skip_lock:
+        verify_locks()
     info_path = OUT / "BUILD_INFO.json"
     if info_path.exists():
         info = json.loads(info_path.read_text(encoding="utf-8"))

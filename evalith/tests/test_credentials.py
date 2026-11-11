@@ -229,6 +229,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-quoted-explicit-secret" not in request["body"]
     assert "synthetic-stripe-passphrase" not in request["body"]
     assert "synthetic-inner" not in request["body"]
+    assert "synthetic-huggingface-token" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -364,6 +365,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-quoted-explicit-secret" not in request["body"]
     assert "synthetic-stripe-passphrase" not in request["body"]
     assert "synthetic-inner" not in request["body"]
+    assert "synthetic-huggingface-token" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1441,6 +1443,9 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
         '{"name": "PASSWORD", "value": "inner"}}'
     )
     assert "outer" not in nested and "inner" not in nested
+    assert "huggingface-token" not in redact_text(
+        '{"name": "huggingfaceToken", "value": "huggingface-token"}'
+    )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'
         '"kubectl.kubernetes.io/last-applied-configuration": '

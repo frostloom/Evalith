@@ -109,6 +109,10 @@ def project_root(tmp_path: Path) -> Path:
         "pa\\\n    ssword=synthetic-split-password\n",
         encoding="utf-8",
     )
+    (root / "config" / "huggingface-token.json").write_text(
+        '{"name": "huggingfaceToken", "value": "synthetic-huggingface-token"}\n',
+        encoding="utf-8",
+    )
     (root / "config" / "nested-name-value.json").write_text(
         '{"name": "API_KEY", "value": "synthetic-outer", "nested": '
         '{"name": "PASSWORD", "value": "synthetic-inner"}}\n',

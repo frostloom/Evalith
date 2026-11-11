@@ -329,6 +329,8 @@ def is_credential_key(key: object) -> bool:
         prefix = normalized[: -len(suffix)]
         if prefix and re.search(r"[^A-Za-z0-9]", raw_key):
             return True
+        if prefix and re.search(r"[a-z][A-Z]", raw_key):
+            return True
         while prefix:
             if prefix in _JSON_CREDENTIAL_PREFIXES or re.fullmatch(
                 r"[a-z]+[0-9]+", prefix

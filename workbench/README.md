@@ -17,6 +17,11 @@ brand artwork or unlicensed font family remains. The full change list and
 whether the source checkout was dirty are written to
 `.workbench/ee-free/BUILD_INFO.json`.
 
+Committed reproducibility inputs:
+
+- `workbench/locks/backend-uv.lock` and `workbench/locks/frontend-package-lock.json`
+- `workbench/locks/tools.json` records their SHA-256 hashes and the Python, uv, Node and npm versions used for the recorded build/smoke run. `BUILD_INFO.json` records the same hashes and versions.
+
 No published Rhesis image is used: the official images contain `/ee/` and must
 not be redistributed as Evalith artifacts.
 
@@ -34,7 +39,7 @@ Then install dependencies from the generated tree:
 
 ```bash
 cd workbench/.workbench/ee-free/apps/backend
-uv sync --extra all --extra cpu --no-install-package torch --no-dev
+uv sync --frozen --extra all --extra cpu --no-install-package torch --no-dev
 
 cd ../frontend
 npm ci

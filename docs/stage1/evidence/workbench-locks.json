@@ -1,0 +1,17 @@
+{
+  "recorded_at": "2026-11-11T04:20:43Z",
+  "python": "3.12.15",
+  "uv": "0.13.1",
+  "node": "24.22.0",
+  "npm": "11.19.1",
+  "locks": {
+    "backend-uv.lock": {
+      "sha256": "2397650c50a30ff345408b0c346cd449865c82047ecdaa9daa8c6c4b52498daf",
+      "target": "apps/backend/uv.lock"
+    },
+    "frontend-package-lock.json": {
+      "sha256": "b26762620bccaaa083551ccb8e381bfab3d4d269b6cc421da8facdb7fc4ee890",
+      "target": "apps/frontend/package-lock.json"
+    }
+  }
+}
