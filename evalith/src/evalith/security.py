@@ -1430,14 +1430,14 @@ def _redact_kubernetes_secret_data(text: str) -> str:
 
 
 _JAVA_PROPERTIES_ENTRY = re.compile(
-    r"(?im)^(?P<prefix>[ \t]*)(?P<key>(?:\\\r?\n|\\[^\r\n]|[A-Za-z0-9_.\-])+)"
+    r"(?im)^(?P<prefix>[ \t]*)(?P<key>(?:\\\r?\n[ \t]*|\\[^\r\n]|[A-Za-z0-9_.\-])+)"
     r"(?P<sep>[ \t]*[=:][ \t]*|[ \t]+)(?P<value>[^\r\n]*)(?=\r?\n|\Z)"
 )
 _JAVA_UNICODE_ESCAPE = re.compile(r"\\u([0-9A-Fa-f]{4})")
 
 
 def _decode_java_key(key: str) -> str:
-    key = re.sub(r"\\\r?\n", "", key)
+    key = re.sub(r"\\\r?\n[ \t]*", "", key)
     key = _JAVA_UNICODE_ESCAPE.sub(
         lambda match: chr(int(match.group(1), 16)), key
     )
@@ -1497,7 +1497,7 @@ def _redact_java_properties(text: str) -> str:
             physical = text[start:newline].rstrip("\r")
             end = newline + 1
         out.append(text[cursor : match.start()])
-        display_key = re.sub(r"\\\r?\n", "", raw_key)
+        display_key = re.sub(r"\\\r?\n[ \t]*", "", raw_key)
         replacement = f"{match.group('prefix')}{display_key} {_REDACTED}"
         if end > match.end():
             replacement += "\n"

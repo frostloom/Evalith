@@ -222,6 +222,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-continued-key" not in request["body"]
     assert "synthetic-continued-crlf" not in request["body"]
     assert "synthetic-redefined-flow-value" not in request["body"]
+    assert "synthetic-indented-key" not in request["body"]
+    assert "synthetic-split-password" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -350,6 +352,8 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-continued-key" not in request["body"]
     assert "synthetic-continued-crlf" not in request["body"]
     assert "synthetic-redefined-flow-value" not in request["body"]
+    assert "synthetic-indented-key" not in request["body"]
+    assert "synthetic-split-password" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1404,6 +1408,12 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
         "env: [{name: *n, value: *v}]\nlater: &n PORT\n"
     )
     assert redact_text('kind: "\\U00110000"\nkind: "\\u12"\n')
+    assert "indented-key" not in redact_text(
+        "api_\\\n    key=indented-key\n"
+    )
+    assert "split-password" not in redact_text(
+        "pa\\\n    ssword=split-password\n"
+    )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'
         '"kubectl.kubernetes.io/last-applied-configuration": '

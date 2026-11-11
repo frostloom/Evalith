@@ -104,6 +104,11 @@ def project_root(tmp_path: Path) -> Path:
         "secret: {kind: Secret, data: *values}\n",
         encoding="utf-8",
     )
+    (root / "config" / "java-properties-indented-key.properties").write_text(
+        "api_\\\n    key=synthetic-indented-key\n"
+        "pa\\\n    ssword=synthetic-split-password\n",
+        encoding="utf-8",
+    )
     (root / "config" / "invalid-unicode.yaml").write_text(
         'kind: "\\U00110000"\nkind: "\\u12"\n',
         encoding="utf-8",
