@@ -190,6 +190,25 @@ def check_artifact() -> dict[str, Any]:
     return checks
 
 
+def checks_succeeded(checks: dict[str, Any]) -> bool:
+    """Return the success criteria used by the smoke exit code."""
+    return all(
+        [
+            checks.get("community_edition") is True,
+            checks.get("rhesis_platform_key_disabled") is True,
+            checks.get("project_created") is True,
+            checks.get("project_read") is True,
+            checks.get("model_connection_ok") is True,
+            checks.get("architect_session_detail") is True,
+            checks.get("architect_session_messages_visible") is True,
+            checks.get("architect_session_user_message") is True,
+            checks.get("architect_session_worker_reply") is True,
+            checks.get("frontend_http_status") == 200,
+            checks.get("all_artifact_checks") is True,
+        ]
+    )
+
+
 def main() -> int:
     global TOKEN
     EVIDENCE.mkdir(parents=True, exist_ok=True)
@@ -306,19 +325,9 @@ def main() -> int:
             "build_info_locked", False
         )
         checks["all_artifact_checks"] = all(checks["artifact"].values())
-        checks["passed"] = all(
-            [
-                checks["community_edition"],
-                checks["rhesis_platform_key_disabled"],
-                checks["project_created"],
-                checks["project_read"],
-                checks["model_connection_ok"],
-                checks["architect_session_detail"],
-                checks["architect_session_messages_visible"],
-                checks["frontend_http_status"] == 200,
-                checks["all_artifact_checks"],
-            ]
-        )
+        checks["passed"] = checks_succeeded(checks)
+        if not checks["architect_session_worker_reply"]:
+            errors.append("architect worker produced no assistant reply")
     except Exception as error:  # noqa: BLE001 - record and fail
         errors.append(str(error))
         checks["passed"] = False
