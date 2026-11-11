@@ -24,6 +24,7 @@ def project_root(tmp_path: Path) -> Path:
     root = tmp_path / "synthetic-project"
     (root / "docs").mkdir(parents=True)
     (root / "src").mkdir()
+    (root / "secret.txt").write_text("synthetic-bare-credential\n", encoding="utf-8")
     (root / "secrets").mkdir()
     (root / ".git").mkdir()
     (root / "README.md").write_text(

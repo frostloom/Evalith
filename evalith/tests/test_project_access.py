@@ -1156,3 +1156,19 @@ def test_explicit_nested_gitignore_override_is_recorded(tmp_path: Path) -> None:
     assert records["sub/ignored.txt"].reason == (
         "explicitly selected despite .gitignore"
     )
+
+
+def test_singular_secret_filename_is_denied(tmp_path: Path) -> None:
+    root = tmp_path / "singular-secret"
+    root.mkdir()
+    (root / "secret.txt").write_text("synthetic bare credential\n", encoding="utf-8")
+    scan = scan_project(root, [], [])
+    assert not scan.files
+    assert any(
+        item["path"] == "secret.txt"
+        and item["reason"] == "sensitive name denied: secret*"
+        for item in scan.excluded
+    )
+    with pytest.raises(AccessError) as excinfo:
+        scan_project(root, ["secret.txt"], [])
+    assert excinfo.value.code == "sensitive_path_denied"
