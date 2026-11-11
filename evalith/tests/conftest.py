@@ -109,6 +109,10 @@ def project_root(tmp_path: Path) -> Path:
         "pa\\\n    ssword=synthetic-split-password\n",
         encoding="utf-8",
     )
+    (root / "config" / "stripe-passphrase.json").write_text(
+        '{"stripePassphrase": "synthetic-stripe-passphrase"}\n',
+        encoding="utf-8",
+    )
     (root / "config" / "explicit-quoted-secret-key.yaml").write_text(
         'kind: Secret\n? "stringData"\n:\n  foo: synthetic-quoted-explicit-secret\n',
         encoding="utf-8",

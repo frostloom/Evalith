@@ -1098,3 +1098,28 @@ def test_chat_rescan_persists_new_diagnostics_without_content_change(
     assert after["digest"] == before["digest"]
     assert after["id"] != before["id"]
     assert "link.txt" in {item["path"] for item in after["excluded"]}
+
+
+def test_tight_supplement_budget_keeps_document_sent(tmp_path: Path) -> None:
+    from evalith.project_access import build_model_context
+
+    root = tmp_path / "tight-supplement"
+    root.mkdir()
+    scan = scan_project(root, [], [])
+    content = "x"
+    digest = hashlib.sha256(content.encode("utf-8")).hexdigest()[:12]
+    source_id = f"supplement:T [{digest}]"
+    budget = (
+        len("### SUPPLEMENT ")
+        + len(source_id)
+        + len("\n```text\n")
+        + len("\n```\n")
+    )
+    sources, text, _ = build_model_context(
+        scan,
+        [{"title": "T", "content": content}],
+        budget_chars=budget,
+    )
+    supplements = [item for item in sources if item.get("supplemental")]
+    assert supplements and supplements[0]["sent"] is True
+    assert "### SUPPLEMENT supplement:T" in text

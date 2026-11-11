@@ -1186,7 +1186,12 @@ def build_model_context(
         separator = "\n" if blocks else ""
         label_suffix = f" [{content_digest}]"
         label_budget = (
-            remaining - len(separator) - len(prefix) - len(footer) - len(label_suffix)
+            remaining
+            - len(separator)
+            - len(prefix)
+            - len(footer)
+            - len(label_suffix)
+            - len("supplement:")
         )
         if label_budget < 1:
             sources.append(
