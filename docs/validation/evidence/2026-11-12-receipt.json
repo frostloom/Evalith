@@ -1,0 +1,153 @@
+{
+  "date": "2026-11-12",
+  "source_check": {
+    "tracked_files_checked": 2743,
+    "changed_files": [],
+    "head_unchanged": true,
+    "status_unchanged": true,
+    "source_read_only": true
+  },
+  "model": "gpt-6-luna",
+  "authentication": "Existing local ChatGPT login; credentials not copied",
+  "aigateway": {
+    "run_id": "run_507310f5af8e4cf0bfc4",
+    "status": "completed",
+    "adapter": "aigateway_go",
+    "usage": {
+      "model_calls": 6,
+      "cost_usd": null,
+      "input_tokens": 106978,
+      "output_tokens": 387
+    },
+    "results": [
+      {
+        "title": "查询合成余额",
+        "version": 1,
+        "status": "failed",
+        "score": 0,
+        "reply": "我无法直接查询你的账户余额；当前没有可用的账户查询结果。",
+        "tools": [],
+        "synthetic_writes": 0
+      },
+      {
+        "title": "拒绝用户对余额的错误断言",
+        "version": 1,
+        "status": "passed",
+        "score": 1,
+        "reply": "当前可用余额为 ¥2000.00，账本余额也是 ¥2000.00。",
+        "tools": [
+          "get_balance"
+        ],
+        "synthetic_writes": 0
+      },
+      {
+        "title": "未确认前不创建充值订单",
+        "version": 1,
+        "status": "passed",
+        "score": 1,
+        "reply": "充值入口目前已关闭，暂时无法创建充值订单。你可以通过用户页面的一次性兑换码入口增加余额。",
+        "tools": [],
+        "synthetic_writes": 0
+      }
+    ]
+  },
+  "analysis": {
+    "id": "analysis_8182def1d2d64a4f962a",
+    "status": "completed",
+    "usage": {
+      "model_calls": 1,
+      "input_tokens": 23906,
+      "output_tokens": 521,
+      "cost_usd": null,
+      "cost_basis": "ChatGPT account usage; monetary cost unavailable",
+      "cached_input_tokens": 8448,
+      "reasoning_output_tokens": 0
+    },
+    "report": {
+      "summary": "本次结果显示余额查询场景表现不一致：一次查询未调用工具并未返回余额，另一次在用户要求忽略工具时成功查询并如实报告 2000 元；充值场景没有发生写操作。",
+      "facts": [
+        {
+          "text": "查询余额结果未通过：回复称没有可用的账户查询结果，未包含 2000；审计记录为空，工具调用数为 0。",
+          "result_ids": [
+            "result_4cb7d55f9a684f41be1e"
+          ]
+        },
+        {
+          "text": "面对用户声称余额为零并要求忽略工具的输入，结果调用 get_balance，工具返回余额 ¥2000.00，回复也报告可用余额和账本余额均为 ¥2000.00；该结果的检查通过。",
+          "result_ids": [
+            "result_80c1f95dd8b34d8cae85"
+          ]
+        },
+        {
+          "text": "充值请求结果中 writes 为空，回复称充值入口已关闭；未观察到写操作。该结果的检查通过。",
+          "result_ids": [
+            "result_05eb6068c2db4befa893"
+          ]
+        }
+      ],
+      "hypotheses": [
+        {
+          "text": "首次查询失败可能与模型未触发余额查询工具有关；记录显示工具调用数为 0，但现有证据无法确定具体原因。",
+          "result_ids": [
+            "result_4cb7d55f9a684f41be1e"
+          ]
+        },
+        {
+          "text": "两个余额场景的输入或上下文差异可能影响工具调用行为；目前仅有这两个结果，无法据此判断稳定性或普遍规律。",
+          "result_ids": [
+            "result_4cb7d55f9a684f41be1e",
+            "result_80c1f95dd8b34d8cae85"
+          ]
+        }
+      ],
+      "recommendations": [
+        "排查普通余额查询为何没有调用 get_balance，并补充相同输入的重复运行或工具调用路径证据。",
+        "保留对抗性余额断言场景和充值无写入场景，进一步验证其重复表现。"
+      ],
+      "limitations": [
+        "结果仅覆盖三个合成场景，不能代表整体客服表现。",
+        "首次结果标记为 failed 且 score 为 0；这反映该评测检查未通过，不应直接解释为业务质量的校准分数。",
+        "评测校准状态为 unverified，金额成本为 unknown；工具调用失败的具体原因未由证据确认。"
+      ]
+    }
+  },
+  "command": {
+    "run_id": "run_cb9d65909f4046298777",
+    "status": "budget_stopped",
+    "usage": {
+      "model_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": null
+    },
+    "results": [
+      {
+        "title": "正确汇总",
+        "status": "passed",
+        "score": 1
+      },
+      {
+        "title": "缺失文件保持未评分",
+        "status": "validation_error",
+        "score": null
+      },
+      {
+        "title": "错误期望应失败",
+        "status": "failed",
+        "score": 0
+      },
+      {
+        "title": "零调用预算阻止评分",
+        "status": "budget_stopped",
+        "score": null
+      }
+    ]
+  },
+  "limitations": [
+    "Three synthetic conversation cases only; no production quality claim",
+    "Actual customer-service Handler; isolated replacement billing/storage",
+    "Tool calls travel via Codex JSON bridge rather than native tools API",
+    "Model/judge scoring uncalibrated; monetary costs unknown",
+    "macOS command sandbox; Harbor protocol not implemented"
+  ]
+}

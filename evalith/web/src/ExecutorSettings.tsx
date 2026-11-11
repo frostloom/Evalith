@@ -96,7 +96,7 @@ export function ExecutorSettings() {
         <div>
           <strong>先配置执行后端</strong>
           <p>
-            配置可以保存和修改。评测运行尚未接入，保存不会执行命令、发送请求或启动环境。
+            保存定义后，在项目中查看并确认独立运行环境，再启动评测。Harbor 尚未接入运行协议。
           </p>
         </div>
       </div>

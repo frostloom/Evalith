@@ -15,7 +15,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .security import redact_text
 
@@ -61,7 +61,7 @@ class CodexClient:
             os.killpg(process.pid, signal.SIGKILL)
             process.wait(timeout=3)
 
-    def complete(self, messages: list[dict[str, str]], *, model: str) -> ModelReply:
+    def complete(self, messages: list[dict[str, str]], *, model: str, cancel: Callable[[], bool] | None = None) -> ModelReply:
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}", model):
             raise CodexError("模型名称无效")
         binary = shutil.which(self.binary)
@@ -96,6 +96,8 @@ class CodexClient:
                 process = subprocess.Popen(arguments + ["-"], stdin=input_file, stdout=output, stderr=errors, start_new_session=True, env={**os.environ, "TMPDIR": str(self.runtime_dir / "tmp")})
                 deadline = time.monotonic() + self.timeout
                 while process.poll() is None:
+                    if cancel and cancel():
+                        raise CodexError("本地模型请求已取消；子进程已停止")
                     if time.monotonic() >= deadline:
                         raise CodexError(f"本地模型请求超时（{self.timeout:g} 秒）；没有切换模型或自动重试")
                     if os.fstat(output.fileno()).st_size + os.fstat(errors.fileno()).st_size > 4_000_000:

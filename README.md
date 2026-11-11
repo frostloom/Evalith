@@ -1,6 +1,14 @@
 # Evalith
 
-Evalith 是一个本地 Agent 评测工作台：读取选定的项目资料，核对项目理解，并保留可追溯的主会话。
+Evalith 是一个本地 Agent 评测工作台：从项目资料和持续会话生成版本化题目，在独立环境真实执行，并保留逐题证据与结果分析。
+
+```bash
+./scripts/start-local.sh
+# http://127.0.0.1:8093
+```
+
+支持本地已登录 ChatGPT 账号与 `gpt-6-luna`。见[运行与功能说明](evalith/README.md)和[真实 aigateway 验证](docs/validation/2026-11-12-real-evaluation.md)。
+
 
 ## 阶段 1：项目工作区与开源底座
 
@@ -19,8 +27,8 @@ npm --prefix evalith/web run build
 uv run --directory evalith uvicorn evalith.api:app --host 127.0.0.1 --port 8090
 # 浏览器打开 http://127.0.0.1:8090
 
-# 测试
-uv run --directory evalith pytest -q
+# 测试（限定 Evalith，避免收集外部实验树）
+uv run --project evalith pytest -c evalith/pyproject.toml evalith/tests
 npm --prefix evalith/web test
 
 # EE-free 工作台构建、依赖与启动详见 workbench/README.md

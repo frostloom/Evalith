@@ -16,6 +16,7 @@ import type {
 import { ImportSheet } from "./ImportSheet";
 import { ModelSettings } from "./ModelSettings";
 import { ExecutorSettings } from "./ExecutorSettings";
+import { EvaluationWorkspace } from "./EvaluationWorkspace";
 import { Workspace } from "./Workspace";
 import { Navigation } from "./Navigation";
 import { PageHeader } from "./ui";
@@ -250,7 +251,13 @@ function AppContent() {
         if (project)
           void actions.openProject(
             project,
-            tab === "overview" || tab === "sources" ? tab : "conversation",
+            tab === "overview" ||
+              tab === "sources" ||
+              tab === "tasks" ||
+              tab === "runs" ||
+              tab === "analyses"
+              ? tab
+              : "conversation",
           );
         else {
           actions.goHome();
@@ -333,21 +340,30 @@ function AppContent() {
             onNotice={setNotice}
           />
         )}
-        {effectiveView === "project" && detail && (
-          <Workspace
-            key={detail.project.id}
-            detail={detail}
-            models={models}
-            busy={busy}
-            tab={workspaceTab}
-            hideTabs
-            onTabChange={changeTab}
-            onDetail={handleDetail}
-            onHome={goHome}
-            onError={setError}
-            onNotice={setNotice}
-          />
-        )}
+        {effectiveView === "project" &&
+          detail &&
+          (["tasks", "runs", "analyses"].includes(workspaceTab) ? (
+            <EvaluationWorkspace
+              key={detail.project.id}
+              detail={detail}
+              section={workspaceTab}
+              onSection={changeTab}
+            />
+          ) : (
+            <Workspace
+              key={detail.project.id}
+              detail={detail}
+              models={models}
+              busy={busy}
+              tab={workspaceTab}
+              hideTabs
+              onTabChange={changeTab}
+              onDetail={handleDetail}
+              onHome={goHome}
+              onError={setError}
+              onNotice={setNotice}
+            />
+          ))}
       </main>
       {view === "import" && (
         <ImportSheet

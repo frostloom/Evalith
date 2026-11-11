@@ -25,6 +25,9 @@ import {
   MessageSquare,
   ListChecks,
   Files,
+  FlaskConical,
+  Play,
+  ChartNoAxesCombined,
 } from "lucide-react";
 import { ThemeToggle } from "./theme";
 import { EvalithMark } from "./ui";
@@ -254,6 +257,30 @@ export function Navigation({
                 icon={<Files />}
                 iconPosition="start"
                 label="资料来源"
+              />
+              <Tab
+                id="tab-tasks"
+                aria-controls="panel-tasks"
+                value="tasks"
+                icon={<FlaskConical />}
+                iconPosition="start"
+                label="题目集"
+              />
+              <Tab
+                id="tab-runs"
+                aria-controls="panel-runs"
+                value="runs"
+                icon={<Play />}
+                iconPosition="start"
+                label="评测运行"
+              />
+              <Tab
+                id="tab-analyses"
+                aria-controls="panel-analyses"
+                value="analyses"
+                icon={<ChartNoAxesCombined />}
+                iconPosition="start"
+                label="结果分析"
               />
             </Tabs>
           </div>

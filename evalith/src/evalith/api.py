@@ -142,16 +142,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.db = database
     app.state.service = service
+    trusted_origins = (*_TRUSTED_ORIGINS, f"http://127.0.0.1:{settings.api_port}", f"http://localhost:{settings.api_port}")
 
     app.add_middleware(
         LocalHostMiddleware,
         allowed_hosts=settings.allowed_hosts,
         allow_remote=settings.allow_remote,
-        allowed_origins=_TRUSTED_ORIGINS,
+        allowed_origins=trusted_origins,
     )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=list(_TRUSTED_ORIGINS),
+        allow_origins=list(trusted_origins),
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],

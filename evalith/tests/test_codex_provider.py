@@ -62,6 +62,25 @@ def test_login_status_never_returns_the_account_or_token(tmp_path):
     assert status == {"available": True, "logged_in": True, "authentication": "chatgpt", "model": "gpt-6-luna"}
 
 
+def test_cancel_reaps_model_process(tmp_path):
+    cli = fake_cli(tmp_path, "import time\ntime.sleep(10)\n")
+    with pytest.raises(CodexError, match="取消"):
+        CodexClient(tmp_path / 'runtime', binary=cli).complete([], model='gpt-6-luna', cancel=lambda: True)
+
+
+def test_understanding_prompt_has_exact_source_allowlist(monkeypatch):
+    from evalith.model_gateway import ModelGateway, ModelConfig
+    gateway=ModelGateway(ModelConfig('id','local','codex_local',None,'gpt-6-luna',None))
+    captured=[]
+    def reply(messages):
+        captured.extend(messages)
+        return {'summary':'test','known':[],'inferred':[],'unknowns':[],'sufficient':False}
+    monkeypatch.setattr(gateway,'_request_chat',reply)
+    gateway.analyze(project_name='test',context_text='data',sources=[{'path':'README.md','sent':True},{'path':'secret','sent':False}],supplemental=[])
+    assert '来源 ID 白名单：["README.md"]' in captured[1]['content']
+    assert '逐字复制' in captured[1]['content']
+
+
 def test_local_account_configuration_does_not_require_an_api_key_or_paid_provider_switch(client, settings, monkeypatch):
     from evalith.codex_provider import ModelReply
     settings.allow_paid_models = False

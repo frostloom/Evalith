@@ -26,7 +26,7 @@ from .security import redact_text
 UNDERSTANDING_SCHEMA = {
     "summary": "一句话项目理解（简体中文）",
     "agent_or_flow": "识别到的 Agent、服务或业务流程；不确定时说明依据不足",
-    "known": [{"text": "有直接资料依据的已知事实", "source": "文件路径或上下文中的完整 supplement:标题 [内容指纹]"}],
+    "known": [{"text": "有直接资料依据的已知事实", "source": "逐字复制来源 ID 白名单中的一项，不得附加指纹或行号"}],
     "inferred": [{"text": "推断（不是事实）", "basis": "推断依据"}],
     "unknowns": [{"text": "影响评测方向但资料中缺失的信息", "why": "为什么重要"}],
     "sufficient": False,
@@ -282,6 +282,7 @@ class ModelGateway:
         self.codex_binary = codex_binary
         self.codex_timeout = codex_timeout
         self.last_usage: dict[str, Any] = {"input_tokens": None, "output_tokens": None, "cost_usd": None}
+        self.cancel_check = None
 
     @property
     def name(self) -> str:
@@ -337,7 +338,8 @@ class ModelGateway:
             from .codex_provider import CodexClient, CodexError
             try:
                 reply = CodexClient(self.codex_runtime_dir, binary=self.codex_binary, timeout=self.codex_timeout).complete(
-                    [{"role": item["role"], "content": self._scrub(item["content"])} for item in messages], model=self.config.model_name
+                    [{"role": item["role"], "content": self._scrub(item["content"])} for item in messages], model=self.config.model_name,
+                    **({"cancel": self.cancel_check} if self.cancel_check else {})
                 )
             except CodexError as exc:
                 raise ModelError(self._scrub(str(exc))) from exc
@@ -425,6 +427,8 @@ class ModelGateway:
         prompt = (
             f"项目名称：{redact_text(project_name)}\n"
             f"资料范围：{len(sources)} 项，内容指纹已随资料给出。\n\n"
+            f"来源 ID 白名单：{json.dumps([item['path'] for item in sources if item.get('sent')], ensure_ascii=False)}\n"
+            "known[].source 必须逐字复制白名单中的一项；文件路径后不得添加 sha256、括号、行号或解释。补充资料 ID 保留白名单中的完整文字。\n\n"
             f"当前理解（JSON）：\n{current_payload}\n\n"
             f"最近会话（JSON）：\n{history_payload}\n\n"
             f"{context_text}\n\n"

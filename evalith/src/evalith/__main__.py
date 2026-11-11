@@ -31,6 +31,8 @@ def main() -> None:
             "refusing to bind a non-loopback address; this service can read local "
             "project paths. Set EVALITH_ALLOW_REMOTE=1 only on a trusted network."
         )
+    # Keep callbacks and same-origin checks aligned with the CLI-selected port.
+    os.environ["EVALITH_API_PORT"] = str(args.port or settings.api_port)
     uvicorn.run(
         "evalith.api:app",
         host=host,

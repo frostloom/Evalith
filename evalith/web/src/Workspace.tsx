@@ -356,7 +356,13 @@ export function Workspace({
               >
                 补充或纠正
               </button>
-              <span className="stage-tag">题目生成 · 阶段 2</span>
+              <Button
+                variant="contained"
+                disabled={!readiness.generation_allowed}
+                onClick={() => changeTab("tasks")}
+              >
+                前往题目集
+              </Button>
             </div>
           </section>
         </div>
@@ -623,14 +629,14 @@ export function Workspace({
           </section>
 
           <section className="later-links">
-            <div>
-              <span>题集</span>
-              <em>阶段 2</em>
-            </div>
-            <div>
-              <span>运行结果</span>
-              <em>阶段 3</em>
-            </div>
+            <button onClick={() => changeTab("tasks")}>
+              <span>题目集</span>
+              <span>查看题目</span>
+            </button>
+            <button onClick={() => changeTab("runs")}>
+              <span>评测运行</span>
+              <span>查看结果</span>
+            </button>
           </section>
         </aside>
       </div>

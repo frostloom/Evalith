@@ -41,6 +41,8 @@ class Settings:
     model_timeout_seconds: float = 60.0
     codex_binary: str = "codex"
     codex_timeout_seconds: float = 180.0
+    go_proxy: str = "https://proxy.golang.org,direct"
+    go_sdkroot: str | None = None
     #: Paid OpenAI-compatible calls stay disabled unless an operator explicitly
     #: opts in; no monetary budget control exists in phase 1.
     allow_paid_models: bool = False
@@ -83,6 +85,8 @@ def settings_from_env() -> Settings:
         model_timeout_seconds=float(os.environ.get("EVALITH_MODEL_TIMEOUT", "60")),
         codex_binary=os.environ.get("EVALITH_CODEX_BIN", "codex"),
         codex_timeout_seconds=float(os.environ.get("EVALITH_CODEX_TIMEOUT", "180")),
+        go_proxy=os.environ.get("EVALITH_GO_PROXY", "https://proxy.golang.org,direct"),
+        go_sdkroot=os.environ.get("EVALITH_GO_SDKROOT") or None,
         allow_paid_models=os.environ.get(
             "EVALITH_ALLOW_PAID_MODELS", ""
         ).strip().lower()

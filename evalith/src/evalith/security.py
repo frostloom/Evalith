@@ -1644,6 +1644,11 @@ class RedactionFilter(logging.Filter):
     """Redact credential-shaped values from a log record's message and args."""
 
     def filter(self, record: logging.LogRecord) -> bool:
+        # Uvicorn's AccessFormatter consumes the five structured arguments.
+        # Flattening them into msg breaks every request log at runtime.
+        if record.name == 'uvicorn.access' and isinstance(record.args, tuple) and len(record.args) == 5:
+            record.args = tuple(redact_text(value) if isinstance(value, str) else value for value in record.args)
+            return True
         try:
             message = record.getMessage()
         except Exception:  # noqa: BLE001 - never break logging
