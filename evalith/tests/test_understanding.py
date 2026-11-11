@@ -367,12 +367,12 @@ def test_marker_like_file_content_does_not_fabricate_sources(
     assert "README.md" in sources
 
 
-def test_unsent_supplement_is_not_claimed_as_known(
+def test_supplement_is_sent_when_files_consume_budget(
     client: TestClient, tmp_path: Path
 ) -> None:
     root = tmp_path / "budget-supplement"
     root.mkdir()
-    for index in range(5):
+    for index in range(10):
         (root / f"big{index}.txt").write_text(
             "x" * 6_000, encoding="utf-8"
         )
@@ -386,13 +386,13 @@ def test_unsent_supplement_is_not_claimed_as_known(
     known_texts = {
         item["text"] for item in detail["understanding"]["known"]
     }
-    assert not any("末尾补充" in text for text in known_texts)
+    assert any("末尾补充" in text for text in known_texts)
     supplements = [
         item
         for item in detail["messages"][-1]["sent_scope"]["sources"]
         if item.get("supplemental")
     ]
-    assert supplements and all(item["sent"] is False for item in supplements)
+    assert supplements and all(item["sent"] is True for item in supplements)
 
 
 def test_missing_model_records_zero_transmitted_scope(

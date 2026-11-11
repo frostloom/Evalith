@@ -1086,7 +1086,15 @@ def build_model_context(
     """
     sources: list[dict[str, Any]] = []
     blocks: list[str] = []
-    remaining = budget_chars
+    # Keep room for user-supplied supplements: project files must not consume
+    # the whole budget before the materials the user explicitly added.
+    supplement_reserve = (
+        min(budget_chars, max(2_000, budget_chars // 4))
+        if supplemental
+        else 0
+    )
+    file_budget = max(0, budget_chars - supplement_reserve)
+    remaining = file_budget
     sent_bytes = 0
     redaction_count = 0
 
@@ -1164,6 +1172,7 @@ def build_model_context(
             }
         )
 
+    remaining = budget_chars - (file_budget - remaining)
     for index, doc in enumerate(supplemental):
         raw_title = str(doc.get("title") or f"补充资料 {index + 1}")
         raw_content = str(doc.get("content", ""))
