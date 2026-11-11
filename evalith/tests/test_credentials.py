@@ -1449,6 +1449,9 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert redact_text("data: {flow: ordinary-flow-data}\n") == (
         "data: {flow: ordinary-flow-data}\n"
     )
+    assert "tagged-flow-secret" not in redact_text(
+        "{kind: Secret, stringData: !!map {example: tagged-flow-secret}}\n"
+    )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'
         '"kubectl.kubernetes.io/last-applied-configuration": '

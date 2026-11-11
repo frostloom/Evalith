@@ -799,9 +799,10 @@ _K8S_SECRET_FLOW_ALIAS_KIND = re.compile(
     r"\*([^\s\[\]{},]+)"
 )
 _K8S_SECRET_FLOW_OPEN = re.compile(
-    r"(?im)(?:^|[{,])[ \t]*"
+    r"(?im)(?P<lead>^|[{,])[ \t]*"
     r"(?:(?:![^\s,}]+|&[^\s,}]+)[ \t]+)?"
-    r"[\"']?(?P<key>data|stringData)[\"']?[ \t]*:[ \t]*\{"
+    r"[\"']?(?P<key>data|stringData)[\"']?[ \t]*:[ \t]*"
+    r"(?:(?:![^\s,{]+|&[^\s,{]+)[ \t]+)*\{"
 )
 
 
@@ -1452,6 +1453,10 @@ def _redact_kubernetes_secret_data(text: str) -> str:
             start = match.end() - 1
             end = _flow_mapping_end(text, start)
             out.append(text[cursor : match.start()])
+            lead = match.group("lead")
+            out.append(lead)
+            if lead == ",":
+                out.append(" ")
             out.append(f"{match.group('key')}: {_REDACTED}")
             cursor = end
         out.append(text[cursor:])

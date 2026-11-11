@@ -109,6 +109,10 @@ def project_root(tmp_path: Path) -> Path:
         "pa\\\n    ssword=synthetic-split-password\n",
         encoding="utf-8",
     )
+    (root / "config" / "tagged-flow-secret.yaml").write_text(
+        "{kind: Secret, stringData: !!map {example: synthetic-tagged-flow-secret}}\n",
+        encoding="utf-8",
+    )
     (root / "config" / "flow-data.yaml").write_text(
         "data: {flow: synthetic-flow-data}\n", encoding="utf-8"
     )
