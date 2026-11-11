@@ -1,22 +1,69 @@
 import { X as CloseRounded } from "lucide-react";
-import type { ReactNode } from "react";
-import { Drawer, IconButton, Typography } from "@mui/material";
+import { useId, type ReactNode } from "react";
+import { Dialog, Drawer, IconButton, Typography } from "@mui/material";
 import { ThemeToggle, ui } from "./theme";
 
-/** Right-hand form drawer matching the upstream BaseDrawer interaction. */
+/** Centered forms and contextual source drawers share the same controls. */
 export function FormDrawer({
   title,
   onClose,
   children,
   footer,
   busy = false,
+  presentation = "drawer",
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
   busy?: boolean;
+  presentation?: "dialog" | "drawer";
 }) {
+  const titleId = useId();
+  const content = (
+    <>
+      <div className="drawer-heading">
+        <Typography id={titleId} component="h2" variant="h5">
+          {title}
+        </Typography>
+        <div className="drawer-heading-actions">
+          <ThemeToggle />
+          <IconButton onClick={onClose} disabled={busy} aria-label="关闭">
+            <CloseRounded />
+          </IconButton>
+        </div>
+      </div>
+      <div className="drawer-content">{children}</div>
+      {footer && <footer className="drawer-footer">{footer}</footer>}
+    </>
+  );
+  if (presentation === "dialog") {
+    return (
+      <Dialog
+        open
+        fullWidth
+        maxWidth={false}
+        aria-labelledby={titleId}
+        onClose={busy ? undefined : onClose}
+        slotProps={{
+          backdrop: { sx: { backgroundColor: "var(--overlay)" } },
+          paper: {
+            className: "form-dialog",
+            sx: {
+              width: 640,
+              maxWidth: "calc(100% - 48px)",
+              maxHeight: "calc(100dvh - 64px)",
+              borderRadius: "14px",
+              border: "1px solid var(--border-strong)",
+              boxShadow: "0 20px 80px #00000024",
+            },
+          },
+        }}
+      >
+        {content}
+      </Dialog>
+    );
+  }
   return (
     <Drawer
       open
@@ -32,19 +79,7 @@ export function FormDrawer({
         },
       }}
     >
-      <div className="drawer-heading">
-        <Typography component="h2" variant="h5">
-          {title}
-        </Typography>
-        <div className="drawer-heading-actions">
-          <ThemeToggle />
-          <IconButton onClick={onClose} disabled={busy} aria-label="关闭">
-            <CloseRounded />
-          </IconButton>
-        </div>
-      </div>
-      <div className="drawer-content">{children}</div>
-      {footer && <footer className="drawer-footer">{footer}</footer>}
+      {content}
     </Drawer>
   );
 }

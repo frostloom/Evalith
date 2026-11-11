@@ -25,7 +25,6 @@ import {
   MessageSquare,
   ListChecks,
   Files,
-  ArrowLeft,
 } from "lucide-react";
 import { ThemeToggle } from "./theme";
 import { EvalithMark } from "./ui";
@@ -103,11 +102,10 @@ export function Navigation({
         </IconButton>
       </div>
       <div className="sidebar-content" id="sidebar-content">
-        <p className="nav-group">工作区</p>
         <nav aria-label="工作区导航" className="workspace-nav">
           <button
             aria-label="项目目录"
-            className={`nav-item ${!modelsActive && !executorsActive ? "is-active" : ""}`}
+            className={`nav-item ${!activeProject && !modelsActive && !executorsActive ? "is-active" : ""}`}
             onClick={onHome}
             aria-current={
               !activeProject && !modelsActive && !executorsActive
@@ -120,24 +118,30 @@ export function Navigation({
             <span className="nav-count">{projects.length}</span>
           </button>
           <button
-            aria-label="执行器配置"
-            className={`nav-item ${executorsActive ? "is-active" : ""}`}
-            onClick={onExecutors}
-            aria-current={executorsActive ? "page" : undefined}
+            className="nav-item nav-create"
+            onClick={onImport}
+            aria-label="建立新项目"
           >
-            <TerminalSquare />
-            <span>执行器配置</span>
-          </button>
-          <button
-            aria-label="模型配置"
-            className={`nav-item ${modelsActive ? "is-active" : ""}`}
-            onClick={onModels}
-            aria-current={modelsActive ? "page" : undefined}
-          >
-            <Cpu />
-            <span>模型配置</span>
+            <Plus />
+            <span>新建项目</span>
           </button>
         </nav>
+        {!activeProject && projects.length > 0 && (
+          <div className="recent-projects">
+            <p className="nav-group">最近项目</p>
+            {projects.slice(0, 6).map((project) => (
+              <button
+                className="nav-item recent-project"
+                key={project.id}
+                onClick={() => onOpen(project)}
+                aria-label={`打开项目 ${project.name}`}
+              >
+                <span className="recent-project-dot" aria-hidden="true" />
+                <span>{project.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {activeProject && (
           <div className="project-navigation">
             <p className="nav-group">当前项目</p>
@@ -252,19 +256,32 @@ export function Navigation({
                 label="资料来源"
               />
             </Tabs>
-            <button
-              className="back-to-projects"
-              onClick={onHome}
-              aria-label="返回项目目录"
-            >
-              <ArrowLeft />
-              <span>返回项目目录</span>
-            </button>
           </div>
         )}
         <div className="sidebar-bottom">
+          <p className="nav-group">配置</p>
+          <nav className="workspace-nav" aria-label="配置导航">
+            <button
+              aria-label="执行器配置"
+              className={`nav-item ${executorsActive ? "is-active" : ""}`}
+              onClick={onExecutors}
+              aria-current={executorsActive ? "page" : undefined}
+            >
+              <TerminalSquare />
+              <span>执行器配置</span>
+            </button>
+            <button
+              aria-label="模型配置"
+              className={`nav-item ${modelsActive ? "is-active" : ""}`}
+              onClick={onModels}
+              aria-current={modelsActive ? "page" : undefined}
+            >
+              <Cpu />
+              <span>模型配置</span>
+            </button>
+          </nav>
           <div className="sidebar-settings">
-            <span>界面主题</span>
+            <span>本地工作区</span>
             <ThemeToggle />
           </div>
         </div>

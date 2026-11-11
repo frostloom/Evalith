@@ -88,11 +88,16 @@ export function ImportSheet({
 
   return (
     <FormDrawer
+      presentation="dialog"
       title="建立项目"
       onClose={onCancel}
       footer={
         <>
-          <button type="button" className="btn btn-quiet" onClick={onCancel}>
+          <button
+            type="button"
+            className="btn btn-quiet"
+            onClick={onCancel}
+          >
             取消
           </button>
           <button

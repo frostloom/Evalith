@@ -278,6 +278,7 @@ function ExecutorEditor({
   };
   return (
     <FormDrawer
+      presentation="dialog"
       title={initial ? "编辑执行器" : "添加执行器"}
       onClose={onClose}
       busy={busy}

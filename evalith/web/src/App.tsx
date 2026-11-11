@@ -403,141 +403,148 @@ function Home({
           : !project.model_config_id)),
   );
   return (
-    <div className="page project-directory">
-      <PageHeader
-        title="项目"
-        description="管理本地项目及其评测会话。"
-        actions={
-          projects.length ? (
-            <Tooltip title="从本地目录建立项目">
-              <Button
-                variant="contained"
-                aria-label="建立项目"
-                startIcon={<AddRounded />}
-                onClick={onImport}
-              >
-                建立项目
-              </Button>
-            </Tooltip>
-          ) : undefined
-        }
-      />
-      {!!projects.length && (
-        <div className="directory-toolbar">
-          <TextField
-            placeholder="搜索项目…"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            slotProps={{
-              htmlInput: { "aria-label": "搜索项目" },
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRounded fontSize="small" />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={filter}
-            onChange={(_, value: string | null) => {
-              if (value) setFilter(value);
-            }}
-            aria-label="项目筛选"
-          >
-            <ToggleButton value="all">全部</ToggleButton>
-            <ToggleButton value="configured">已配置模型</ToggleButton>
-            <ToggleButton value="unconfigured">待配置模型</ToggleButton>
-          </ToggleButtonGroup>
-          <span className="directory-count">{filtered.length} 个项目</span>
-        </div>
-      )}
-      {loading ? (
-        <p role="status" className="empty-state">
-          正在加载项目…
-        </p>
-      ) : filtered.length ? (
-        <div className="project-grid">
-          {filtered.map((project, index) => (
-            <button
-              className="project-card"
-              data-tone={index % 3}
-              key={project.id}
-              onClick={() => onOpen(project)}
+    <div className="project-directory">
+      <div className="directory-topbar">
+        <FolderOutlined />
+        <span>工作区</span>
+        <span className="toolbar-slash">/</span>
+        <strong>项目目录</strong>
+      </div>
+      <div className="directory-body">
+        <PageHeader
+          title="项目"
+          description="从一个项目开始，整理资料，明确评测方向。"
+          actions={
+            projects.length ? (
+              <Tooltip title="从本地目录建立项目">
+                <Button
+                  variant="contained"
+                  aria-label="建立项目"
+                  startIcon={<AddRounded />}
+                  onClick={onImport}
+                >
+                  建立项目
+                </Button>
+              </Tooltip>
+            ) : undefined
+          }
+        />
+        {!!projects.length && (
+          <div className="directory-toolbar">
+            <TextField
+              placeholder="搜索项目…"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              slotProps={{
+                htmlInput: { "aria-label": "搜索项目" },
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchRounded fontSize="small" />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              value={filter}
+              onChange={(_, value: string | null) => {
+                if (value) setFilter(value);
+              }}
+              aria-label="项目筛选"
             >
-              <div className="project-card-top">
-                <span className="project-card-icon" aria-hidden="true">
-                  {project.name.slice(0, 1)}
-                </span>
-                <div className="project-card-heading">
-                  <strong>{project.name}</strong>
-                  <span>项目主会话</span>
-                </div>
-                <ArrowOutwardRounded className="card-enter-arrow" />
-              </div>
-              <p className="project-card-path" title={project.root_path}>
-                <FolderOutlined />
-                {compactPath(project.root_path)}
-              </p>
-              <div className="project-card-details">
-                <span>
-                  <FolderOutlined />
-                  {project.file_count} 个文件
-                </span>
-                <span className="project-card-model">
-                  <span className="model-presence" />
-                  {models.find((model) => model.id === project.model_config_id)
-                    ?.name ?? "尚未关联模型"}
-                </span>
-              </div>
-              {project.analysis_error && (
-                <span className="project-card-error">初步分析需要检查</span>
-              )}
-              <div className="project-card-footer">
-                <span>
-                  <ScheduleRounded />
-                  {new Date(project.updated_at).toLocaleDateString("zh-CN", {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                  更新
-                </span>
-                <span className="card-open-label">
-                  进入会话 <ArrowOutwardRounded />
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <section className="empty-state">
-          <div className="empty-project-art" aria-hidden="true">
-            <FolderOutlined />
+              <ToggleButton value="all">全部</ToggleButton>
+              <ToggleButton value="configured">已配置模型</ToggleButton>
+              <ToggleButton value="unconfigured">待配置模型</ToggleButton>
+            </ToggleButtonGroup>
+            <span className="directory-count">{filtered.length} 个项目</span>
           </div>
-          <h2>{projects.length ? "没有匹配的项目" : "创建第一个项目"}</h2>
-          <p>
-            {projects.length
-              ? "调整搜索词或筛选条件，找到需要的项目。"
-              : "连接本地项目与资料，和模型一起明确评测方向。"}
+        )}
+        {loading ? (
+          <p role="status" className="empty-state">
+            正在加载项目…
           </p>
-          <Button
-            variant="contained"
-            onClick={
-              projects.length
-                ? () => {
-                    setSearch("");
-                    setFilter("all");
-                  }
-                : onImport
-            }
-          >
-            {projects.length ? "清除筛选" : "建立项目"}
-          </Button>
-        </section>
-      )}
+        ) : filtered.length ? (
+          <div className="project-grid">
+            {filtered.map((project) => (
+              <button
+                className="project-card"
+                key={project.id}
+                onClick={() => onOpen(project)}
+              >
+                <div className="project-card-top">
+                  <span className="project-card-icon" aria-hidden="true">
+                    <FolderOutlined />
+                  </span>
+                  <div className="project-card-heading">
+                    <strong>{project.name}</strong>
+                    <span>持续会话</span>
+                  </div>
+                  <ArrowOutwardRounded className="card-enter-arrow" />
+                </div>
+                <p className="project-card-path" title={project.root_path}>
+                  {compactPath(project.root_path)}
+                </p>
+                <div className="project-card-details">
+                  <span>
+                    <FolderOutlined />
+                    {project.file_count} 个文件
+                  </span>
+                  <span className="project-card-model">
+                    <span className="model-presence" />
+                    {models.find(
+                      (model) => model.id === project.model_config_id,
+                    )?.name ?? "尚未关联模型"}
+                  </span>
+                </div>
+                {project.analysis_error && (
+                  <span className="project-card-error">初步分析需要检查</span>
+                )}
+                <div className="project-card-footer">
+                  <span>
+                    <ScheduleRounded />
+                    {new Date(project.updated_at).toLocaleDateString("zh-CN", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                    更新
+                  </span>
+                  <span className="card-open-label">
+                    打开会话 <ArrowOutwardRounded />
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <section className="empty-state">
+            <div className="empty-project-art" aria-hidden="true">
+              <FolderOutlined />
+            </div>
+            <h2>{projects.length ? "没有匹配的项目" : "创建第一个项目"}</h2>
+            <p>
+              {projects.length
+                ? "调整搜索词或筛选条件，找到需要的项目。"
+                : "连接本地项目与资料，和模型一起明确评测方向。"}
+            </p>
+            <Button
+              variant="contained"
+              onClick={
+                projects.length
+                  ? () => {
+                      setSearch("");
+                      setFilter("all");
+                    }
+                  : onImport
+              }
+            >
+              {projects.length ? "清除筛选" : "建立项目"}
+            </Button>
+          </section>
+        )}
+      </div>
     </div>
   );
 }

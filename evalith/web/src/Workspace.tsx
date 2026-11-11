@@ -5,9 +5,12 @@ import {
   ChevronDown as ExpandMoreRounded,
   RefreshCw as RefreshRounded,
   ArrowUp as ArrowUpwardRounded,
+  ArrowDown,
+  Check,
+  Cpu,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Tab, Tabs } from "@mui/material";
+import { Button, Popover, Tab, Tabs } from "@mui/material";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { EvalithMark, FormDrawer, PageHeader } from "./ui";
@@ -92,7 +95,10 @@ export function Workspace({
   const [composing, setComposing] = useState(false);
   const [working, setWorking] = useState(false);
   const [editingSources, setEditingSources] = useState(false);
-  const [editingModel, setEditingModel] = useState(false);
+  const [modelAnchor, setModelAnchor] = useState<HTMLElement | null>(null);
+  const [followingMessages, setFollowingMessages] = useState(true);
+  const followingRef = useRef(true);
+  const [sending, setSending] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const projectIdRef = useRef(project.id);
   useEffect(() => {
@@ -150,8 +156,11 @@ export function Workspace({
 
   const send = async (text: string) => {
     const content = text.trim();
-    if (!content) return;
+    if (!content || working || busy) return;
     const origin = project.id;
+    followingRef.current = true;
+    setFollowingMessages(true);
+    setSending(true);
     setWorking(true);
     try {
       const next = await api.sendMessage(project.id, content);
@@ -185,6 +194,7 @@ export function Workspace({
     } finally {
       if (mountedRef.current && projectIdRef.current === origin) {
         setWorking(false);
+        setSending(false);
       }
     }
   };
@@ -198,9 +208,15 @@ export function Workspace({
   };
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (activeTab === "conversation")
+    if (activeTab === "conversation" && followingRef.current)
       messagesEnd.current?.scrollIntoView?.({ block: "end" });
-  }, [activeTab, messages.length]);
+  }, [activeTab, messages.length, sending]);
+  useEffect(() => {
+    const input = composerRef.current;
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.min(Math.max(input.scrollHeight, 46), 200)}px`;
+  }, [message, activeTab]);
 
   return (
     <div className="workspace">
@@ -353,7 +369,16 @@ export function Workspace({
           aria-label="项目主会话"
         >
           <div className="conversation-main">
-            <div className="messages">
+            <div
+              className="messages"
+              onScroll={(event) => {
+                const node = event.currentTarget;
+                const nearEnd =
+                  node.scrollHeight - node.scrollTop - node.clientHeight < 96;
+                followingRef.current = nearEnd;
+                setFollowingMessages(nearEnd);
+              }}
+            >
               <div className="conversation-transcript">
                 {understanding?.stale && (
                   <div className="chat-source-notice" role="status">
@@ -401,69 +426,102 @@ export function Workspace({
                       onSources={() => changeTab("sources")}
                     />
                   ))}
+                {sending && (
+                  <div className="reply-pending" role="status">
+                    <EvalithMark />
+                    <span>
+                      正在回复
+                      <span className="pending-dots" aria-hidden="true">
+                        …
+                      </span>
+                    </span>
+                  </div>
+                )}
                 <div ref={messagesEnd} />
               </div>
             </div>
-            <div className="composer">
-              <label className="sr-only" htmlFor="composer-input">
-                给主会话发送消息
-              </label>
-              <textarea
-                id="composer-input"
-                ref={composerRef}
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                onCompositionStart={() => setComposing(true)}
-                onCompositionEnd={() => setComposing(false)}
-                onKeyDown={(event) => {
-                  if (
-                    event.key === "Enter" &&
-                    !event.shiftKey &&
-                    !composing &&
-                    !event.nativeEvent.isComposing
-                  ) {
-                    event.preventDefault();
-                    void send(message);
-                  }
-                }}
-                rows={2}
-                placeholder="补充资料、纠正理解，或聊聊你想评测什么…"
-                disabled={disabled}
-              />
-              <div className="composer-foot">
-                <div className="composer-tools">
+            <div className="composer-dock">
+              {!followingMessages && (
+                <button
+                  className="jump-to-latest"
+                  onClick={() => {
+                    followingRef.current = true;
+                    setFollowingMessages(true);
+                    messagesEnd.current?.scrollIntoView?.({
+                      block: "end",
+                      behavior: window.matchMedia?.(
+                        "(prefers-reduced-motion: reduce)",
+                      ).matches
+                        ? "instant"
+                        : "smooth",
+                    });
+                  }}
+                >
+                  <ArrowDown /> 回到最新消息
+                </button>
+              )}
+              <div className="composer">
+                <label className="sr-only" htmlFor="composer-input">
+                  给主会话发送消息
+                </label>
+                <textarea
+                  id="composer-input"
+                  ref={composerRef}
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                  onCompositionStart={() => setComposing(true)}
+                  onCompositionEnd={() => setComposing(false)}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" &&
+                      !event.shiftKey &&
+                      !composing &&
+                      !event.nativeEvent.isComposing
+                    ) {
+                      event.preventDefault();
+                      void send(message);
+                    }
+                  }}
+                  rows={2}
+                  placeholder="补充资料、纠正理解，或聊聊你想评测什么…"
+                  disabled={disabled}
+                />
+                <div className="composer-foot">
+                  <div className="composer-tools">
+                    <button
+                      className="composer-attach"
+                      onClick={() => setEditingSources(true)}
+                      disabled={disabled}
+                    >
+                      <AddRounded />
+                      <span>项目资料</span>
+                    </button>
+                    <button
+                      className="composer-model"
+                      aria-haspopup="dialog"
+                      aria-expanded={Boolean(modelAnchor)}
+                      onClick={(event) => setModelAnchor(event.currentTarget)}
+                      disabled={disabled}
+                    >
+                      <TuneOutlined />
+                      {models.find(
+                        (item) => item.id === project.model_config_id,
+                      )?.name ?? "选择模型"}
+                      <ExpandMoreRounded />
+                    </button>
+                  </div>
                   <button
-                    className="composer-attach"
-                    onClick={() => setEditingSources(true)}
-                    disabled={disabled}
+                    className="send-button"
+                    aria-label={working ? "处理中…" : "发送"}
+                    onClick={() => void send(message)}
+                    disabled={disabled || !message.trim()}
                   >
-                    <AddRounded />
-                    <span>项目资料</span>
-                  </button>
-                  <button
-                    className="composer-model"
-                    onClick={() => setEditingModel(true)}
-                    disabled={disabled}
-                  >
-                    <TuneOutlined />
-                    {models.find((item) => item.id === project.model_config_id)
-                      ?.name ?? "选择模型"}
-                    <ExpandMoreRounded />
+                    <ArrowUpwardRounded fontSize="small" />
                   </button>
                 </div>
-                <button
-                  className="send-button"
-                  aria-label={working ? "处理中…" : "发送"}
-                  onClick={() => void send(message)}
-                  disabled={disabled || !message.trim()}
-                >
-                  <ArrowUpwardRounded fontSize="small" />
-                </button>
               </div>
+              <p className="composer-hint">Enter 发送，Shift + Enter 换行</p>
             </div>
-            <p className="composer-hint">
-              每个项目一段持续会话<span>Enter 发送，Shift + Enter 换行</span>
-            </p>
           </div>
         </section>
 
@@ -577,15 +635,16 @@ export function Workspace({
         </aside>
       </div>
 
-      {editingModel && (
+      {modelAnchor && (
         <ModelPicker
+          anchor={modelAnchor}
           project={project}
           models={models}
-          onClose={() => setEditingModel(false)}
+          onClose={() => setModelAnchor(null)}
           onSaved={(next) => {
             if (!mountedRef.current) return;
             applyDetail(next);
-            setEditingModel(false);
+            setModelAnchor(null);
             reportNotice("模型配置已保存，项目主会话保持不变。");
           }}
           onError={reportError}
@@ -795,12 +854,14 @@ function MessageRow({
 }
 
 function ModelPicker({
+  anchor,
   project,
   models,
   onClose,
   onSaved,
   onError,
 }: {
+  anchor: HTMLElement;
   project: ProjectDetail["project"];
   models: ModelConfig[];
   onClose: () => void;
@@ -827,56 +888,93 @@ function ModelPicker({
   };
 
   return (
-    <FormDrawer
-      title="模型配置"
-      onClose={onClose}
-      footer={
-        <>
-          <button
-            className="btn btn-primary"
-            onClick={() => void save()}
-            disabled={busy || models.length === 0}
-          >
-            {busy ? "保存并分析中…" : "保存模型"}
-          </button>
-          <button className="btn btn-quiet" onClick={onClose}>
-            取消
-          </button>
-        </>
-      }
+    <Popover
+      open
+      anchorEl={anchor}
+      onClose={busy ? undefined : onClose}
+      anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      transformOrigin={{ vertical: "bottom", horizontal: "right" }}
+      slotProps={{
+        paper: {
+          role: "dialog",
+          "aria-label": "会话模型",
+          "aria-modal": true,
+          className: "model-menu",
+          sx: { width: 340, maxWidth: "calc(100vw - 32px)", mb: 1.5 },
+        },
+      }}
     >
-      <div className="modal-body">
-        {models.length === 0 ? (
-          <p className="inline-note">
-            还没有模型配置。请先在“模型与凭据”中添加；保存项目模型不会创建新的主会话。
-          </p>
-        ) : (
-          <label className="field">
-            <span>模型服务</span>
-            <select
-              value={modelId}
-              onChange={(event) => setModelId(event.target.value)}
-            >
-              <option value="">未配置（保留当前会话，暂停分析）</option>
-              {models.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name} ·{" "}
-                  {model.provider === "stub" ? "离线演示" : model.model_name}
-                </option>
-              ))}
-            </select>
-            <small>
-              保存后如项目此前因缺少模型而分析失败，会自动重新分析；主会话与已有纠正保留。
-            </small>
-          </label>
-        )}
-        {error && (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        )}
+      <div className="model-menu-heading">
+        <Cpu />
+        <h2>会话模型</h2>
       </div>
-    </FormDrawer>
+      {models.length === 0 ? (
+        <p className="model-menu-note">
+          还没有模型服务，请先到侧栏的“模型配置”添加。
+        </p>
+      ) : (
+        <fieldset className="model-menu-options" disabled={busy}>
+          <legend className="sr-only">模型服务</legend>
+          {models.map((model) => (
+            <label
+              key={model.id}
+              className={`model-menu-option ${modelId === model.id ? "is-selected" : ""}`}
+            >
+              <input
+                type="radio"
+                name="conversation-model"
+                value={model.id}
+                checked={modelId === model.id}
+                onChange={() => setModelId(model.id)}
+              />
+              <span>
+                <strong>{model.name}</strong>
+                <small>
+                  {model.provider === "stub"
+                    ? "离线演示 · 固定响应"
+                    : model.model_name}
+                </small>
+              </span>
+              {modelId === model.id && <Check aria-hidden="true" />}
+            </label>
+          ))}
+          <label className="model-menu-option">
+            <input
+              type="radio"
+              name="conversation-model"
+              value=""
+              checked={!modelId}
+              onChange={() => setModelId("")}
+            />
+            <span>
+              <strong>暂不关联模型</strong>
+              <small>保留会话，暂停分析</small>
+            </span>
+            {!modelId && <Check aria-hidden="true" />}
+          </label>
+        </fieldset>
+      )}
+      <p className="model-menu-note">
+        保存后保留当前会话；此前因缺少模型而失败的分析会重新运行。
+      </p>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="model-menu-footer">
+        <button className="btn btn-quiet" onClick={onClose} disabled={busy}>
+          取消
+        </button>
+        <button
+          className="btn btn-primary"
+          onClick={() => void save()}
+          disabled={busy || models.length === 0}
+        >
+          {busy ? "保存并分析中…" : "保存模型"}
+        </button>
+      </div>
+    </Popover>
   );
 }
 

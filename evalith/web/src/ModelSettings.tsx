@@ -194,12 +194,15 @@ export function ModelSettings({
 
         {adding && (
           <FormDrawer
+            presentation="dialog"
+            busy={busy}
             title="添加模型服务"
             onClose={() => setAdding(false)}
             footer={
               <>
                 <button
                   className="btn btn-quiet"
+                  disabled={busy}
                   onClick={() => setAdding(false)}
                 >
                   取消

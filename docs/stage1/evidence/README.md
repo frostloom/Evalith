@@ -1,6 +1,6 @@
 # Stage-1 evidence
 
-Latest visual proposal: [desktop interface reset](../2026-11-11-界面整体重做.md), with `evalith-reset-*.png` at 1440×1000. Functional settings verification remains in the prior report. Earlier screenshots are retained as historical proposals.
+Latest visual proposal: [product navigation, conversation and dialogs](../2026-11-11-产品交互与会话.md), with `evalith-product-*.png` at 1440×1000. Functional settings verification remains in the prior report. Earlier screenshots are retained as historical proposals.
 
 | File | What it is | How to regenerate |
 | --- | --- | --- |

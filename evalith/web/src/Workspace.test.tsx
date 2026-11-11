@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -6,6 +12,7 @@ const apiMock = vi.hoisted(() => ({
   getProject: vi.fn(),
   sendMessage: vi.fn(),
   continueProject: vi.fn(),
+  updateProjectModel: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -16,7 +23,7 @@ vi.mock("./api", () => ({
   },
 }));
 
-import type { ProjectDetail } from "./types";
+import type { ModelConfig, ProjectDetail } from "./types";
 import { Workspace } from "./Workspace";
 import { ApiError } from "./api";
 
@@ -59,7 +66,168 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+it("selects a model in context, saves explicitly and preserves the conversation draft", async () => {
+  const user = userEvent.setup();
+  const onDetail = vi.fn();
+  const next = makeDetail(false);
+  next.project.model_config_id = "local";
+  apiMock.updateProjectModel.mockResolvedValue(next);
+  render(
+    <Workspace
+      detail={makeDetail(false)}
+      models={[
+        {
+          id: "local",
+          name: "离线演示模型",
+          provider: "stub",
+          model_name: "stub",
+        } as ModelConfig,
+      ]}
+      busy={false}
+      tab="conversation"
+      onDetail={onDetail}
+      onHome={vi.fn()}
+      onError={vi.fn()}
+      onNotice={vi.fn()}
+    />,
+  );
+  const draft = screen.getByRole("textbox", { name: "给主会话发送消息" });
+  await user.type(draft, "保留项目背景");
+  const trigger = screen.getByRole("button", { name: "选择模型" });
+  await user.click(trigger);
+  expect(trigger).toHaveAttribute("aria-expanded", "true");
+  const picker = screen.getByRole("dialog", { name: "会话模型" });
+  await user.click(within(picker).getByRole("radio", { name: /离线演示模型/ }));
+  expect(apiMock.updateProjectModel).not.toHaveBeenCalled();
+  await user.click(within(picker).getByRole("button", { name: "保存模型" }));
+  await waitFor(() =>
+    expect(apiMock.updateProjectModel).toHaveBeenCalledWith("prj_a", "local"),
+  );
+  await waitFor(() => expect(onDetail).toHaveBeenCalledWith(next));
+  expect(draft).toHaveValue("保留项目背景");
+  expect(
+    screen.queryByRole("dialog", { name: "会话模型" }),
+  ).not.toBeInTheDocument();
+});
+
+it("closes the model menu with Escape without applying a pending selection", async () => {
+  const user = userEvent.setup();
+  render(
+    <Workspace
+      detail={makeDetail(false)}
+      models={[
+        {
+          id: "local",
+          name: "离线演示模型",
+          provider: "stub",
+          model_name: "stub",
+        } as ModelConfig,
+      ]}
+      busy={false}
+      tab="conversation"
+      onDetail={vi.fn()}
+      onHome={vi.fn()}
+      onError={vi.fn()}
+      onNotice={vi.fn()}
+    />,
+  );
+  await user.click(screen.getByRole("button", { name: "选择模型" }));
+  await user.click(screen.getByRole("radio", { name: /离线演示模型/ }));
+  await user.keyboard("{Escape}");
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "会话模型" }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(apiMock.updateProjectModel).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "选择模型" })).toHaveFocus();
+});
+
 describe("workspace failure reconciliation", () => {
+  it("shows a pending reply and prevents another Enter from sending twice", async () => {
+    const user = userEvent.setup();
+    let finish!: (detail: ProjectDetail) => void;
+    apiMock.sendMessage.mockReturnValue(
+      new Promise<ProjectDetail>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(
+      <Workspace
+        detail={makeDetail(false)}
+        models={[]}
+        busy={false}
+        tab="conversation"
+        onDetail={vi.fn()}
+        onHome={vi.fn()}
+        onError={vi.fn()}
+        onNotice={vi.fn()}
+      />,
+    );
+    const input = screen.getByRole("textbox", { name: "给主会话发送消息" });
+    await user.type(input, "补充业务背景");
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("status")).toHaveTextContent("正在回复");
+    expect(input).toBeDisabled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(apiMock.sendMessage).toHaveBeenCalledTimes(1);
+    finish(makeDetail(false));
+    await waitFor(() =>
+      expect(screen.queryByRole("status")).not.toBeInTheDocument(),
+    );
+    expect(input).toHaveValue("");
+  });
+
+  it("keeps the reading position for new replies until the reader returns to the latest message", async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    const previous = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      const props = {
+        models: [],
+        busy: false,
+        tab: "conversation" as const,
+        onDetail: vi.fn(),
+        onHome: vi.fn(),
+        onError: vi.fn(),
+        onNotice: vi.fn(),
+      };
+      const view = render(<Workspace detail={makeDetail(false)} {...props} />);
+      const messages = screen
+        .getByRole("tabpanel", { name: "主会话" })
+        .querySelector(".messages")!;
+      Object.defineProperties(messages, {
+        scrollHeight: { value: 2000 },
+        clientHeight: { value: 400 },
+        scrollTop: { value: 0 },
+      });
+      fireEvent.scroll(messages);
+      scrollIntoView.mockClear();
+      const next = makeDetail(false);
+      next.messages = [
+        {
+          id: "new",
+          role: "assistant",
+          content: "新的回复",
+          payload: { kind: "chat" },
+          model: null,
+          sent_scope: null,
+          created_at: "2026-11-11T00:00:00Z",
+        },
+      ];
+      view.rerender(<Workspace detail={next} {...props} />);
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      await user.click(screen.getByRole("button", { name: "回到最新消息" }));
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(
+        screen.queryByRole("button", { name: "回到最新消息" }),
+      ).not.toBeInTheDocument();
+    } finally {
+      Element.prototype.scrollIntoView = previous;
+    }
+  });
+
   it("refreshes readiness after a failed withdrawal request", async () => {
     const user = userEvent.setup();
     const refreshed = makeDetail(false);
