@@ -171,15 +171,19 @@ class WorkspaceService:
         base_url = str(payload.get("base_url", "") or "").strip() or None
         if not name:
             raise WorkspaceError("模型配置名称不能为空")
-        if provider not in ("stub", "openai_compatible"):
+        if provider not in ("stub", "openai_compatible", "codex_local"):
             raise WorkspaceError("不支持的模型提供方")
-        if provider != "stub" and not self.settings.allow_paid_models:
+        if provider == "codex_local":
+            if base_url or payload.get("api_key"):
+                raise WorkspaceError("本地登录账号不接受服务地址或 API 密钥", status_code=422)
+            model_name = model_name or "gpt-6-luna"
+        if provider == "openai_compatible" and not self.settings.allow_paid_models:
             raise WorkspaceError(
                 "付费模型默认禁用；请由维护者显式启用预算控制后再使用",
                 status_code=422,
                 code="paid_models_disabled",
             )
-        if provider != "stub" and not base_url:
+        if provider == "openai_compatible" and not base_url:
             raise WorkspaceError("非替身模型必须填写 OpenAI 兼容服务地址")
         if base_url:
             parsed_url = urllib.parse.urlsplit(base_url)
@@ -282,7 +286,7 @@ class WorkspaceService:
             return gateway
         if (
             enforce_paid
-            and row["provider"] != "stub"
+            and row["provider"] == "openai_compatible"
             and not self.settings.allow_paid_models
         ):
             raise ModelError(
@@ -296,7 +300,7 @@ class WorkspaceService:
             model_name=row["model_name"],
             api_key=self.cipher.decrypt(row["api_key_encrypted"]),
         )
-        gateway = ModelGateway(config, timeout=self.settings.model_timeout_seconds)
+        gateway = ModelGateway(config, timeout=self.settings.model_timeout_seconds, codex_runtime_dir=self.settings.data_dir / "codex", codex_binary=self.settings.codex_binary, codex_timeout=self.settings.codex_timeout_seconds)
         gateway.extra_secrets = tuple(self._saved_secret_variants())
         return gateway
 

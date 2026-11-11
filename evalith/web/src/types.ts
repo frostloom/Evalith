@@ -1,7 +1,7 @@
 export type ModelConfig = {
   id: string;
   name: string;
-  provider: "stub" | "openai_compatible";
+  provider: "stub" | "openai_compatible" | "codex_local";
   base_url: string | null;
   model_name: string;
   has_api_key: boolean;

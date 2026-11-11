@@ -16,6 +16,7 @@ import json
 import re
 import urllib.parse
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -273,10 +274,14 @@ def _stub_understanding(
 
 
 class ModelGateway:
-    def __init__(self, config: ModelConfig | None, *, timeout: float = 60.0) -> None:
+    def __init__(self, config: ModelConfig | None, *, timeout: float = 60.0, codex_runtime_dir: Path | None = None, codex_binary: str = "codex", codex_timeout: float = 180) -> None:
         self.config = config
         self.timeout = timeout
         self.extra_secrets: tuple[str, ...] = ()
+        self.codex_runtime_dir = codex_runtime_dir or Path.cwd() / ".evalith" / "codex"
+        self.codex_binary = codex_binary
+        self.codex_timeout = codex_timeout
+        self.last_usage: dict[str, Any] = {"input_tokens": None, "output_tokens": None, "cost_usd": None}
 
     @property
     def name(self) -> str:
@@ -328,6 +333,16 @@ class ModelGateway:
 
     def _request_chat(self, messages: list[dict[str, str]]) -> dict[str, Any]:
         assert self.config is not None
+        if self.config.provider == "codex_local":
+            from .codex_provider import CodexClient, CodexError
+            try:
+                reply = CodexClient(self.codex_runtime_dir, binary=self.codex_binary, timeout=self.codex_timeout).complete(
+                    [{"role": item["role"], "content": self._scrub(item["content"])} for item in messages], model=self.config.model_name
+                )
+            except CodexError as exc:
+                raise ModelError(self._scrub(str(exc))) from exc
+            self.last_usage = reply.usage
+            return self._scrub_value(_extract_json(reply.text))
         if not self.config.base_url:
             raise ModelError("模型配置缺少服务地址")
         url = self.config.base_url.rstrip("/") + "/chat/completions"
@@ -368,10 +383,19 @@ class ModelGateway:
         if not isinstance(content, str):
             raise ModelError("模型返回内容不是文本")
         parsed = _extract_json(content)
+        usage = payload.get("usage") or {}
+        self.last_usage = {"input_tokens": usage.get("prompt_tokens"), "output_tokens": usage.get("completion_tokens"), "cost_usd": None}
         # A successful provider response may echo a bare configured key in
         # summary/reply/structured fields.  Scrub decoded strings recursively
         # before returning them to the service for persistence.
         return self._scrub_value(parsed)
+
+    def complete_json(self, system: str, payload: dict[str, Any]) -> dict[str, Any]:
+        if self.config is None:
+            raise ModelError("尚未配置模型")
+        if self.config.provider == "stub":
+            raise ModelError("离线演示模型不生成真实评测资产，请选择已登录账号或模型服务")
+        return self._request_chat([{"role": "system", "content": system}, {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}])
 
     def analyze(
         self,
@@ -490,6 +514,14 @@ class ModelGateway:
             return False, "未配置模型"
         if self.config.provider == "stub":
             return True, "确定性替身可用（不调用真实模型，不代表模型质量）"
+        if self.config.provider == "codex_local":
+            try:
+                result = self.complete_json('Return only the JSON object {"ok":true}.', {"request": "connection check"})
+                if result.get("ok") is not True:
+                    return False, "模型请求已返回，但连接检查内容无效"
+                return True, f"已通过本地 ChatGPT 账号完成 {self.config.model_name} 请求；费用未知，使用账号额度"
+            except ModelError as exc:
+                return False, str(exc)
         if not self.config.base_url:
             return False, "缺少服务地址"
         try:

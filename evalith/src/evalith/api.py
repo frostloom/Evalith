@@ -182,6 +182,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "items": [service.serialize_model_config(row) for row in database.list_model_configs()]
         }
 
+    @app.get("/api/local-model/status")
+    def local_model_status() -> dict[str, Any]:
+        from .codex_provider import CodexClient
+        return CodexClient(settings.data_dir / "codex", binary=settings.codex_binary).status()
+
     @app.post("/api/model-configs", status_code=201)
     def create_model_config(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         return service.create_model_config(payload)

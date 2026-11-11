@@ -30,7 +30,7 @@ export function ModelSettings({
   const [adding, setAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ModelConfig | null>(null);
   const [name, setName] = useState("");
-  const [provider, setProvider] = useState<"stub" | "openai_compatible">(
+  const [provider, setProvider] = useState<ModelConfig["provider"]>(
     "stub",
   );
   const [baseUrl, setBaseUrl] = useState("");
@@ -52,9 +52,9 @@ export function ModelSettings({
       await api.createModel({
         name: name.trim(),
         provider,
-        base_url: provider === "stub" ? null : baseUrl.trim(),
+        base_url: provider === "openai_compatible" ? baseUrl.trim() : null,
         model_name: modelName.trim(),
-        api_key: apiKey,
+        api_key: provider === "openai_compatible" ? apiKey : "",
       });
       setName("");
       setApiKey("");
@@ -159,7 +159,7 @@ export function ModelSettings({
                 </div>
               </div>
               <span className="service-provider">
-                {model.provider === "stub" ? "离线演示" : "OpenAI 兼容"}
+                {model.provider === "stub" ? "离线演示" : model.provider === "codex_local" ? "ChatGPT 账号" : "OpenAI 兼容"}
               </span>
               <span
                 className={`service-status ${model.last_test_ok ? "is-ok" : model.last_test_at ? "is-error" : ""}`}
@@ -236,14 +236,13 @@ export function ModelSettings({
                 <select
                   value={provider}
                   onChange={(event) => {
-                    const next = event.target.value as
-                      | "stub"
-                      | "openai_compatible";
+                    const next = event.target.value as ModelConfig["provider"];
                     setProvider(next);
-                    setModelName(next === "stub" ? "stub-understanding" : "");
+                    setModelName(next === "stub" ? "stub-understanding" : next === "codex_local" ? "gpt-6-luna" : "");
                   }}
                 >
                   <option value="stub">离线演示（离线，不产生费用）</option>
+                  <option value="codex_local">本地 ChatGPT 已登录账号</option>
                   <option value="openai_compatible">OpenAI 兼容服务</option>
                 </select>
               </label>
@@ -283,6 +282,12 @@ export function ModelSettings({
                 <p className="inline-note">
                   演示模型按固定规则返回理解与讨论内容，用于验证链路和边界，不代表真实模型判断。
                 </p>
+              )}
+              {provider === "codex_local" && (
+                <>
+                  <label className="field"><span>模型</span><input value={modelName} onChange={(event) => setModelName(event.target.value)} placeholder="gpt-6-luna" /></label>
+                  <p className="inline-note">通过本机 Codex 已登录的 ChatGPT 账号调用。登录凭据由本机保管，不复制到项目或浏览器；使用账号额度，金额费用未知。测试连接会发起一次真实请求。</p>
+                </>
               )}
               {localError && (
                 <p className="form-error" role="alert">

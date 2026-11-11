@@ -39,6 +39,8 @@ class Settings:
     max_files: int = 400
     #: Model request timeout in seconds.
     model_timeout_seconds: float = 60.0
+    codex_binary: str = "codex"
+    codex_timeout_seconds: float = 180.0
     #: Paid OpenAI-compatible calls stay disabled unless an operator explicitly
     #: opts in; no monetary budget control exists in phase 1.
     allow_paid_models: bool = False
@@ -79,6 +81,8 @@ def settings_from_env() -> Settings:
         max_file_bytes=int(os.environ.get("EVALITH_MAX_FILE_BYTES", "512000")),
         max_files=int(os.environ.get("EVALITH_MAX_FILES", "400")),
         model_timeout_seconds=float(os.environ.get("EVALITH_MODEL_TIMEOUT", "60")),
+        codex_binary=os.environ.get("EVALITH_CODEX_BIN", "codex"),
+        codex_timeout_seconds=float(os.environ.get("EVALITH_CODEX_TIMEOUT", "180")),
         allow_paid_models=os.environ.get(
             "EVALITH_ALLOW_PAID_MODELS", ""
         ).strip().lower()
