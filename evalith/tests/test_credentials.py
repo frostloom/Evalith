@@ -228,6 +228,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-openai-opaque" not in request["body"]
     assert "synthetic-quoted-explicit-secret" not in request["body"]
     assert "synthetic-stripe-passphrase" not in request["body"]
+    assert "synthetic-inner" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -362,6 +363,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-openai-opaque" not in request["body"]
     assert "synthetic-quoted-explicit-secret" not in request["body"]
     assert "synthetic-stripe-passphrase" not in request["body"]
+    assert "synthetic-inner" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1434,6 +1436,11 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     assert "stripe-passphrase" not in redact_text(
         '{"stripePassphrase": "stripe-passphrase"}'
     )
+    nested = redact_text(
+        '{"name": "API_KEY", "value": "outer", "nested": '
+        '{"name": "PASSWORD", "value": "inner"}}'
+    )
+    assert "outer" not in nested and "inner" not in nested
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'
         '"kubectl.kubernetes.io/last-applied-configuration": '

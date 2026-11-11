@@ -392,8 +392,9 @@ def _redact_json_credentials(text: str) -> str:
                 and "value" in value
                 and is_credential_key(value.get("name"))
             ):
-                cleaned = dict(value)
-                cleaned["value"] = _REDACTED
+                cleaned = {}
+                for key, item in value.items():
+                    cleaned[key] = _REDACTED if key == "value" else walk(item)
                 return cleaned
             if str(value.get("kind", "")).casefold() == "secret":
                 cleaned = {}

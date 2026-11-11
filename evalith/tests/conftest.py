@@ -109,6 +109,11 @@ def project_root(tmp_path: Path) -> Path:
         "pa\\\n    ssword=synthetic-split-password\n",
         encoding="utf-8",
     )
+    (root / "config" / "nested-name-value.json").write_text(
+        '{"name": "API_KEY", "value": "synthetic-outer", "nested": '
+        '{"name": "PASSWORD", "value": "synthetic-inner"}}\n',
+        encoding="utf-8",
+    )
     (root / "config" / "stripe-passphrase.json").write_text(
         '{"stripePassphrase": "synthetic-stripe-passphrase"}\n',
         encoding="utf-8",
