@@ -251,6 +251,7 @@ _JSON_EXACT_CREDENTIAL_KEYS = {
     "accountkey",
     "accesskey",
     "unresolvedcredential",
+    "openaikey",
     "clientkeydata",
     "awsaccesskeyid",
     "awssecretaccesskey",
@@ -279,6 +280,7 @@ _JSON_CREDENTIAL_SUFFIXES = (
     "accountkey",
     "accesskey",
     "unresolvedcredential",
+    "openaikey",
     "clientkeydata",
 )
 _JSON_CREDENTIAL_PREFIXES = {
@@ -1367,6 +1369,21 @@ def _redact_aliases_at_references(
     return text
 
 
+_EXPLICIT_SECRET_KEY = re.compile(
+    r"(?m)^(?P<indent>[ \t]*)\?\s*(?P<key>data|stringData)[ \t]*\r?\n"
+    r"(?P=indent):[ \t]*"
+)
+
+
+def _normalize_explicit_secret_keys(text: str) -> str:
+    return _EXPLICIT_SECRET_KEY.sub(
+        lambda match: (
+            f"{match.group('indent')}{match.group('key')}: "
+        ),
+        text,
+    )
+
+
 def _redact_kubernetes_secret_data(text: str) -> str:
     stripped = text.strip()
     if stripped.startswith(("{", "[")):
@@ -1376,6 +1393,7 @@ def _redact_kubernetes_secret_data(text: str) -> str:
             pass
         else:
             return text
+    text = _normalize_explicit_secret_keys(text)
     text = _normalize_escaped_kind_key(text)
     text = _normalize_escaped_secret_kind(text)
     alias_kind = any(

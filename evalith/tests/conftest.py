@@ -109,6 +109,13 @@ def project_root(tmp_path: Path) -> Path:
         "pa\\\n    ssword=synthetic-split-password\n",
         encoding="utf-8",
     )
+    (root / "config" / "explicit-secret-key.yaml").write_text(
+        "kind: Secret\n? stringData\n: \n  foo: synthetic-explicit-secret\n",
+        encoding="utf-8",
+    )
+    (root / "config" / "openai-key.py").write_text(
+        'OPENAI_KEY = "synthetic-openai-opaque"\n', encoding="utf-8"
+    )
     (root / "config" / "invalid-unicode.yaml").write_text(
         'kind: "\\U00110000"\nkind: "\\u12"\n',
         encoding="utf-8",
