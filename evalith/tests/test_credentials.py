@@ -226,6 +226,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-split-password" not in request["body"]
     assert "synthetic-explicit-secret" not in request["body"]
     assert "synthetic-openai-opaque" not in request["body"]
+    assert "synthetic-quoted-explicit-secret" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -358,6 +359,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-split-password" not in request["body"]
     assert "synthetic-explicit-secret" not in request["body"]
     assert "synthetic-openai-opaque" not in request["body"]
+    assert "synthetic-quoted-explicit-secret" not in request["body"]
     assert "synthetic-pgp-private-key" not in request["body"]
     assert "synthetic-java-properties" not in request["body"]
     assert "synthetic-escaped-property" not in request["body"]
@@ -1423,6 +1425,9 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "openai-opaque" not in redact_text(
         'OPENAI_KEY = "openai-opaque"\n'
+    )
+    assert "quoted-explicit-secret" not in redact_text(
+        'kind: Secret\n? "stringData"\n:\n  foo: quoted-explicit-secret\n'
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

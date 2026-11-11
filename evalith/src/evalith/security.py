@@ -1370,7 +1370,7 @@ def _redact_aliases_at_references(
 
 
 _EXPLICIT_SECRET_KEY = re.compile(
-    r"(?m)^(?P<indent>[ \t]*)\?\s*(?P<key>data|stringData)[ \t]*\r?\n"
+    r"(?m)^(?P<indent>[ \t]*)\?\s*[\"']?(?P<key>data|stringData)[\"']?[ \t]*\r?\n"
     r"(?P=indent):[ \t]*"
 )
 
