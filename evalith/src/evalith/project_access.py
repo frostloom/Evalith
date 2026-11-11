@@ -47,6 +47,7 @@ ALWAYS_EXCLUDED = [
     ".terraform",
     ".azure",
     ".config/gcloud",
+    ".config/gh",
     "accessTokens.json",
     "application_default_credentials.json",
     "*.tfstate",
@@ -1045,9 +1046,11 @@ def scan_project(
                         owned_fd = fd
                         fd = -1
                         file_rulesets = list(root_rulesets)
-                        parent_fd = os.dup(root_fd)
+                        parent_fd: int | None = None
                         parent_parts: list[str] = []
+                        failed = False
                         try:
+                            parent_fd = os.dup(root_fd)
                             for part in parts[:-1]:
                                 parent_parts.append(part)
                                 next_fd = os.open(
@@ -1065,8 +1068,14 @@ def scan_project(
                                         _read_gitignore(parent_fd),
                                     )
                                 )
+                        except BaseException:
+                            failed = True
+                            raise
                         finally:
-                            os.close(parent_fd)
+                            if parent_fd is not None:
+                                _safe_close(parent_fd)
+                            if failed:
+                                _safe_close(owned_fd)
                         add_file_from_fd(
                             owned_fd,
                             relative,

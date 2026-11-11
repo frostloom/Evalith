@@ -1172,3 +1172,53 @@ def test_singular_secret_filename_is_denied(tmp_path: Path) -> None:
     with pytest.raises(AccessError) as excinfo:
         scan_project(root, ["secret.txt"], [])
     assert excinfo.value.code == "sensitive_path_denied"
+
+
+def test_github_cli_credential_store_is_denied(tmp_path: Path) -> None:
+    root = tmp_path / "gh-project"
+    root.mkdir()
+    gh_dir = root / ".config" / "gh"
+    gh_dir.mkdir(parents=True)
+    (gh_dir / "hosts.yml").write_text(
+        "github.com:\n  oauth_token: synthetic-gh-token\n", encoding="utf-8"
+    )
+    scan = scan_project(root, [], [])
+    assert not scan.files
+    assert any(
+        item["path"] == ".config/gh/"
+        and item["reason"] == "excluded: .config/gh"
+        for item in scan.excluded
+    )
+    with pytest.raises(AccessError) as excinfo:
+        scan_project(root, [".config/gh/hosts.yml"], [])
+    assert excinfo.value.code == "sensitive_path_denied"
+
+
+def test_explicit_file_closes_descriptor_when_rules_fail(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import evalith.project_access as project_access
+
+    root = tmp_path / "fd-project"
+    sub = root / "sub"
+    sub.mkdir(parents=True)
+    (sub / ".gitignore").write_text("ignored.txt\n", encoding="utf-8")
+    (sub / "selected.txt").write_text("selected\n", encoding="utf-8")
+    fd_dir = Path("/proc/self/fd")
+    if not fd_dir.exists():
+        fd_dir = Path("/dev/fd")
+    if not fd_dir.exists():
+        pytest.skip("no descriptor listing available")
+    real_read = project_access._read_gitignore
+
+    def failing(fd: int):
+        raise project_access.AccessError(
+            "synthetic gitignore failure", code="gitignore_invalid"
+        )
+
+    before = len(list(fd_dir.iterdir()))
+    monkeypatch.setattr(project_access, "_read_gitignore", failing)
+    with pytest.raises(project_access.AccessError):
+        project_access.scan_project(root, ["sub/selected.txt"], [])
+    after = len(list(fd_dir.iterdir()))
+    assert after <= before
