@@ -1,14 +1,16 @@
+import {
+  Plus as AddRounded,
+  FolderClosed as FolderOutlined,
+  SlidersHorizontal as TuneOutlined,
+  ChevronDown as ExpandMoreRounded,
+  RefreshCw as RefreshRounded,
+  ArrowUp as ArrowUpwardRounded,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Tab, Tabs } from "@mui/material";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import RefreshRounded from "@mui/icons-material/RefreshRounded";
-import TuneOutlined from "@mui/icons-material/TuneOutlined";
-import FolderOutlined from "@mui/icons-material/FolderOutlined";
-import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
-import AddRounded from "@mui/icons-material/AddRounded";
-import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
-import { FormDrawer, PageHeader } from "./ui";
+import { EvalithMark, FormDrawer, PageHeader } from "./ui";
 import { api, ApiError } from "./api";
 import type {
   Message,
@@ -717,7 +719,7 @@ function MessageRow({
       <article className="message message-assistant message-understanding">
         <div className="assistant-identity">
           <span className="message-role" aria-hidden="true">
-            E
+            <EvalithMark />
           </span>
           <span>
             Evalith<span className="message-caption">项目理解</span>
@@ -725,9 +727,6 @@ function MessageRow({
         </div>
         <div className="message-content">
           <p>{initial?.summary || "已根据选定资料更新项目理解。"}</p>
-          {initial?.agent_or_flow && (
-            <p className="chat-flow">{initial.agent_or_flow}</p>
-          )}
           {!!initial?.unknowns.length && (
             <div className="chat-findings">
               <h3>还需要一起确认</h3>
@@ -771,7 +770,7 @@ function MessageRow({
     <article className="message message-assistant">
       <div className="assistant-identity">
         <span className="message-role" aria-hidden="true">
-          E
+          <EvalithMark />
         </span>
         <span>Evalith</span>
       </div>
@@ -862,7 +861,7 @@ function ModelPicker({
               {models.map((model) => (
                 <option key={model.id} value={model.id}>
                   {model.name} ·{" "}
-                  {model.provider === "stub" ? "确定性替身" : model.model_name}
+                  {model.provider === "stub" ? "离线演示" : model.model_name}
                 </option>
               ))}
             </select>

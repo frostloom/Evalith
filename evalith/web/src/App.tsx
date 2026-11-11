@@ -1,3 +1,10 @@
+import {
+  Plus as AddRounded,
+  Search as SearchRounded,
+  ArrowUpRight as ArrowOutwardRounded,
+  Clock3 as ScheduleRounded,
+  FolderClosed as FolderOutlined,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import type {
@@ -23,11 +30,6 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
-import AddRounded from "@mui/icons-material/AddRounded";
-import SearchRounded from "@mui/icons-material/SearchRounded";
-import ArrowOutwardRounded from "@mui/icons-material/ArrowOutwardRounded";
-import ScheduleRounded from "@mui/icons-material/ScheduleRounded";
-import FolderOutlined from "@mui/icons-material/FolderOutlined";
 
 type View = "home" | "project" | "import" | "models" | "executors";
 
@@ -269,7 +271,7 @@ function AppContent() {
 
   return (
     <div
-      className={`app-shell ${effectiveView === "project" ? "is-project" : "is-directory"} ${collapsed && effectiveView === "project" ? "sidebar-collapsed" : ""}`}
+      className={`app-shell ${effectiveView === "project" ? "is-project" : "is-directory"} ${collapsed ? "sidebar-collapsed" : ""}`}
     >
       <a
         className="skip-link"
@@ -313,6 +315,7 @@ function AppContent() {
         {effectiveView === "home" && (
           <Home
             projects={projects}
+            models={models}
             loading={!loaded}
             onOpen={(project) => void openProject(project)}
             onImport={startImport}
@@ -376,11 +379,13 @@ function AppContent() {
 
 function Home({
   projects,
+  models,
   onOpen,
   onImport,
   loading,
 }: {
   projects: Project[];
+  models: ModelConfig[];
   onOpen: (project: Project) => void;
   onImport: () => void;
   loading: boolean;
@@ -456,45 +461,52 @@ function Home({
         </p>
       ) : filtered.length ? (
         <div className="project-grid">
-          {filtered.map((project) => (
+          {filtered.map((project, index) => (
             <button
               className="project-card"
+              data-tone={index % 3}
               key={project.id}
               onClick={() => onOpen(project)}
             >
               <div className="project-card-top">
                 <span className="project-card-icon" aria-hidden="true">
-                  <FolderOutlined />
+                  {project.name.slice(0, 1)}
                 </span>
-                <span
-                  className={`project-state ${project.analysis_error ? "has-error" : ""}`}
-                >
-                  <i />
-                  {project.analysis_error
-                    ? "需要检查"
-                    : project.model_config_id
-                      ? "已配置模型"
-                      : "待配置模型"}
-                </span>
-              </div>
-              <div className="project-card-heading">
-                <strong>{project.name}</strong>
+                <div className="project-card-heading">
+                  <strong>{project.name}</strong>
+                  <span>项目主会话</span>
+                </div>
                 <ArrowOutwardRounded className="card-enter-arrow" />
               </div>
               <p className="project-card-path" title={project.root_path}>
+                <FolderOutlined />
                 {compactPath(project.root_path)}
               </p>
-              <div className="project-card-footer">
+              <div className="project-card-details">
                 <span>
                   <FolderOutlined />
                   {project.file_count} 个文件
                 </span>
+                <span className="project-card-model">
+                  <span className="model-presence" />
+                  {models.find((model) => model.id === project.model_config_id)
+                    ?.name ?? "尚未关联模型"}
+                </span>
+              </div>
+              {project.analysis_error && (
+                <span className="project-card-error">初步分析需要检查</span>
+              )}
+              <div className="project-card-footer">
                 <span>
                   <ScheduleRounded />
                   {new Date(project.updated_at).toLocaleDateString("zh-CN", {
                     month: "short",
                     day: "numeric",
                   })}
+                  更新
+                </span>
+                <span className="card-open-label">
+                  进入会话 <ArrowOutwardRounded />
                 </span>
               </div>
             </button>
@@ -503,11 +515,7 @@ function Home({
       ) : (
         <section className="empty-state">
           <div className="empty-project-art" aria-hidden="true">
-            <span />
-            <span />
-            <div>
-              <FolderOutlined />
-            </div>
+            <FolderOutlined />
           </div>
           <h2>{projects.length ? "没有匹配的项目" : "创建第一个项目"}</h2>
           <p>

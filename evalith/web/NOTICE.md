@@ -5,3 +5,5 @@ The navigation, project-directory, detail-tab and drawer patterns and relevant d
 Inter is distributed under the SIL Open Font License 1.1; its copyright and full license accompany the variable font in `public/fonts/inter/OFL.txt`. Linear is a visual reference only; no Linear artwork or source code is distributed.
 
 Material UI and Emotion are used under their respective MIT licenses, distributed with those npm packages.
+
+Lucide icons are distributed under the ISC License provided by the lucide-react package. The Evalith mark is original project artwork.

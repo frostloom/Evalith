@@ -1,6 +1,6 @@
 # Stage-1 evidence
 
-Latest frontend: see [project directory and independent settings verification](../2026-11-11-项目目录与独立配置.md). Current screenshots are `evalith-project-first-*.png`, captured at 1440×1000. The previous Linear screenshots and earlier images below are historical evidence.
+Latest visual proposal: [desktop interface reset](../2026-11-11-界面整体重做.md), with `evalith-reset-*.png` at 1440×1000. Functional settings verification remains in the prior report. Earlier screenshots are retained as historical proposals.
 
 | File | What it is | How to regenerate |
 | --- | --- | --- |

@@ -126,11 +126,11 @@ export function ImportSheet({
               value={modelId}
               onChange={(event) => setModelId(event.target.value)}
             >
-              <option value="">暂不配置（分析会失败并显示原因）</option>
+              <option value="">请选择模型</option>
               {models.map((model) => (
                 <option key={model.id} value={model.id}>
                   {model.name} ·{" "}
-                  {model.provider === "stub" ? "确定性替身" : model.model_name}
+                  {model.provider === "stub" ? "离线演示" : model.model_name}
                 </option>
               ))}
             </select>
@@ -233,7 +233,7 @@ export function ImportSheet({
         </details>
         {models.length === 0 && (
           <p className="inline-note">
-            还没有模型配置。可以先用“确定性替身”离线验证流程，不代表真实模型质量。
+            还没有模型配置。可以先用“离线演示”离线验证流程，不代表真实模型质量。
             <button type="button" className="link-button" onClick={onNeedModel}>
               去添加
             </button>

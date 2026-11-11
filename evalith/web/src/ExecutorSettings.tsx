@@ -1,3 +1,8 @@
+import {
+  Plus as AddRounded,
+  TerminalSquare as TerminalRounded,
+  Globe2 as LanguageRounded,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -7,9 +12,6 @@ import {
   DialogContent,
   DialogTitle,
 } from "@mui/material";
-import AddRounded from "@mui/icons-material/AddRounded";
-import TerminalRounded from "@mui/icons-material/TerminalRounded";
-import LanguageRounded from "@mui/icons-material/LanguageRounded";
 import { api } from "./api";
 import { FormDrawer, PageHeader } from "./ui";
 import type { ExecutorConfig, ExecutorDefinition } from "./types";

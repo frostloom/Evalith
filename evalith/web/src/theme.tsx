@@ -1,4 +1,8 @@
 import {
+  Moon as DarkModeOutlined,
+  Sun as LightModeOutlined,
+} from "lucide-react";
+import {
   createContext,
   useContext,
   useLayoutEffect,
@@ -8,8 +12,6 @@ import {
 } from "react";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { CssBaseline, GlobalStyles, IconButton, Tooltip } from "@mui/material";
-import DarkModeOutlined from "@mui/icons-material/DarkModeOutlined";
-import LightModeOutlined from "@mui/icons-material/LightModeOutlined";
 
 export type ColorMode = "light" | "dark";
 export const THEME_KEY = "evalith.theme";
@@ -20,20 +22,20 @@ export const ui = {
 const palettes = {
   light: {
     bg: "#ffffff",
-    directory: "#fafafb",
-    rail: "#f6f6f8",
+    directory: "#ffffff",
+    rail: "#f0f1f4",
     surface: "#ffffff",
-    surface2: "#f8f8fa",
-    input: "#fafafb",
-    ink: "#24252b",
-    body: "#3e3f48",
-    muted: "#6b6d79",
-    border: "#e6e6eb",
-    borderStrong: "#d6d7df",
-    accent: "#626bd2",
-    accentText: "#5058b9",
-    accentSoft: "#ececf5",
-    button: "#282931",
+    surface2: "#f6f7fa",
+    input: "#ffffff",
+    ink: "#1c2333",
+    body: "#444e62",
+    muted: "#606a7c",
+    border: "#e5e8ef",
+    borderStrong: "#d4d9e4",
+    accent: "#5261d7",
+    accentText: "#4452c5",
+    accentSoft: "#edf0ff",
+    button: "#5261d7",
     buttonText: "#ffffff",
     success: "#237c55",
     warning: "#956108",
@@ -44,22 +46,22 @@ const palettes = {
     overlay: "rgba(24,25,31,0.28)",
   },
   dark: {
-    bg: "#191a1e",
-    directory: "#16171b",
-    rail: "#15161a",
-    surface: "#202126",
-    surface2: "#23242b",
-    input: "#1c1d22",
-    ink: "#ebebef",
-    body: "#c4c5ce",
-    muted: "#999ba8",
-    border: "#2d2e36",
-    borderStrong: "#42444f",
-    accent: "#8189e4",
-    accentText: "#a5acf8",
-    accentSoft: "#2b2c3b",
-    button: "#e5e5eb",
-    buttonText: "#22232a",
+    bg: "#18191f",
+    directory: "#18191f",
+    rail: "#101115",
+    surface: "#1d1f27",
+    surface2: "#22252e",
+    input: "#1d2028",
+    ink: "#eff0f6",
+    body: "#bfc5d4",
+    muted: "#969bac",
+    border: "#2c303b",
+    borderStrong: "#414856",
+    accent: "#97a5ff",
+    accentText: "#bdc6ff",
+    accentSoft: "#242a44",
+    button: "#8796fb",
+    buttonText: "#10131e",
     success: "#81c9a3",
     warning: "#d4b474",
     error: "#ed919e",
@@ -181,7 +183,10 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
                 fontSize: 13,
                 "& fieldset": { borderColor: c.borderStrong },
               },
-              input: { padding: "8px 11px" },
+              input: {
+                padding: "8px 11px",
+                "&::placeholder": { color: c.muted, opacity: 1 },
+              },
             },
           },
           MuiPaper: { styleOverrides: { root: { backgroundImage: "none" } } },

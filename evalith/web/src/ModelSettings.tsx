@@ -1,3 +1,4 @@
+import { Plus as AddRounded, Bot as SmartToyOutlined } from "lucide-react";
 import { useState } from "react";
 import {
   Dialog,
@@ -7,8 +8,6 @@ import {
   Button,
   Tooltip,
 } from "@mui/material";
-import AddRounded from "@mui/icons-material/AddRounded";
-import SmartToyOutlined from "@mui/icons-material/SmartToyOutlined";
 import { FormDrawer, PageHeader } from "./ui";
 import { api } from "./api";
 import type { ModelConfig } from "./types";
@@ -104,23 +103,23 @@ export function ModelSettings({
     <div className="settings-page page">
       <PageHeader
         title="模型配置"
-        description="管理项目理解与会话使用的模型。密钥加密保存，默认可使用离线替身验证流程。"
-        breadcrumb={
-          <button className="link-button" onClick={onBack}>
-            返回
-          </button>
-        }
+        description="管理项目理解与会话使用的模型。密钥加密保存，可使用离线演示模型体验流程。"
         actions={
-          <Tooltip title="添加模型服务">
-            <Button
-              variant="contained"
-              aria-label="添加模型服务"
-              startIcon={<AddRounded />}
-              onClick={() => setAdding(true)}
-            >
-              添加模型
-            </Button>
-          </Tooltip>
+          <>
+            <button className="link-button" onClick={onBack}>
+              返回
+            </button>
+            <Tooltip title="添加模型服务">
+              <Button
+                variant="contained"
+                aria-label="添加模型服务"
+                startIcon={<AddRounded />}
+                onClick={() => setAdding(true)}
+              >
+                添加模型
+              </Button>
+            </Tooltip>
+          </>
         }
       />
       <div className="settings-layout">
@@ -160,7 +159,7 @@ export function ModelSettings({
                 </div>
               </div>
               <span className="service-provider">
-                {model.provider === "stub" ? "确定性替身" : "OpenAI 兼容"}
+                {model.provider === "stub" ? "离线演示" : "OpenAI 兼容"}
               </span>
               <span
                 className={`service-status ${model.last_test_ok ? "is-ok" : model.last_test_at ? "is-error" : ""}`}
@@ -226,7 +225,7 @@ export function ModelSettings({
                 <input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder="例如：本地确定性替身"
+                  placeholder="例如：本地离线演示"
                 />
               </label>
               <label className="field">
@@ -241,7 +240,7 @@ export function ModelSettings({
                     setModelName(next === "stub" ? "stub-understanding" : "");
                   }}
                 >
-                  <option value="stub">确定性替身（离线，不产生费用）</option>
+                  <option value="stub">离线演示（离线，不产生费用）</option>
                   <option value="openai_compatible">OpenAI 兼容服务</option>
                 </select>
               </label>
@@ -279,7 +278,7 @@ export function ModelSettings({
               )}
               {provider === "stub" && (
                 <p className="inline-note">
-                  替身按固定规则返回理解与讨论内容，用于验证链路和边界，不代表真实模型判断。
+                  演示模型按固定规则返回理解与讨论内容，用于验证链路和边界，不代表真实模型判断。
                 </p>
               )}
               {localError && (

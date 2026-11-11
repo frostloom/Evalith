@@ -1,6 +1,6 @@
+import { X as CloseRounded } from "lucide-react";
 import type { ReactNode } from "react";
 import { Drawer, IconButton, Typography } from "@mui/material";
-import CloseRounded from "@mui/icons-material/CloseRounded";
 import { ThemeToggle, ui } from "./theme";
 
 /** Right-hand form drawer matching the upstream BaseDrawer interaction. */
@@ -82,5 +82,20 @@ export function PageHeader({
         <div className="page-actions">{actions}</div>
       </div>
     </header>
+  );
+}
+
+export function EvalithMark() {
+  return (
+    <svg
+      className="evalith-mark"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path d="M4 4h16v4H8v2h10v4H8v2h12v4H4V4Z" fill="currentColor" />
+    </svg>
   );
 }
