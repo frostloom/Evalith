@@ -122,6 +122,17 @@ else
   )
 fi
 
+if [[ -f "$PID_DIR/worker.pid" ]] && kill -0 "$(cat "$PID_DIR/worker.pid")" 2>/dev/null; then
+  echo "[workbench] worker already running"
+else
+  echo "[workbench] starting architect worker"
+  (
+    cd "$TREE/apps/backend"
+    nohup uv run celery -A rhesis.backend.celery.core:app worker       -Q architect --pool=solo --loglevel=INFO       >"$LOG_DIR/worker.log" 2>&1 &
+    echo $! >"$PID_DIR/worker.pid"
+  )
+fi
+
 for _ in $(seq 1 90); do
   if curl -fsS http://127.0.0.1:8080/health >/dev/null 2>&1; then
     break

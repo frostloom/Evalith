@@ -251,6 +251,7 @@ def test_model_request_carries_key_only_in_authorization_header(
     assert "synthetic-tagged-secret-data" not in request["body"]
     assert "synthetic-tagged-flow-secret" not in request["body"]
     assert "synthetic-multiline-flow-secret" not in request["body"]
+    assert "synthetic-secret-list" not in request["body"]
     assert "synthetic-anchored-secret" not in request["body"]
     assert "c2VjcmV0LXN5bnRoZXRpYw==" not in request["body"]
     assert "synthetic-flow-brace" not in request["body"]
@@ -1457,6 +1458,9 @@ def test_kubernetes_secret_json_and_quoted_kind_are_redacted() -> None:
     )
     assert "multiline-flow-secret" not in redact_text(
         "{\n  kind: Secret,\n  data: {foo: multiline-flow-secret}\n}\n"
+    )
+    assert "secret-list-value" not in redact_text(
+        '{"kind": "SecretList", "items": [{"data": {"foo": "secret-list-value"}}]}'
     )
     annotated = redact_text(
         '{"kind": "Secret", "metadata": {"annotations": {'

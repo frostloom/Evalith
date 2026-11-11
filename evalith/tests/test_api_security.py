@@ -78,3 +78,27 @@ def test_remote_client_is_allowed_with_opt_in(settings) -> None:
             "/api/health", headers={"host": "127.0.0.1:8090"}
         )
     assert response.status_code == 200
+
+
+def test_remote_opt_in_keeps_host_validation(settings) -> None:
+    app = create_app(replace(settings, allow_remote=True))
+    with TestClient(app, client=("192.0.2.10", 50000)) as remote:
+        response = remote.get(
+            "/api/health", headers={"host": "evil.example"}
+        )
+    assert response.status_code == 403
+    assert response.json()["code"] == "untrusted_host"
+
+
+def test_remote_opt_in_keeps_origin_validation(settings) -> None:
+    app = create_app(replace(settings, allow_remote=True))
+    with TestClient(app, client=("192.0.2.10", 50000)) as remote:
+        response = remote.get(
+            "/api/health",
+            headers={
+                "host": "127.0.0.1:8090",
+                "origin": "http://evil.example",
+            },
+        )
+    assert response.status_code == 403
+    assert response.json()["code"] == "untrusted_origin"

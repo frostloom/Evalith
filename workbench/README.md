@@ -78,15 +78,17 @@ python3 workbench/smoke.py
 
 The smoke script logs in through quick start, reads the community feature
 report, creates and reads a project, creates a model and tests its connection
-against a deterministic local OpenAI-compatible stub, creates and reads an
-Architect session, fetches the frontend, and checks the generated artifact for
-EE residue. Evidence is written to
+against a deterministic local OpenAI-compatible stub, creates an Architect
+session with an initial message, waits for the worker to persist and return the
+assistant turn, fetches the frontend, and checks the generated artifact for EE
+residue. `run_local.sh` starts a solo-pool Celery architect worker so the
+session message/worker path is exercised; the model is still the deterministic
+stub. Evidence is written to
 `docs/stage1/evidence/workbench-smoke-<timestamp>.json`.
 
-Limits: no real model, no real business data, and no Celery worker in the smoke
-path. The Architect REST surface is verified; the full model-backed Architect
-tool loop remains a stage-0 record (deterministic stub) and is not claimed as
-real-model-validated.
+Limits: no real model and no real business data. The Architect session
+message/worker path is exercised against the deterministic stub, not a real
+model; real-model quality and container project access remain unverified.
 
 ## Optional container images
 

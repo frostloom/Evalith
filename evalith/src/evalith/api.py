@@ -77,11 +77,9 @@ class LocalHostMiddleware(BaseHTTPMiddleware):
             return ""
 
     async def dispatch(self, request, call_next):
-        if self.allow_remote:
-            return await call_next(request)
         client = getattr(request, "client", None)
         client_host = getattr(client, "host", None)
-        if client_host not in {
+        if not self.allow_remote and client_host not in {
             None,
             "testclient",
             "testserver",

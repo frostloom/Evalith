@@ -78,7 +78,16 @@ class StubModelHandler(BaseHTTPRequestHandler):
                 "choices": [
                     {
                         "index": 0,
-                        "message": {"role": "assistant", "content": "OK"},
+                        "message": {
+                            "role": "assistant",
+                            "content": json.dumps(
+                                {
+                                    "reasoning": "deterministic smoke",
+                                    "action": "finish",
+                                    "final_answer": "Deterministic smoke reply.",
+                                }
+                            ),
+                        },
                         "finish_reason": "stop",
                     }
                 ],
@@ -248,7 +257,11 @@ def main() -> int:
         session = api(
             "POST",
             "/architect/sessions/",
-            {"title": "Smoke discovery session", "mode": "discovery"},
+            {
+                "title": "Smoke discovery session",
+                "mode": "discovery",
+                "initial_message": "Summarise the smoke project.",
+            },
             project_id=project["id"],
         )
         ids["architect_session_id"] = session["id"]
@@ -259,6 +272,27 @@ def main() -> int:
         )
         checks["architect_session_detail"] = detail.get("id") == session["id"]
         checks["architect_session_messages_visible"] = "messages" in detail
+        checks["architect_session_user_message"] = any(
+            item.get("role") == "user"
+            and "Summarise the smoke project." in str(item.get("content", ""))
+            for item in detail.get("messages", [])
+        )
+        assistant_seen = False
+        for _ in range(60):
+            detail = api(
+                "GET",
+                f"/architect/sessions/{session['id']}",
+                project_id=project["id"],
+            )
+            if any(
+                item.get("role") == "assistant"
+                and str(item.get("content", "")).strip()
+                for item in detail.get("messages", [])
+            ):
+                assistant_seen = True
+                break
+            time.sleep(1)
+        checks["architect_session_worker_reply"] = assistant_seen
 
         wait_for(FRONTEND_URL + "/api/health")
         with urllib.request.urlopen(FRONTEND_URL + "/", timeout=30) as response:
@@ -310,7 +344,7 @@ def main() -> int:
         "errors": errors,
         "limitations": [
             "No real model or real business data is used.",
-            "The Architect Celery/model tool loop is not exercised unless a worker is started.",
+            "The Architect worker/model loop is exercised against the deterministic stub, not a real model.",
             "Frontend verification is HTTP/HTML level in this script; screenshots are in docs/stage1/evidence.",
         ],
     }

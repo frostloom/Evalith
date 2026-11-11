@@ -387,6 +387,17 @@ def _redact_json_credentials(text: str) -> str:
             return json.dumps(walk(inner), ensure_ascii=False)
         return item
 
+    def clean_secret(mapping: dict) -> dict:
+        cleaned = {}
+        for key, item in mapping.items():
+            if key in ("data", "stringData"):
+                cleaned[key] = _REDACTED
+            elif str(key).endswith("last-applied-configuration"):
+                cleaned[key] = clean_annotation(item)
+            else:
+                cleaned[key] = walk(item)
+        return cleaned
+
     def walk(value):
         if isinstance(value, dict):
             if (
@@ -399,12 +410,17 @@ def _redact_json_credentials(text: str) -> str:
                     cleaned[key] = _REDACTED if key == "value" else walk(item)
                 return cleaned
             if str(value.get("kind", "")).casefold() == "secret":
+                return clean_secret(value)
+            if str(value.get("kind", "")).casefold() == "secretlist":
                 cleaned = {}
                 for key, item in value.items():
-                    if key in ("data", "stringData"):
-                        cleaned[key] = _REDACTED
-                    elif str(key).endswith("last-applied-configuration"):
-                        cleaned[key] = clean_annotation(item)
+                    if key == "items" and isinstance(item, list):
+                        cleaned[key] = [
+                            clean_secret(entry)
+                            if isinstance(entry, dict)
+                            else walk(entry)
+                            for entry in item
+                        ]
                     else:
                         cleaned[key] = walk(item)
                 return cleaned
