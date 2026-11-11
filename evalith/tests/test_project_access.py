@@ -1137,3 +1137,22 @@ def test_ordinary_flow_data_mapping_stays_in_context(tmp_path: Path) -> None:
     sources, text, _ = build_model_context(scan, [], budget_chars=10_000)
     assert sources and sources[0]["sent"] is True
     assert "ordinary-flow-data" in text
+
+
+def test_explicit_nested_gitignore_override_is_recorded(tmp_path: Path) -> None:
+    root = tmp_path / "nested-override"
+    root.mkdir()
+    sub = root / "sub"
+    sub.mkdir()
+    (sub / ".gitignore").write_text("ignored.txt\n", encoding="utf-8")
+    (sub / "ignored.txt").write_text("synthetic nested\n", encoding="utf-8")
+
+    selected_file = scan_project(root, ["sub/ignored.txt"], [])
+    record = selected_file.files[0]
+    assert record.reason == "explicitly selected despite .gitignore"
+
+    selected_dir = scan_project(root, ["sub"], [])
+    records = {item.path: item for item in selected_dir.files}
+    assert records["sub/ignored.txt"].reason == (
+        "explicitly selected despite .gitignore"
+    )

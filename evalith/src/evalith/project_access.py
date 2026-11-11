@@ -983,10 +983,9 @@ def scan_project(
                     continue
                 try:
                     child_rulesets = list(rulesets)
-                    if not force:
-                        child_rulesets.append(
-                            (relative, _read_gitignore(child_fd))
-                        )
+                    child_rulesets.append(
+                        (relative, _read_gitignore(child_fd))
+                    )
                     walk(child_fd, relative, child_rulesets, force=force)
                 finally:
                     os.close(child_fd)
@@ -1030,18 +1029,49 @@ def scan_project(
                 fd, entry_stat = _open_relative(root_fd, parts)
                 try:
                     if stat.S_ISDIR(entry_stat.st_mode):
-                        walk(fd, relative, root_rulesets, force=True)
+                        walk(
+                            fd,
+                            relative,
+                            [
+                                *root_rulesets,
+                                (relative, _read_gitignore(fd)),
+                            ],
+                            force=True,
+                        )
                     elif stat.S_ISREG(entry_stat.st_mode):
                         # Transfer ownership before the helper runs: it closes
                         # the descriptor on success and on every error path.
                         owned_fd = fd
                         fd = -1
+                        file_rulesets = list(root_rulesets)
+                        parent_fd = os.dup(root_fd)
+                        parent_parts: list[str] = []
+                        try:
+                            for part in parts[:-1]:
+                                parent_parts.append(part)
+                                next_fd = os.open(
+                                    part,
+                                    os.O_RDONLY
+                                    | os.O_DIRECTORY
+                                    | getattr(os, "O_NOFOLLOW", 0),
+                                    dir_fd=parent_fd,
+                                )
+                                os.close(parent_fd)
+                                parent_fd = next_fd
+                                file_rulesets.append(
+                                    (
+                                        "/".join(parent_parts),
+                                        _read_gitignore(parent_fd),
+                                    )
+                                )
+                        finally:
+                            os.close(parent_fd)
                         add_file_from_fd(
                             owned_fd,
                             relative,
                             required=True,
                             scrub_text=scrub,
-                            rulesets=root_rulesets,
+                            rulesets=file_rulesets,
                         )
                     else:
                         raise AccessError(

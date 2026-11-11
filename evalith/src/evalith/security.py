@@ -791,7 +791,7 @@ _K8S_SECRET_KIND = re.compile(
     r"[\"']?Secret[\"']?[ \t]*(?:#[^\r\n]*)?\r?$"
 )
 _K8S_SECRET_FLOW_KIND = re.compile(
-    r"(?i)[{,][ \t]*[\"']?kind[\"']?[ \t]*:[ \t]*"
+    r"(?i)[{,][ \t\r\n]*[\"']?kind[\"']?[ \t]*:[ \t\r\n]*"
     r"(?:(?:![^\s,}]+|&[^\s,}]+)[ \t]+)*[\"']?Secret\b"
 )
 _K8S_SECRET_FLOW_ALIAS_KIND = re.compile(
