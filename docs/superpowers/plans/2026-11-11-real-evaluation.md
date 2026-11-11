@@ -39,9 +39,9 @@ Files: `evalith/src/evalith/codex_provider.py`, `model_gateway.py`, `service.py`
 
 Files: new `evaluation_store.py`, `evaluation_assets.py`, API routes; `tests/test_evaluation_assets.py`.
 
-- [ ] Test readiness/stale/project boundaries, schema checks, source references, revisions and historical snapshots.
-- [ ] Generate categorized tasks through the configured model; persist immutable revisions and editable current assets with preparation reasons.
-- [ ] Add list/detail/edit/generation and estimates APIs. No code execution from generated content.
+- [x] Test readiness/stale/project boundaries, schema checks, source references, revisions and historical snapshots.
+- [x] Generate categorized tasks through the configured model; persist immutable revisions and editable current assets with preparation reasons.
+- [x] Add list/detail/edit/generation and estimates APIs. No code execution from generated content.
 
 ### Task 3: Isolated environments and incremental execution
 

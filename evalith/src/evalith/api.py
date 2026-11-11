@@ -268,33 +268,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def update_sources(project_id: str, payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         return service.update_sources(project_id, payload)
 
-    @app.post("/api/projects/{project_id}/generate")
-    def generate(project_id: str) -> dict[str, Any]:
-        """Phase-1 gate: no question generation is implemented yet.
-
-        Kept as an endpoint so the boundary is testable: the service refuses
-        with 409 until the understanding gate opens, and reports that
-        generation itself belongs to a later phase even when it opens.
-        """
-        detail = service.get_project_detail(project_id)
-        readiness = detail["readiness"]
-        if not readiness["generation_allowed"]:
-            return JSONResponse(
-                status_code=409,
-                content={
-                    "error": readiness["reason"],
-                    "code": "generation_not_ready",
-                    "readiness": readiness,
-                },
-            )
-        return JSONResponse(
-            status_code=501,
-            content={
-                "error": "题目生成属于阶段 2；本工单只验证推进状态与边界。",
-                "code": "generation_not_implemented",
-                "readiness": readiness,
-            },
-        )
+    from .evaluation_api import install_evaluation_routes
+    install_evaluation_routes(app,service)
 
     # ------------------------------------------------------------------
     # static UI

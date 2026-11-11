@@ -703,7 +703,7 @@ class WorkspaceService:
         if understanding is None:
             return {
                 "generation_allowed": False,
-                "generation_implemented": False,
+                "generation_implemented": True,
                 "unknowns_confirmed": False,
                 "reason": "尚未形成项目理解；请先完成分析或补充资料。",
             }
@@ -714,7 +714,7 @@ class WorkspaceService:
             reason = "资料已变化，当前理解来自历史快照；请重新分析后再继续。"
         elif allowed:
             reason = (
-                "可以进入后续题目设计阶段（本工单不生成题目）。"
+                "可以设计评测题目。"
                 "用户继续或模型判断足够都不等于未知业务规则已确认。"
             )
         elif understanding.get("error"):
@@ -723,7 +723,7 @@ class WorkspaceService:
             reason = "尚未满足继续条件：请补充资料、纠正理解，或明确表示继续。"
         return {
             "generation_allowed": allowed,
-            "generation_implemented": False,
+            "generation_implemented": True,
             "unknowns_confirmed": False,
             "reason": reason,
         }

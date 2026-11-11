@@ -53,9 +53,9 @@ def test_question_generation_gate_stays_closed_until_ready(
     assert refreshed["readiness"]["unknowns_confirmed"] is False
     assert refreshed["understanding"]["unknowns"]  # continuing does not confirm unknowns
 
-    still_not_implemented = client.post(f"/api/projects/{project_id}/generate")
-    assert still_not_implemented.status_code == 501
-    assert still_not_implemented.json()["code"] == "generation_not_implemented"
+    offline_model = client.post(f"/api/projects/{project_id}/generate")
+    assert offline_model.status_code == 422
+    assert offline_model.json()["code"] == "real_model_required"
 
 
 def test_user_correction_updates_summary_but_keeps_unknowns(
