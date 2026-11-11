@@ -215,3 +215,64 @@ describe("Rhesis detail navigation", () => {
     ).toHaveValue("未发送的纠正");
   });
 });
+
+it("keeps the conversation focused without a permanently visible context sidebar", () => {
+  render(
+    <Workspace
+      detail={makeDetail(false)}
+      models={[]}
+      busy={false}
+      tab="conversation"
+      onDetail={vi.fn()}
+      onHome={vi.fn()}
+      onError={vi.fn()}
+      onNotice={vi.fn()}
+    />,
+  );
+  expect(
+    screen.getByRole("textbox", { name: "给主会话发送消息" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("complementary", { name: "当前项目上下文" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("tab", { name: "项目理解" })).toBeVisible();
+  expect(screen.getByRole("tab", { name: "资料来源" })).toBeVisible();
+});
+
+it("renders model replies as readable headings, lists and code without enabling raw HTML", () => {
+  const detail = makeDetail(false);
+  detail.messages = [
+    {
+      id: "formatted",
+      role: "assistant",
+      content:
+        "## 评测重点\n\n- **输入校验**\n- 异常恢复\n\n```python\nassert result.ok\n```\n\n<script>window.untrusted = true</script>\n\n[不可信链接](javascript:alert(1))",
+      payload: { kind: "chat" },
+      model: "stub",
+      sent_scope: null,
+      created_at: "2026-11-11T00:00:00Z",
+    },
+  ];
+  render(
+    <Workspace
+      detail={detail}
+      models={[]}
+      busy={false}
+      tab="conversation"
+      onDetail={vi.fn()}
+      onHome={vi.fn()}
+      onError={vi.fn()}
+      onNotice={vi.fn()}
+    />,
+  );
+  expect(
+    screen.getByRole("heading", { name: "评测重点", level: 2 }),
+  ).toBeVisible();
+  expect(screen.getByText("输入校验").tagName).toBe("STRONG");
+  expect(screen.getByText("assert result.ok").tagName).toBe("CODE");
+  expect(document.querySelector("script")).toBeNull();
+  expect(screen.getByText("不可信链接")).not.toHaveAttribute(
+    "href",
+    "javascript:alert(1)",
+  );
+});

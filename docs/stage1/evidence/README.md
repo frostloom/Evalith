@@ -1,6 +1,6 @@
 # Stage-1 evidence
 
-Latest frontend: see [Linear light/dark verification](../2026-11-11-Linear前端与PRD验证.md). The `evalith-linear-*.png` files capture the current desktop design at 1440×1000. Older screenshots below are retained as historical evidence.
+Latest frontend: see [project directory and independent settings verification](../2026-11-11-项目目录与独立配置.md). Current screenshots are `evalith-project-first-*.png`, captured at 1440×1000. The previous Linear screenshots and earlier images below are historical evidence.
 
 | File | What it is | How to regenerate |
 | --- | --- | --- |

@@ -103,7 +103,7 @@ export function ModelSettings({
   return (
     <div className="settings-page page">
       <PageHeader
-        title="模型与凭据"
+        title="模型配置"
         description="管理项目理解与会话使用的模型。密钥加密保存，默认可使用离线替身验证流程。"
         breadcrumb={
           <button className="link-button" onClick={onBack}>
@@ -124,45 +124,63 @@ export function ModelSettings({
         }
       />
       <div className="settings-layout">
-        <section className="config-list">
-          <div className="section-heading">
-            <h2>已有配置</h2>
-            <span>{models.length} 个</span>
+        <section className="service-list" aria-label="模型配置列表">
+          <div className="service-list-header">
+            <span>模型服务</span>
+            <span>提供方</span>
+            <span>连接状态</span>
+            <span />
           </div>
-          {models.length === 0 && (
-            <p className="empty-list">
-              还没有模型配置。点击右上角的加号添加模型服务。
-            </p>
+          {!models.length && (
+            <div className="service-empty">
+              <SmartToyOutlined />
+              <h2>添加第一个模型</h2>
+              <p>连接模型服务，在项目会话中复用。</p>
+              <button onClick={() => setAdding(true)}>添加模型</button>
+            </div>
           )}
           {models.map((model) => (
-            <article className="config-row" key={model.id}>
-              <div className="config-main">
-                <div className="model-card-title">
+            <article className="service-row" key={model.id}>
+              <div className="service-main">
+                <span className="service-icon">
                   <SmartToyOutlined />
-                  <h3>{model.name}</h3>
+                </span>
+                <div>
+                  <h2>{model.name}</h2>
+                  <p>
+                    {model.provider === "stub"
+                      ? "离线流程验证 · 不调用真实模型"
+                      : model.model_name}
+                  </p>
+                  {model.last_test_at && !model.last_test_ok ? (
+                    <div className="service-error-detail">
+                      {model.last_test_message}
+                    </div>
+                  ) : null}
                 </div>
-                <p className="mono">
-                  {model.provider === "stub"
-                    ? "确定性替身（不调用真实模型）"
-                    : `${model.base_url ?? "未填写地址"} · ${model.model_name}`}
-                </p>
-                <p className="muted small">
-                  {model.has_api_key ? "已保存加密密钥" : "无密钥"}
-                  {model.last_test_at
-                    ? ` · 最近测试：${model.last_test_ok ? "成功" : "失败"}，${model.last_test_message ?? ""}`
-                    : " · 尚未测试"}
-                </p>
               </div>
-              <div className="config-actions">
+              <span className="service-provider">
+                {model.provider === "stub" ? "确定性替身" : "OpenAI 兼容"}
+              </span>
+              <span
+                className={`service-status ${model.last_test_ok ? "is-ok" : model.last_test_at ? "is-error" : ""}`}
+              >
+                <i />
+                {model.last_test_at
+                  ? model.last_test_ok
+                    ? "已连接"
+                    : "连接失败"
+                  : "未测试"}
+              </span>
+              <div className="service-actions">
                 <button
-                  className="btn btn-quiet"
                   onClick={() => void test(model)}
                   disabled={testing === model.id}
                 >
                   {testing === model.id ? "测试中…" : "测试连接"}
                 </button>
                 <button
-                  className="link-button danger"
+                  className="danger-action"
                   onClick={() => {
                     setDeleteError(null);
                     setDeleteTarget(model);

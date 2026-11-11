@@ -129,3 +129,19 @@ export type ProjectDetail = {
 };
 
 export type WorkspaceTab = "overview" | "conversation" | "sources";
+
+export type ExecutorDefinition = {
+  name: string;
+  backend: "local_command" | "http_api" | "harbor";
+  command: string[];
+  working_directory: string | null;
+  base_url: string | null;
+  timeout_seconds: number;
+};
+export type ExecutorConfig = ExecutorDefinition & {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  verified: false;
+  execution_available: false;
+};

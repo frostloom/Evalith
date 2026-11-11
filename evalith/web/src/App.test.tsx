@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const apiMock = vi.hoisted(() => ({
   listModels: vi.fn(),
+  listExecutorConfigs: vi.fn(),
   createModel: vi.fn(),
   testModel: vi.fn(),
   deleteModel: vi.fn(),
@@ -98,6 +99,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   window.history.replaceState(null, "", "/");
   apiMock.listModels.mockResolvedValue({ items: [] });
+  apiMock.listExecutorConfigs.mockResolvedValue({ items: [] });
   apiMock.listProjects.mockResolvedValue({
     items: [project("a", "Project A"), project("b", "Project B")],
   });
@@ -111,16 +113,18 @@ async function selectProject(
   name: string,
 ) {
   const namePattern = new RegExp(`${name}.*文件`);
-  if (!screen.queryByRole("button", { name: namePattern })) {
-    await user.click(screen.getByRole("button", { name: "切换项目" }));
+  const switcher = screen.queryByRole("button", { name: "切换项目" });
+  if (switcher && !screen.queryByRole("button", { name: namePattern })) {
+    await user.click(switcher);
   }
   await user.click(await screen.findByRole("button", { name: namePattern }));
 }
 async function importProject(user: ReturnType<typeof userEvent.setup>) {
-  if (!screen.queryByRole("button", { name: /导入本地项目/ })) {
-    await user.click(screen.getByRole("button", { name: "切换项目" }));
-  }
-  await user.click(screen.getAllByRole("button", { name: /导入本地项目/ })[0]);
+  const switcher = screen.queryByRole("button", { name: "切换项目" });
+  if (switcher) await user.click(switcher);
+  await user.click(
+    (await screen.findAllByRole("button", { name: "建立项目" }))[0],
+  );
 }
 
 it("keeps workspace updates under StrictMode", async () => {
@@ -158,6 +162,13 @@ describe("import navigation", () => {
   it("accepts an import started from an existing workspace", async () => {
     const user = userEvent.setup();
     apiMock.createProject.mockResolvedValue(detail("c", "Imported C"));
+    apiMock.listProjects.mockResolvedValue({
+      items: [
+        project("a", "Project A"),
+        project("b", "Project B"),
+        project("c", "Imported C"),
+      ],
+    });
     render(<App />);
     const main = screen.getByRole("main");
     await user.click(
@@ -168,8 +179,8 @@ describe("import navigation", () => {
     await importProject(user);
     await user.type(screen.getByLabelText("项目名称"), "Imported C");
     await user.type(screen.getByLabelText(/本地目录/), "/tmp/c");
-    await user.click(screen.getByRole("button", { name: "导入并开始会话" }));
-    await screen.findByRole("heading", { name: "Imported C" });
+    await user.click(screen.getByRole("button", { name: "建立项目" }));
+    await screen.findByRole("button", { name: /Imported C.*文件/ });
     expect(apiMock.createProject).toHaveBeenCalledTimes(1);
   });
 
@@ -185,11 +196,11 @@ describe("import navigation", () => {
     await importProject(user);
     await user.type(screen.getByLabelText("项目名称"), "Late C");
     await user.type(screen.getByLabelText(/本地目录/), "/tmp/c");
-    await user.click(screen.getByRole("button", { name: "导入并开始会话" }));
-    if (screen.queryByRole("dialog", { name: "导入本地项目" }))
+    await user.click(screen.getByRole("button", { name: "建立项目" }));
+    if (screen.queryByRole("dialog", { name: "建立项目" }))
       await user.click(screen.getByRole("button", { name: "取消" }));
-    await user.click(screen.getByRole("button", { name: "模型与凭据" }));
-    await screen.findByRole("heading", { name: "模型与凭据" });
+    await user.click(screen.getByRole("button", { name: "模型配置" }));
+    await screen.findByRole("heading", { name: "模型配置" });
     await act(async () => {
       resolveImport?.(detail("c", "Late C"));
     });
@@ -197,7 +208,7 @@ describe("import navigation", () => {
       expect(screen.queryByRole("heading", { name: "Late C" })).toBeNull(),
     );
     expect(
-      screen.getByRole("heading", { name: "模型与凭据" }),
+      screen.getByRole("heading", { name: "模型配置" }),
     ).toBeInTheDocument();
   });
 
@@ -213,7 +224,7 @@ describe("import navigation", () => {
     await importProject(user);
     await user.type(screen.getByLabelText("项目名称"), "Late C");
     await user.type(screen.getByLabelText(/本地目录/), "/tmp/c");
-    await user.click(screen.getByRole("button", { name: "导入并开始会话" }));
+    await user.click(screen.getByRole("button", { name: "建立项目" }));
     await user.click(screen.getByRole("button", { name: "取消" }));
     await act(async () => {
       resolveImport?.(detail("c", "Late C"));
@@ -305,10 +316,10 @@ describe("project switching", () => {
     );
     await screen.findByRole("heading", { name: "Project A" });
     await user.click(screen.getByRole("tab", { name: "主会话" }));
-    if (screen.queryByRole("dialog", { name: "导入本地项目" }))
+    if (screen.queryByRole("dialog", { name: "建立项目" }))
       await user.click(screen.getByRole("button", { name: "取消" }));
-    await user.click(screen.getByRole("button", { name: "模型与凭据" }));
-    await screen.findByRole("heading", { name: "模型与凭据" });
+    await user.click(screen.getByRole("button", { name: "模型配置" }));
+    await screen.findByRole("heading", { name: "模型配置" });
     await user.click(screen.getByRole("button", { name: "返回" }));
     await screen.findByRole("heading", { name: "Project A" });
     await user.click(screen.getByRole("tab", { name: "主会话" }));
@@ -479,6 +490,13 @@ describe("project switching", () => {
       return Promise.resolve(detail("a", "Project A"));
     });
     apiMock.createProject.mockResolvedValue(detail("c", "Imported C"));
+    apiMock.listProjects.mockResolvedValue({
+      items: [
+        project("a", "Project A"),
+        project("b", "Project B"),
+        project("c", "Imported C"),
+      ],
+    });
     const user = userEvent.setup();
     render(<App />);
     const main = screen.getByRole("main");
@@ -491,11 +509,11 @@ describe("project switching", () => {
     await importProject(user);
     await user.type(screen.getByLabelText("项目名称"), "Imported C");
     await user.type(screen.getByLabelText(/本地目录/), "/tmp/c");
-    await user.click(screen.getByRole("button", { name: "导入并开始会话" }));
+    await user.click(screen.getByRole("button", { name: "建立项目" }));
     await act(async () => {
       rejectB?.(new Error("B failed"));
     });
-    await screen.findByRole("heading", { name: "Imported C" });
+    await screen.findByRole("button", { name: /Imported C.*文件/ });
   });
 
   it("refreshes the workspace when returning from model settings", async () => {
@@ -536,10 +554,10 @@ describe("project switching", () => {
       "我不同意继续。",
     );
     await user.click(screen.getByRole("button", { name: "发送" }));
-    if (screen.queryByRole("dialog", { name: "导入本地项目" }))
+    if (screen.queryByRole("dialog", { name: "建立项目" }))
       await user.click(screen.getByRole("button", { name: "取消" }));
-    await user.click(screen.getByRole("button", { name: "模型与凭据" }));
-    await screen.findByRole("heading", { name: "模型与凭据" });
+    await user.click(screen.getByRole("button", { name: "模型配置" }));
+    await screen.findByRole("heading", { name: "模型配置" });
     await act(async () => {
       resolveSend?.(updatedA);
     });
@@ -563,10 +581,10 @@ describe("project switching", () => {
     await user.click(
       await within(main).findByRole("button", { name: /Project A.*文件/ }),
     );
-    if (screen.queryByRole("dialog", { name: "导入本地项目" }))
+    if (screen.queryByRole("dialog", { name: "建立项目" }))
       await user.click(screen.getByRole("button", { name: "取消" }));
-    await user.click(screen.getByRole("button", { name: "模型与凭据" }));
-    await screen.findByRole("heading", { name: "模型与凭据" });
+    await user.click(screen.getByRole("button", { name: "模型配置" }));
+    await screen.findByRole("heading", { name: "模型配置" });
     await act(async () => {
       resolveA?.(detail("a", "Project A"));
     });
@@ -574,7 +592,7 @@ describe("project switching", () => {
       expect(screen.queryByRole("heading", { name: "Project A" })).toBeNull(),
     );
     expect(
-      screen.getByRole("heading", { name: "模型与凭据" }),
+      screen.getByRole("heading", { name: "模型配置" }),
     ).toBeInTheDocument();
   });
 
@@ -617,11 +635,11 @@ describe("project switching", () => {
   });
 });
 
-it("opens mobile navigation and closes it after choosing a destination", async () => {
+it("closes the project navigation after choosing a project section", async () => {
   const user = userEvent.setup();
-  apiMock.listModels.mockResolvedValue({ items: [] });
-  apiMock.listProjects.mockResolvedValue({ items: [] });
   render(<App />);
+  await selectProject(user, "Project A");
+  await screen.findByRole("heading", { name: "Project A" });
   const menu = screen.getByRole("button", { name: "展开导航" });
   expect(menu).toHaveAttribute("aria-expanded", "false");
   await user.click(menu);
@@ -629,13 +647,14 @@ it("opens mobile navigation and closes it after choosing a destination", async (
     "aria-expanded",
     "true",
   );
-  await user.click(screen.getByRole("button", { name: "模型与凭据" }));
-  expect(
-    screen.getByRole("heading", { name: "模型与凭据" }),
-  ).toBeInTheDocument();
+  await user.click(screen.getByRole("tab", { name: "资料来源" }));
   expect(screen.getByRole("button", { name: "展开导航" })).toHaveAttribute(
     "aria-expanded",
     "false",
+  );
+  expect(screen.getByRole("tab", { name: "资料来源" })).toHaveAttribute(
+    "aria-selected",
+    "true",
   );
 });
 
@@ -679,8 +698,8 @@ it("restores a tab when browser navigation returns to the project", async () => 
   await selectProject(user, "Project A");
   await screen.findByRole("heading", { name: "Project A" });
   await user.click(screen.getByRole("tab", { name: "资料来源" }));
-  await user.click(screen.getByRole("button", { name: "模型与凭据" }));
-  await screen.findByRole("heading", { name: "模型与凭据" });
+  await user.click(screen.getByRole("button", { name: "模型配置" }));
+  await screen.findByRole("heading", { name: "模型配置" });
   await act(async () => {
     window.history.replaceState(null, "", "/#/projects/a?tab=sources");
     window.dispatchEvent(new PopStateEvent("popstate"));
@@ -696,11 +715,9 @@ it("restores a tab when browser navigation returns to the project", async () => 
 it("closes the create drawer with Escape and restores its trigger focus", async () => {
   const user = userEvent.setup();
   render(<App />);
-  const trigger = screen.getByRole("button", { name: "导入本地项目" });
+  const trigger = await screen.findByRole("button", { name: "建立项目" });
   await user.click(trigger);
-  expect(
-    screen.getByRole("dialog", { name: "导入本地项目" }),
-  ).toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "建立项目" })).toBeInTheDocument();
   await user.type(
     screen.getByRole("textbox", { name: "项目名称" }),
     "unsaved project",
@@ -732,7 +749,7 @@ it("asks before deleting a model and leaves cancellation without effects", async
   });
   const user = userEvent.setup();
   render(<App />);
-  await user.click(screen.getByRole("button", { name: "模型与凭据" }));
+  await user.click(screen.getByRole("button", { name: "模型配置" }));
   await user.click(await screen.findByRole("button", { name: "删除" }));
   const dialog = screen.getByRole("dialog", { name: "删除模型配置？" });
   await user.click(within(dialog).getByRole("button", { name: "取消" }));
@@ -813,7 +830,78 @@ it("keeps form input when the theme is changed from an open project drawer", asy
   expect(screen.getByRole("textbox", { name: "项目名称" })).toHaveValue(
     "待导入的项目",
   );
+  expect(screen.getByRole("dialog", { name: "建立项目" })).toBeInTheDocument();
+});
+
+it("starts with project establishment and does not expose a project workspace before a card is opened", async () => {
+  render(<App />);
+  await screen.findByRole("button", { name: /Project A.*文件/ });
+  expect(screen.getByRole("heading", { name: "项目", level: 1 })).toBeVisible();
   expect(
-    screen.getByRole("dialog", { name: "导入本地项目" }),
-  ).toBeInTheDocument();
+    screen.queryByRole("button", { name: "项目会话" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "切换项目" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("textbox", { name: "给主会话发送消息" }),
+  ).not.toBeInTheDocument();
+});
+
+it("creates a project card first and enters its conversation only after opening that card", async () => {
+  const created = detail("c", "New approval project");
+  apiMock.createProject.mockResolvedValue(created);
+  apiMock.listProjects
+    .mockResolvedValueOnce({ items: [] })
+    .mockResolvedValue({ items: [created.project] });
+  apiMock.enterProject.mockResolvedValue(created);
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("heading", { name: "创建第一个项目" });
+  await importProject(user);
+  await user.type(screen.getByLabelText("项目名称"), created.project.name);
+  await user.type(screen.getByLabelText(/本地目录/), "/tmp/c");
+  await user.click(screen.getByRole("button", { name: "建立项目" }));
+  const card = await screen.findByRole("button", {
+    name: /New approval project.*文件/,
+  });
+  expect(
+    screen.queryByRole("textbox", { name: "给主会话发送消息" }),
+  ).not.toBeInTheDocument();
+  expect(apiMock.enterProject).not.toHaveBeenCalled();
+  await user.click(card);
+  expect(
+    await screen.findByRole("textbox", { name: "给主会话发送消息" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: created.project.name }),
+  ).toBeVisible();
+});
+
+it("keeps the project directory, executor settings and model settings as separate destinations", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("button", { name: /Project A.*文件/ });
+  await user.click(screen.getByRole("button", { name: "执行器配置" }));
+  expect(
+    await screen.findByRole("heading", { name: "执行器配置", level: 1 }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: /Project A.*文件/ }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "添加模型服务" }),
+  ).not.toBeInTheDocument();
+  expect(window.location.hash).toBe("#/executors");
+  await user.click(screen.getByRole("button", { name: "模型配置" }));
+  expect(
+    await screen.findByRole("heading", { name: "模型配置" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "添加执行器" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "项目目录" }));
+  expect(
+    await screen.findByRole("button", { name: /Project A.*文件/ }),
+  ).toBeVisible();
 });

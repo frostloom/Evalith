@@ -1,0 +1,12 @@
+
+> evalith-web@0.1.0 test
+> vitest run
+
+
+ RUN  v5.1.0 /Users/a1/.dsh/state/superagent/work/open-source-base-stage1-08cb3653da88/evalith/web
+
+
+ Test Files  4 passed (4)
+      Tests  39 passed (39)
+   Start at  18:16:48
+   Duration  7.40s (tests 47%, import 26%, environment 19%, setup 4%, transform 4%)

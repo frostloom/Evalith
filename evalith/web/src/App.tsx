@@ -8,6 +8,7 @@ import type {
 } from "./types";
 import { ImportSheet } from "./ImportSheet";
 import { ModelSettings } from "./ModelSettings";
+import { ExecutorSettings } from "./ExecutorSettings";
 import { Workspace } from "./Workspace";
 import { Navigation } from "./Navigation";
 import { PageHeader } from "./ui";
@@ -15,7 +16,6 @@ import { AppThemeProvider } from "./theme";
 import {
   Alert,
   Button,
-  Chip,
   InputAdornment,
   Snackbar,
   TextField,
@@ -25,10 +25,11 @@ import {
 } from "@mui/material";
 import AddRounded from "@mui/icons-material/AddRounded";
 import SearchRounded from "@mui/icons-material/SearchRounded";
-import SmartToyOutlined from "@mui/icons-material/SmartToyOutlined";
+import ArrowOutwardRounded from "@mui/icons-material/ArrowOutwardRounded";
+import ScheduleRounded from "@mui/icons-material/ScheduleRounded";
 import FolderOutlined from "@mui/icons-material/FolderOutlined";
 
-type View = "home" | "project" | "import" | "models";
+type View = "home" | "project" | "import" | "models" | "executors";
 
 function compactPath(value: string): string {
   const parts = value.split("/").filter(Boolean);
@@ -123,13 +124,20 @@ function AppContent() {
   const handleCreated = (next: ProjectDetail, token: number) => {
     if (token !== importGeneration.current) return;
     if (selectedProjectRef.current !== null) return;
-    selectedProjectRef.current = next.project.id;
-    displayedProjectRef.current = next.project.id;
-    setDetail(next);
-    setView("project");
-    setWorkspaceTab("conversation");
-    writeRoute(`#/projects/${next.project.id}?tab=conversation`);
-    setNotice("项目已导入，初步理解已生成。");
+    selectedProjectRef.current = null;
+    displayedProjectRef.current = null;
+    setDetail(null);
+    setProjects((current) => [
+      next.project,
+      ...current.filter((item) => item.id !== next.project.id),
+    ]);
+    setView("home");
+    writeRoute("#/projects");
+    setNotice(
+      next.project.analysis_error
+        ? "项目已建立，初步分析失败。可从项目卡片进入检查原因。"
+        : "项目已建立，点击项目卡片开始会话。",
+    );
     void load();
   };
 
@@ -163,6 +171,16 @@ function AppContent() {
     setBusy(false);
     setView("models");
     writeRoute("#/models");
+  };
+
+  const openExecutors = () => {
+    setNavOpen(false);
+    importGeneration.current += 1;
+    openSequence.current += 1;
+    selectedProjectRef.current = null;
+    setBusy(false);
+    setView("executors");
+    writeRoute("#/executors");
   };
 
   const goHome = (updateHistory = true) => {
@@ -201,10 +219,18 @@ function AppContent() {
     projects,
     openProject,
     openModels,
+    openExecutors,
     goHome,
     view,
   });
-  routeActions.current = { projects, openProject, openModels, goHome, view };
+  routeActions.current = {
+    projects,
+    openProject,
+    openModels,
+    openExecutors,
+    goHome,
+    view,
+  };
   useEffect(() => {
     if (!loaded) return;
     const restore = () => {
@@ -229,6 +255,7 @@ function AppContent() {
           setError("项目不存在或不在当前工作区中。");
         }
       } else if (window.location.hash === "#/models") actions.openModels();
+      else if (window.location.hash === "#/executors") actions.openExecutors();
       else if (actions.view !== "home") actions.goHome(false);
     };
     restore();
@@ -241,7 +268,9 @@ function AppContent() {
   }, [loaded]);
 
   return (
-    <div className={`app-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
+    <div
+      className={`app-shell ${effectiveView === "project" ? "is-project" : "is-directory"} ${collapsed && effectiveView === "project" ? "sidebar-collapsed" : ""}`}
+    >
       <a
         className="skip-link"
         href="#main-content"
@@ -254,15 +283,19 @@ function AppContent() {
       </a>
       <Navigation
         projects={projects}
-        activeProject={detail?.project ?? null}
+        activeProject={
+          effectiveView === "project" ? (detail?.project ?? null) : null
+        }
         section={workspaceTab}
         modelsActive={effectiveView === "models"}
+        executorsActive={effectiveView === "executors"}
         collapsed={collapsed}
         mobileOpen={navOpen}
         onCollapse={() => setCollapsed((current) => !current)}
         onMobileToggle={() => setNavOpen((current) => !current)}
         onHome={goHome}
         onModels={openModels}
+        onExecutors={openExecutors}
         onImport={startImport}
         onOpen={(project) => void openProject(project)}
         onSection={changeTab}
@@ -285,6 +318,7 @@ function AppContent() {
             onImport={startImport}
           />
         )}
+        {effectiveView === "executors" && <ExecutorSettings />}
         {effectiveView === "models" && (
           <ModelSettings
             models={models}
@@ -303,6 +337,7 @@ function AppContent() {
             models={models}
             busy={busy}
             tab={workspaceTab}
+            hideTabs
             onTabChange={changeTab}
             onDetail={handleDetail}
             onHome={goHome}
@@ -366,51 +401,55 @@ function Home({
     <div className="page project-directory">
       <PageHeader
         title="项目"
-        description="从项目资料开始，逐步明确评测方向。"
+        description="管理本地项目及其评测会话。"
         actions={
-          <Tooltip title="导入本地项目">
-            <Button
-              variant="contained"
-              aria-label="导入本地项目"
-              startIcon={<AddRounded />}
-              onClick={onImport}
-            >
-              导入项目
-            </Button>
-          </Tooltip>
+          projects.length ? (
+            <Tooltip title="从本地目录建立项目">
+              <Button
+                variant="contained"
+                aria-label="建立项目"
+                startIcon={<AddRounded />}
+                onClick={onImport}
+              >
+                建立项目
+              </Button>
+            </Tooltip>
+          ) : undefined
         }
       />
-      <div className="directory-toolbar">
-        <TextField
-          placeholder="搜索项目…"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          slotProps={{
-            htmlInput: { "aria-label": "搜索项目" },
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchRounded fontSize="small" />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={filter}
-          onChange={(_, value: string | null) => {
-            if (value) setFilter(value);
-          }}
-          aria-label="项目筛选"
-        >
-          <ToggleButton value="all">全部</ToggleButton>
-          <ToggleButton value="configured">已配置模型</ToggleButton>
-          <ToggleButton value="unconfigured">待配置模型</ToggleButton>
-        </ToggleButtonGroup>
-        <span className="directory-count">{filtered.length} 个项目</span>
-      </div>
+      {!!projects.length && (
+        <div className="directory-toolbar">
+          <TextField
+            placeholder="搜索项目…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            slotProps={{
+              htmlInput: { "aria-label": "搜索项目" },
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchRounded fontSize="small" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={filter}
+            onChange={(_, value: string | null) => {
+              if (value) setFilter(value);
+            }}
+            aria-label="项目筛选"
+          >
+            <ToggleButton value="all">全部</ToggleButton>
+            <ToggleButton value="configured">已配置模型</ToggleButton>
+            <ToggleButton value="unconfigured">待配置模型</ToggleButton>
+          </ToggleButtonGroup>
+          <span className="directory-count">{filtered.length} 个项目</span>
+        </div>
+      )}
       {loading ? (
         <p role="status" className="empty-state">
           正在加载项目…
@@ -423,38 +462,39 @@ function Home({
               key={project.id}
               onClick={() => onOpen(project)}
             >
+              <div className="project-card-top">
+                <span className="project-card-icon" aria-hidden="true">
+                  <FolderOutlined />
+                </span>
+                <span
+                  className={`project-state ${project.analysis_error ? "has-error" : ""}`}
+                >
+                  <i />
+                  {project.analysis_error
+                    ? "需要检查"
+                    : project.model_config_id
+                      ? "已配置模型"
+                      : "待配置模型"}
+                </span>
+              </div>
               <div className="project-card-heading">
-                <SmartToyOutlined />
                 <strong>{project.name}</strong>
+                <ArrowOutwardRounded className="card-enter-arrow" />
               </div>
               <p className="project-card-path" title={project.root_path}>
                 {compactPath(project.root_path)}
               </p>
-              <div className="project-card-field">
-                <span>状态</span>
-                <Chip
-                  size="small"
-                  label={
-                    project.analysis_error
-                      ? "分析失败"
-                      : project.model_config_id
-                        ? "已配置模型"
-                        : "待配置模型"
-                  }
-                  color={project.analysis_error ? "error" : "default"}
-                />
-              </div>
-              <div className="project-card-field">
-                <span>资料范围</span>
+              <div className="project-card-footer">
                 <span>
-                  <FolderOutlined fontSize="small" />
+                  <FolderOutlined />
                   {project.file_count} 个文件
                 </span>
-              </div>
-              <div className="project-card-footer">
-                <span>本地项目</span>
-                <span className="mono">
-                  {project.snapshot_digest?.slice(0, 10) ?? "未扫描"}
+                <span>
+                  <ScheduleRounded />
+                  {new Date(project.updated_at).toLocaleDateString("zh-CN", {
+                    month: "short",
+                    day: "numeric",
+                  })}
                 </span>
               </div>
             </button>
@@ -462,12 +502,18 @@ function Home({
         </div>
       ) : (
         <section className="empty-state">
-          <AppsEmpty />
+          <div className="empty-project-art" aria-hidden="true">
+            <span />
+            <span />
+            <div>
+              <FolderOutlined />
+            </div>
+          </div>
           <h2>{projects.length ? "没有匹配的项目" : "创建第一个项目"}</h2>
           <p>
             {projects.length
               ? "调整搜索词或筛选条件，找到需要的项目。"
-              : "导入本地目录，选择分析范围，然后核对项目理解。"}
+              : "连接本地项目与资料，和模型一起明确评测方向。"}
           </p>
           <Button
             variant="contained"
@@ -480,18 +526,10 @@ function Home({
                 : onImport
             }
           >
-            {projects.length ? "清除筛选" : "导入本地项目"}
+            {projects.length ? "清除筛选" : "建立项目"}
           </Button>
         </section>
       )}
     </div>
-  );
-}
-
-function AppsEmpty() {
-  return (
-    <span className="empty-state-icon">
-      <SmartToyOutlined />
-    </span>
   );
 }

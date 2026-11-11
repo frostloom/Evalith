@@ -78,7 +78,7 @@ export function ImportSheet({
       });
       onCreated(detail, token);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "导入失败";
+      const message = err instanceof Error ? err.message : "建立项目失败";
       setLocalError(message);
       onError(message);
     } finally {
@@ -88,7 +88,7 @@ export function ImportSheet({
 
   return (
     <FormDrawer
-      title="导入本地项目"
+      title="建立项目"
       onClose={onCancel}
       footer={
         <>
@@ -101,13 +101,13 @@ export function ImportSheet({
             className="btn btn-primary"
             disabled={busy}
           >
-            {busy ? "正在扫描并分析…" : "导入并开始会话"}
+            {busy ? "正在扫描并分析…" : "建立项目"}
           </button>
         </>
       }
     >
       <p className="drawer-intro">
-        选择本地目录与模型，为项目建立独立的资料范围和持续会话。
+        连接本地目录，为项目准备资料和独立的持续会话。
       </p>
       <form id="import-project-form" className="form-sheet" onSubmit={submit}>
         <div className="field-row">

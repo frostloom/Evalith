@@ -1,4 +1,10 @@
-import type { ModelConfig, Project, ProjectDetail } from "./types";
+import type {
+  ExecutorConfig,
+  ExecutorDefinition,
+  ModelConfig,
+  Project,
+  ProjectDetail,
+} from "./types";
 
 export class ApiError extends Error {
   code: string;
@@ -37,6 +43,21 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  listExecutorConfigs: () =>
+    request<{ items: ExecutorConfig[] }>("/api/executor-configs"),
+  createExecutorConfig: (body: ExecutorDefinition) =>
+    request<ExecutorConfig>("/api/executor-configs", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateExecutorConfig: (id: string, body: ExecutorDefinition) =>
+    request<ExecutorConfig>(`/api/executor-configs/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  deleteExecutorConfig: (id: string) =>
+    request<void>(`/api/executor-configs/${id}`, { method: "DELETE" }),
+
   listModels: () => request<{ items: ModelConfig[] }>("/api/model-configs"),
   createModel: (body: Record<string, unknown>) =>
     request<ModelConfig>("/api/model-configs", {
@@ -56,8 +77,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  getProject: (id: string) =>
-    request<ProjectDetail>(`/api/projects/${id}`),
+  getProject: (id: string) => request<ProjectDetail>(`/api/projects/${id}`),
   enterProject: (id: string) =>
     request<ProjectDetail>(`/api/projects/${id}/enter`, { method: "POST" }),
   sendMessage: (id: string, content: string) =>

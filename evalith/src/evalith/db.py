@@ -32,6 +32,14 @@ CREATE TABLE IF NOT EXISTS model_configs (
     last_test_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS executor_configs (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    definition_encrypted TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS projects (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,

@@ -20,6 +20,7 @@ export const ui = {
 const palettes = {
   light: {
     bg: "#ffffff",
+    directory: "#fafafb",
     rail: "#f6f6f8",
     surface: "#ffffff",
     surface2: "#f8f8fa",
@@ -44,6 +45,7 @@ const palettes = {
   },
   dark: {
     bg: "#191a1e",
+    directory: "#16171b",
     rail: "#15161a",
     surface: "#202126",
     surface2: "#23242b",
@@ -132,7 +134,12 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
           MuiButton: {
             defaultProps: { disableElevation: true, size: "small" },
             styleOverrides: {
-              root: { minHeight: 32, padding: "5px 11px", boxShadow: "none" },
+              root: {
+                minHeight: 32,
+                padding: "5px 11px",
+                boxShadow: "none",
+                transition: "none",
+              },
               containedPrimary: {
                 backgroundColor: c.button,
                 color: c.buttonText,
@@ -250,6 +257,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
     });
   const variables = {
     "--canvas": c.bg,
+    "--directory": c.directory,
     "--rail": c.rail,
     "--surface": c.surface,
     "--surface2": c.surface2,

@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Tab, Tabs } from "@mui/material";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import RefreshRounded from "@mui/icons-material/RefreshRounded";
 import TuneOutlined from "@mui/icons-material/TuneOutlined";
 import FolderOutlined from "@mui/icons-material/FolderOutlined";
 import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
+import AddRounded from "@mui/icons-material/AddRounded";
+import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import { FormDrawer, PageHeader } from "./ui";
 import { api, ApiError } from "./api";
 import type {
@@ -52,9 +56,11 @@ export function Workspace({
   onNotice,
   tab,
   onTabChange,
+  hideTabs = false,
 }: {
   detail: ProjectDetail;
   tab?: WorkspaceTab;
+  hideTabs?: boolean;
   onTabChange?: (tab: WorkspaceTab) => void;
   models: ModelConfig[];
   busy: boolean;
@@ -199,31 +205,26 @@ export function Workspace({
       <PageHeader
         title={project.name}
         breadcrumb={
-          <>
+          hideTabs ? undefined : (
             <button className="link-button" onClick={onHome}>
-              项目
+              所有项目
             </button>
-          </>
+          )
         }
         actions={
           <>
-            <Button
-              variant="text"
-              startIcon={<TuneOutlined />}
-              onClick={() => setEditingModel(true)}
-            >
-              模型
-            </Button>
-            <Button
-              variant="text"
-              startIcon={<RefreshRounded />}
-              onClick={() =>
-                void run(() => api.rescan(project.id), "资料范围已重新扫描。")
-              }
-              disabled={disabled}
-            >
-              重新扫描
-            </Button>
+            {activeTab !== "conversation" && (
+              <Button
+                variant="text"
+                startIcon={<RefreshRounded />}
+                onClick={() =>
+                  void run(() => api.rescan(project.id), "资料范围已重新扫描。")
+                }
+                disabled={disabled}
+              >
+                重新扫描
+              </Button>
+            )}
             <Button
               variant="text"
               startIcon={<FolderOutlined />}
@@ -234,34 +235,36 @@ export function Workspace({
           </>
         }
       />
-      <Tabs
-        selectionFollowsFocus
-        value={activeTab}
-        onChange={(_, value: WorkspaceTab) => changeTab(value)}
-        aria-label="项目工作区章节"
-        className="detail-tabs"
-        variant="scrollable"
-        scrollButtons="auto"
-      >
-        <Tab
-          value="conversation"
-          label="主会话"
-          id="tab-conversation"
-          aria-controls="panel-conversation"
-        />
-        <Tab
-          value="overview"
-          label="项目理解"
-          id="tab-overview"
-          aria-controls="panel-overview"
-        />
-        <Tab
-          value="sources"
-          label="资料来源"
-          id="tab-sources"
-          aria-controls="panel-sources"
-        />
-      </Tabs>
+      {!hideTabs && (
+        <Tabs
+          selectionFollowsFocus
+          value={activeTab}
+          onChange={(_, value: WorkspaceTab) => changeTab(value)}
+          aria-label="项目工作区章节"
+          className="detail-tabs"
+          variant="scrollable"
+          scrollButtons="auto"
+        >
+          <Tab
+            value="conversation"
+            label="主会话"
+            id="tab-conversation"
+            aria-controls="panel-conversation"
+          />
+          <Tab
+            value="overview"
+            label="项目理解"
+            id="tab-overview"
+            aria-controls="panel-overview"
+          />
+          <Tab
+            value="sources"
+            label="资料来源"
+            id="tab-sources"
+            aria-controls="panel-sources"
+          />
+        </Tabs>
+      )}
       <div className="workspace-panels">
         <div
           hidden={activeTab !== "overview"}
@@ -348,25 +351,56 @@ export function Workspace({
           aria-label="项目主会话"
         >
           <div className="conversation-main">
-            <div className="conversation-heading">
-              <span>项目主会话</span>
-              <span>自动保存</span>
-            </div>
             <div className="messages">
-              {messages.length === 0 && (
-                <div className="chat-empty">
-                  <h3>先一起了解这个项目</h3>
-                  <p>补充业务背景、纠正理解，或说明你希望重点评测的方向。</p>
-                </div>
-              )}
-              {messages.map((item) => (
-                <MessageRow
-                  key={item.id}
-                  message={item}
-                  onInspect={() => changeTab("overview")}
-                />
-              ))}
-              <div ref={messagesEnd} />
+              <div className="conversation-transcript">
+                {understanding?.stale && (
+                  <div className="chat-source-notice" role="status">
+                    <strong>项目资料有更新</strong>
+                    <p>之前的理解来自历史资料，请重新核对后继续。</p>
+                    <button onClick={() => changeTab("overview")}>
+                      核对项目理解
+                    </button>
+                  </div>
+                )}
+                {messages.some(
+                  (item) =>
+                    item.role === "system" && item.payload?.kind !== "error",
+                ) && (
+                  <details className="session-record">
+                    <summary>项目活动记录</summary>
+                    {messages
+                      .filter(
+                        (item) =>
+                          item.role === "system" &&
+                          item.payload?.kind !== "error",
+                      )
+                      .map((item) => (
+                        <p key={item.id}>{item.content}</p>
+                      ))}
+                  </details>
+                )}
+
+                {messages.length === 0 && (
+                  <div className="chat-empty">
+                    <h3>先一起了解这个项目</h3>
+                    <p>补充业务背景、纠正理解，或说明你希望重点评测的方向。</p>
+                  </div>
+                )}
+                {messages
+                  .filter(
+                    (item) =>
+                      item.role !== "system" || item.payload?.kind === "error",
+                  )
+                  .map((item) => (
+                    <MessageRow
+                      key={item.id}
+                      message={item}
+                      onInspect={() => changeTab("overview")}
+                      onSources={() => changeTab("sources")}
+                    />
+                  ))}
+                <div ref={messagesEnd} />
+              </div>
             </div>
             <div className="composer">
               <label className="sr-only" htmlFor="composer-input">
@@ -391,11 +425,19 @@ export function Workspace({
                   }
                 }}
                 rows={2}
-                placeholder="补充资料、纠正理解，或说明希望评测的方向。Enter 发送，Shift+Enter 换行。"
+                placeholder="补充资料、纠正理解，或聊聊你想评测什么…"
                 disabled={disabled}
               />
               <div className="composer-foot">
-                <span>
+                <div className="composer-tools">
+                  <button
+                    className="composer-attach"
+                    onClick={() => setEditingSources(true)}
+                    disabled={disabled}
+                  >
+                    <AddRounded />
+                    <span>项目资料</span>
+                  </button>
                   <button
                     className="composer-model"
                     onClick={() => setEditingModel(true)}
@@ -404,8 +446,9 @@ export function Workspace({
                     <TuneOutlined />
                     {models.find((item) => item.id === project.model_config_id)
                       ?.name ?? "选择模型"}
+                    <ExpandMoreRounded />
                   </button>
-                </span>
+                </div>
                 <button
                   className="send-button"
                   aria-label={working ? "处理中…" : "发送"}
@@ -416,88 +459,10 @@ export function Workspace({
                 </button>
               </div>
             </div>
+            <p className="composer-hint">
+              每个项目一段持续会话<span>Enter 发送，Shift + Enter 换行</span>
+            </p>
           </div>
-          <aside className="conversation-context" aria-label="当前项目上下文">
-            <div className="context-section">
-              <div className="context-label">
-                {understanding?.stale ? "历史理解" : "当前理解"}
-                <button
-                  className="quiet-link"
-                  onClick={() => changeTab("overview")}
-                >
-                  查看详情
-                </button>
-              </div>
-              {understanding?.stale && (
-                <p className="context-warning" role="status">
-                  资料已变化，需重新核对。
-                </p>
-              )}
-              <p className="context-summary">
-                {understanding?.error
-                  ? "分析失败，请检查模型或资料后重试。"
-                  : understanding?.summary ||
-                    "还没有形成项目理解，可先配置模型或补充资料。"}
-              </p>
-              {understanding?.error && (
-                <p className="context-warning">{understanding.error}</p>
-              )}
-            </div>
-            <div className="context-section">
-              <div className="context-label">
-                待确认<span>{understanding?.unknowns.length ?? 0}</span>
-              </div>
-              <ul className="context-unknowns">
-                {understanding?.unknowns.slice(0, 2).map((item, index) => (
-                  <li key={index}>{itemText(item)}</li>
-                ))}
-              </ul>
-              {!understanding?.unknowns.length && (
-                <p className="context-muted">暂无待确认项</p>
-              )}
-            </div>
-            <div className="context-section">
-              <div className="context-label">
-                {understanding?.stale ? "原分析来源" : "参考资料"}
-                <button
-                  className="quiet-link"
-                  onClick={() => changeTab("sources")}
-                >
-                  {snapshot?.file_count ?? 0} 份
-                </button>
-              </div>
-              <ul className="context-files">
-                {(understanding?.sources ?? []).slice(0, 3).map((source) => (
-                  <li key={source.path}>
-                    <FolderOutlined />
-                    <span title={source.path}>{source.path}</span>
-                  </li>
-                ))}
-              </ul>
-              <button
-                className="context-add"
-                onClick={() => setEditingSources(true)}
-              >
-                <span>＋</span>补充项目资料
-              </button>
-            </div>
-            <div className="context-section context-next">
-              <div className="context-label">下一步</div>
-              <p className="context-muted">
-                {understanding?.stale
-                  ? "先重新分析最新资料，再确认评测方向。"
-                  : readiness.generation_allowed
-                    ? "已确认继续意愿。题目设计将在后续阶段开放。"
-                    : "讨论并确认理解，再进入题目设计。"}
-              </p>
-              <button
-                className="quiet-link"
-                onClick={() => changeTab("overview")}
-              >
-                {understanding?.stale ? "重新核对理解" : "查看准备状态"}
-              </button>
-            </div>
-          </aside>
         </section>
 
         <aside
@@ -739,42 +704,94 @@ function UnderstandingPanel({
 function MessageRow({
   message,
   onInspect,
+  onSources,
 }: {
   message: Message;
   onInspect: () => void;
+  onSources: () => void;
 }) {
   const kind = message.payload?.kind;
   if (kind === "understanding") {
     const initial = message.payload?.understanding;
     return (
-      <div className="message message-assistant message-understanding">
-        <span className="message-role">E</span>
+      <article className="message message-assistant message-understanding">
+        <div className="assistant-identity">
+          <span className="message-role" aria-hidden="true">
+            E
+          </span>
+          <span>
+            Evalith<span className="message-caption">项目理解</span>
+          </span>
+        </div>
         <div className="message-content">
-          <span className="message-caption">项目理解已更新</span>
           <p>{initial?.summary || "已根据选定资料更新项目理解。"}</p>
+          {initial?.agent_or_flow && (
+            <p className="chat-flow">{initial.agent_or_flow}</p>
+          )}
+          {!!initial?.unknowns.length && (
+            <div className="chat-findings">
+              <h3>还需要一起确认</h3>
+              <ul>
+                {initial.unknowns.slice(0, 2).map((item, index) => (
+                  <li key={index}>{itemText(item)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="message-references">
+            {initial?.sources.slice(0, 2).map((source) => (
+              <button key={source.path} onClick={onSources} title={source.path}>
+                <FolderOutlined />
+                {source.path.split("/").pop()}
+              </button>
+            ))}
+          </div>
           <button className="message-inspect" onClick={onInspect}>
-            查看理解与来源 <span>↗</span>
+            查看完整理解与来源 <span aria-hidden="true">↗</span>
           </button>
         </div>
-      </div>
+      </article>
     );
   }
-  if (message.role === "system") {
-    const isError = kind === "error";
+  if (message.role === "system")
     return (
-      <div className={`message message-system ${isError ? "is-error" : ""}`}>
-        <span className="message-role">{isError ? "错误" : "记录"}</span>
+      <div className="message message-system is-error" role="alert">
+        <span>处理失败</span>
         <p>{message.content}</p>
       </div>
     );
-  }
+  if (message.role === "user")
+    return (
+      <article className="message message-user">
+        <span className="sr-only">你</span>
+        <p>{message.content}</p>
+      </article>
+    );
   return (
-    <div className={`message message-${message.role}`}>
-      <span className="message-role">
-        {message.role === "user" ? "你" : "E"}
-      </span>
-      <p>{message.content}</p>
-    </div>
+    <article className="message message-assistant">
+      <div className="assistant-identity">
+        <span className="message-role" aria-hidden="true">
+          E
+        </span>
+        <span>Evalith</span>
+      </div>
+      <div className="message-content prose">
+        <Markdown
+          skipHtml
+          remarkPlugins={[remarkGfm]}
+          components={{
+            img: ({ alt }) => <span>{alt}</span>,
+            a: ({ href, children }) => (
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                {children}
+              </a>
+            ),
+          }}
+        >
+          {message.content}
+        </Markdown>
+      </div>
+    </article>
   );
 }
 
