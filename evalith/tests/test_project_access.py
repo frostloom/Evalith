@@ -1123,3 +1123,17 @@ def test_tight_supplement_budget_keeps_document_sent(tmp_path: Path) -> None:
     supplements = [item for item in sources if item.get("supplemental")]
     assert supplements and supplements[0]["sent"] is True
     assert "### SUPPLEMENT supplement:T" in text
+
+
+def test_ordinary_flow_data_mapping_stays_in_context(tmp_path: Path) -> None:
+    from evalith.project_access import build_model_context
+
+    root = tmp_path / "flow-data"
+    root.mkdir()
+    (root / "config.yaml").write_text(
+        "data: {flow: ordinary-flow-data}\n", encoding="utf-8"
+    )
+    scan = scan_project(root, [], [])
+    sources, text, _ = build_model_context(scan, [], budget_chars=10_000)
+    assert sources and sources[0]["sent"] is True
+    assert "ordinary-flow-data" in text

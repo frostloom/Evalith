@@ -1414,14 +1414,22 @@ def _redact_kubernetes_secret_data(text: str) -> str:
         == "secret"
         for match in _K8S_SECRET_FLOW_ALIAS_KIND.finditer(text)
     )
-    flow = bool(
-        _K8S_SECRET_FLOW_KIND.search(text)
-        or _K8S_SECRET_FLOW_OPEN.search(text)
-        or flow_alias_kind
-    )
+    literal_flow_kind = bool(_K8S_SECRET_FLOW_KIND.search(text))
     block_kind = bool(_K8S_SECRET_BLOCK_KIND.search(text))
     line_kind = bool(_K8S_SECRET_KIND.search(text))
-    if not flow and not alias_kind and not block_kind and not line_kind:
+    secret_kind = (
+        literal_flow_kind
+        or flow_alias_kind
+        or alias_kind
+        or block_kind
+        or line_kind
+    )
+    flow = bool(
+        literal_flow_kind
+        or flow_alias_kind
+        or (secret_kind and _K8S_SECRET_FLOW_OPEN.search(text))
+    )
+    if not secret_kind:
         return text
 
     text = _normalize_escaped_secret_keys(text)

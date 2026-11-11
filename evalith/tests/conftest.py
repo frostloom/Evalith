@@ -109,6 +109,9 @@ def project_root(tmp_path: Path) -> Path:
         "pa\\\n    ssword=synthetic-split-password\n",
         encoding="utf-8",
     )
+    (root / "config" / "flow-data.yaml").write_text(
+        "data: {flow: synthetic-flow-data}\n", encoding="utf-8"
+    )
     (root / "config" / "huggingface-token.json").write_text(
         '{"name": "huggingfaceToken", "value": "synthetic-huggingface-token"}\n',
         encoding="utf-8",

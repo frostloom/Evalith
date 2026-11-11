@@ -170,10 +170,13 @@ def check_artifact() -> dict[str, Any]:
             "rhesis-backend-ee" not in listing.stdout.lower()
         )
     info = TREE / "BUILD_INFO.json"
+    build_info = json.loads(info.read_text()) if info.exists() else {}
     checks["build_info_pinned"] = (
-        info.exists()
-        and json.loads(info.read_text())["upstream_commit"]
+        build_info.get("upstream_commit")
         == "ce24bb1993fc545bb0ccb0d8b3951683ac14fff1"
+    )
+    checks["build_info_locked"] = bool(build_info.get("dependency_locks")) and bool(
+        build_info.get("tool_versions")
     )
     return checks
 
@@ -265,6 +268,9 @@ def main() -> int:
         checks["frontend_uses_evalith_mark"] = "evalith-mark" in html or "Evalith" in html
 
         checks["artifact"] = check_artifact()
+        checks["build_info_locked"] = checks["artifact"].get(
+            "build_info_locked", False
+        )
         checks["all_artifact_checks"] = all(checks["artifact"].values())
         checks["passed"] = all(
             [
@@ -286,6 +292,11 @@ def main() -> int:
         stub.shutdown()
         stub.server_close()
 
+    build_info = (
+        json.loads((TREE / "BUILD_INFO.json").read_text(encoding="utf-8"))
+        if (TREE / "BUILD_INFO.json").exists()
+        else {}
+    )
     report = {
         "generated_at": started.isoformat(),
         "backend_url": BACKEND_URL,
@@ -293,6 +304,7 @@ def main() -> int:
         "source_build": "uv sync from workbench/.workbench/ee-free (no published image)",
         "upstream_commit": "ce24bb1993fc545bb0ccb0d8b3951683ac14fff1",
         "model": "deterministic local OpenAI-compatible stub; not a real model",
+        "build_info": build_info,
         "checks": checks,
         "ids": ids,
         "errors": errors,
