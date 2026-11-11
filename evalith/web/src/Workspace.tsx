@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 import type {
   Message,
   ModelConfig,
@@ -102,6 +102,16 @@ export function Workspace({
     } catch (err) {
       if (mountedRef.current && projectIdRef.current === origin) {
         reportError(err instanceof Error ? err.message : "操作失败");
+        if (err instanceof ApiError && err.code === "understanding_stale") {
+          try {
+            const latest = await api.getProject(origin);
+            if (mountedRef.current && projectIdRef.current === origin && latest.project.id === origin) {
+              applyDetail(latest);
+            }
+          } catch {
+            // Keep the source-change error visible if refreshing also fails.
+          }
+        }
       }
     } finally {
       if (mountedRef.current && projectIdRef.current === origin) {
@@ -194,10 +204,16 @@ export function Workspace({
 
       <div className="workspace-body">
         <div className="document">
+          <nav className="workspace-sections" aria-label="项目工作区章节">
+            <a href="#project-understanding">项目理解</a>
+            <a href="#project-conversation">主会话 <span>{messages.length}</span></a>
+            <span>题集 <small>待开放</small></span>
+            <span>运行 <small>待开放</small></span>
+          </nav>
           {understanding ? (
             <UnderstandingPanel understanding={understanding} />
           ) : (
-            <section className="understanding empty">
+            <section className="understanding empty" id="project-understanding">
               <p>还没有项目理解。检查模型配置后点击“重新分析”。</p>
             </section>
           )}
@@ -215,7 +231,7 @@ export function Workspace({
               </div>
             </div>
             <div className="readiness-actions">
-              {!readiness.generation_allowed && !understanding?.error && (
+              {!readiness.generation_allowed && !understanding?.error && !understanding?.stale && (
                 <button
                   className="btn btn-primary"
                   onClick={() =>
@@ -242,7 +258,7 @@ export function Workspace({
             </div>
           </section>
 
-          <section className="conversation" aria-label="项目主会话">
+          <section className="conversation" id="project-conversation" aria-label="项目主会话">
             <div className="section-heading">
               <h2>主会话</h2>
               <span className="mono">每项目一条 · 重开恢复</span>
@@ -306,7 +322,7 @@ export function Workspace({
             <p className="evidence-meta">
               快照 <span className="mono">{shortHash(snapshot?.digest)}</span>
               <br />
-              {snapshot?.created_at?.replace("T", " ").slice(0, 19)}
+              {snapshot?.created_at && new Date(snapshot.created_at).toLocaleString("zh-CN", { hour12: false })}
             </p>
             <ul className="file-list">
               {snapshot?.files.map((file) => (
@@ -428,17 +444,24 @@ export function Workspace({
 }
 
 function UnderstandingPanel({ understanding }: { understanding: Understanding }) {
+  const stale = understanding.stale;
   const bands = [
-    { key: "known", title: "已知", hint: "有资料或用户输入依据", items: understanding.known },
-    { key: "inferred", title: "推断", hint: "不是事实", items: understanding.inferred },
-    { key: "unknowns", title: "未知", hint: "影响评测方向", items: understanding.unknowns },
+    { key: "known", title: stale ? "历史依据" : "已知", hint: stale ? "来自旧快照，需重新核对" : "有资料或用户输入依据", items: understanding.known },
+    { key: "inferred", title: stale ? "历史推断" : "推断", hint: "不是事实", items: understanding.inferred },
+    { key: "unknowns", title: stale ? "待重新核对" : "未知", hint: "影响评测方向", items: understanding.unknowns },
   ] as const;
 
   return (
-    <section className="understanding">
+    <section className={`understanding ${stale ? "is-stale" : ""}`} id="project-understanding">
+      {stale && (
+        <div className="stale-notice" role="alert">
+          <strong>资料已变化 · 理解待更新</strong>
+          <p>以下结论来自历史快照，不能作为当前依据。点击“重新分析”核对最新资料；历史会话保留。</p>
+        </div>
+      )}
       <div className="understanding-head">
         <div>
-          <p className="kicker">初步理解</p>
+          <p className="kicker">{stale ? "历史理解" : "初步理解"}</p>
           <p className="understanding-summary">{understanding.summary}</p>
           {understanding.agent_or_flow && (
             <p className="understanding-flow">

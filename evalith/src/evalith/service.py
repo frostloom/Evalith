@@ -668,7 +668,18 @@ class WorkspaceService:
         if row is None:
             return None
         data = dict(row)
+        project = self.db.get_project(data["project_id"])
+        analysed_snapshot = self.db.get_snapshot(data["snapshot_id"])
+        current_snapshot = self.db.get_snapshot(project["snapshot_id"]) if project else None
+        # A new snapshot can contain only updated scan diagnostics. Compare
+        # content fingerprints so that such a refresh does not retire facts.
+        stale = (
+            analysed_snapshot is None
+            or current_snapshot is None
+            or analysed_snapshot["digest"] != current_snapshot["digest"]
+        )
         return {
+            "stale": stale,
             "summary": data["summary"],
             "agent_or_flow": data["agent_or_flow"],
             "known": loads(data["known"], []),
@@ -692,8 +703,12 @@ class WorkspaceService:
                 "unknowns_confirmed": False,
                 "reason": "尚未形成项目理解；请先完成分析或补充资料。",
             }
-        allowed = bool(understanding.get("sufficient") or understanding.get("user_continued"))
-        if allowed:
+        allowed = not understanding.get("stale") and bool(
+            understanding.get("sufficient") or understanding.get("user_continued")
+        )
+        if understanding.get("stale"):
+            reason = "资料已变化，当前理解来自历史快照；请重新分析后再继续。"
+        elif allowed:
             reason = (
                 "可以进入后续题目设计阶段（本工单不生成题目）。"
                 "用户继续或模型判断足够都不等于未知业务规则已确认。"
@@ -1500,10 +1515,19 @@ class WorkspaceService:
         project = self.db.get_project(project_id)
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
+        self._rescan(project, store_new_snapshot=True)
+        project = self.db.get_project(project_id)
+        assert project is not None
         current_row = self.db.get_understanding(project_id)
         current = self.parse_understanding(current_row)
         if current is None:
             raise WorkspaceError("尚未形成项目理解，不能进入下一步", status_code=409)
+        if current.get("stale"):
+            raise WorkspaceError(
+                "资料已变化，请重新分析后再继续",
+                status_code=409,
+                code="understanding_stale",
+            )
         if current.get("error"):
             raise WorkspaceError(
                 "项目理解失败，请先修复模型或资料并重新分析",

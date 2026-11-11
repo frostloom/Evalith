@@ -29,6 +29,7 @@ export type UnderstandingItem = {
 };
 
 export type Understanding = {
+  stale: boolean;
   summary: string;
   agent_or_flow: string;
   known: Array<UnderstandingItem | string>;

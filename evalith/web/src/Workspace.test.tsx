@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const apiMock = vi.hoisted(() => ({
   getProject: vi.fn(),
   sendMessage: vi.fn(),
+  continueProject: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -22,6 +23,7 @@ vi.mock("./api", () => ({
 
 import type { ProjectDetail } from "./types";
 import { Workspace } from "./Workspace";
+import { ApiError } from "./api";
 
 function makeDetail(readinessOpen: boolean): ProjectDetail {
   return {
@@ -113,5 +115,41 @@ describe("workspace failure reconciliation", () => {
     fireEvent.compositionEnd(input);
     fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
     await waitFor(() => expect(apiMock.sendMessage).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe("stale source evidence", () => {
+  it("refreshes the workspace when continuation discovers changed files", async () => {
+    const user = userEvent.setup();
+    const refreshed = makeDetail(false);
+    const error = new ApiError("资料已变化", "understanding_stale", 409);
+    error.code = "understanding_stale";
+    apiMock.continueProject.mockRejectedValue(error);
+    apiMock.getProject.mockResolvedValue(refreshed);
+    const onDetail = vi.fn();
+    render(<Workspace detail={makeDetail(false)} models={[]} busy={false}
+      onDetail={onDetail} onHome={vi.fn()} onError={vi.fn()} onNotice={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "表示可以继续" }));
+    await waitFor(() => expect(onDetail).toHaveBeenCalledWith(refreshed));
+  });
+
+  it("labels previous conclusions as historical and requires reanalysis", () => {
+    const detail = makeDetail(false);
+    detail.understanding = {
+      summary: "Old policy summary", agent_or_flow: "Approval flow",
+      known: [{ text: "Approval optional", source: "policy.md" }],
+      inferred: [], unknowns: [], sources: [], sufficient: false,
+      user_continued: false, sufficient_reason: "", model: "stub",
+      error: null, updated_at: "2026-11-06T00:00:00Z",
+      snapshot_id: "snp_old", stale: true,
+    };
+    render(<Workspace detail={detail} models={[]} busy={false}
+      onDetail={vi.fn()} onHome={vi.fn()} onError={vi.fn()} onNotice={vi.fn()} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("资料已变化");
+    expect(screen.getByRole("heading", { name: "历史依据" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "已知" })).not.toBeInTheDocument();
+    expect(screen.getByText("Approval optional")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /继续/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重新分析" })).toBeEnabled();
   });
 });

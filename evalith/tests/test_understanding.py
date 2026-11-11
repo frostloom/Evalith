@@ -2028,3 +2028,57 @@ def test_narrowed_scope_keeps_discussion_and_reanalysis_working(
 
     reanalysed = client.post(f"/api/projects/{project_id}/reanalyse")
     assert reanalysed.status_code == 200, reanalysed.text
+
+
+@pytest.mark.parametrize("change", ["edit", "delete"])
+def test_source_changes_mark_understanding_stale_until_reanalysis(
+    client: TestClient, project_root: Path, change: str
+) -> None:
+    model = create_stub_model(client)
+    original = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = original["project"]["id"]
+    assert original["understanding"].get("stale") is False
+    policy = project_root / "docs" / "RELEASE_POLICY.md"
+    if change == "edit":
+        policy.write_text("# Policy\nApproval is now required.\n", encoding="utf-8")
+    else:
+        policy.unlink()
+
+    refreshed = _detail(client, project_id)
+    assert refreshed["understanding"]["stale"] is True
+    assert refreshed["understanding"]["snapshot_id"] == original["snapshot"]["id"]
+    assert refreshed["understanding"]["known"] == original["understanding"]["known"]
+    assert refreshed["readiness"]["generation_allowed"] is False
+    # Reopening does not silently make the old analysis current.
+    assert _detail(client, project_id)["understanding"]["stale"] is True
+    updated = client.post(f"/api/projects/{project_id}/reanalyse").json()
+    assert updated["understanding"]["stale"] is False
+    assert updated["understanding"]["snapshot_id"] == updated["snapshot"]["id"]
+
+
+def test_continue_cannot_approve_understanding_after_unseen_source_change(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    detail = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = detail["project"]["id"]
+    (project_root / "README.md").write_text("# Changed project\n", encoding="utf-8")
+    response = client.post(f"/api/projects/{project_id}/continue")
+    assert response.status_code == 409
+    assert response.json()["code"] == "understanding_stale"
+    assert _detail(client, project_id)["understanding"]["user_continued"] is False
+
+
+def test_diagnostic_only_snapshot_does_not_retire_current_understanding(
+    client: TestClient, project_root: Path
+) -> None:
+    model = create_stub_model(client)
+    original = import_project(client, project_root, model_config_id=model["id"]).json()
+    project_id = original["project"]["id"]
+    assert client.post(f"/api/projects/{project_id}/continue").status_code == 200
+    (project_root / ".env.local").write_text("API_KEY=synthetic-new-secret\n", encoding="utf-8")
+    refreshed = _detail(client, project_id)
+    assert refreshed["snapshot"]["id"] != original["snapshot"]["id"]
+    assert refreshed["snapshot"]["digest"] == original["snapshot"]["digest"]
+    assert refreshed["understanding"]["stale"] is False
+    assert refreshed["readiness"]["generation_allowed"] is True

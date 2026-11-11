@@ -581,3 +581,17 @@ describe("project switching", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+it("opens mobile navigation and closes it after choosing a destination", async () => {
+  const user = userEvent.setup();
+  apiMock.listModels.mockResolvedValue({ items: [] });
+  apiMock.listProjects.mockResolvedValue({ items: [] });
+  render(<App />);
+  const menu = screen.getByRole("button", { name: "展开导航" });
+  expect(menu).toHaveAttribute("aria-expanded", "false");
+  await user.click(menu);
+  expect(screen.getByRole("button", { name: "收起导航" })).toHaveAttribute("aria-expanded", "true");
+  await user.click(screen.getByRole("button", { name: "模型与凭据" }));
+  expect(screen.getByRole("heading", { name: "配置会话使用的模型服务。" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "展开导航" })).toHaveAttribute("aria-expanded", "false");
+});

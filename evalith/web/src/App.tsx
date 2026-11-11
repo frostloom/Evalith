@@ -20,6 +20,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [navOpen, setNavOpen] = useState(false);
   const selectedProjectRef = useRef<string | null>(null);
   const displayedProjectRef = useRef<string | null>(null);
   const openSequence = useRef(0);
@@ -49,6 +50,7 @@ export function App() {
   }, [notice]);
 
   const openProject = async (project: Project) => {
+    setNavOpen(false);
     importGeneration.current += 1;
     const sequence = ++openSequence.current;
     selectedProjectRef.current = project.id;
@@ -93,6 +95,7 @@ export function App() {
   };
 
   const startImport = () => {
+    setNavOpen(false);
     importGeneration.current += 1;
     openSequence.current += 1;
     selectedProjectRef.current = null;
@@ -101,6 +104,7 @@ export function App() {
   };
 
   const openModels = () => {
+    setNavOpen(false);
     importGeneration.current += 1;
     openSequence.current += 1;
     selectedProjectRef.current = null;
@@ -109,6 +113,7 @@ export function App() {
   };
 
   const goHome = () => {
+    setNavOpen(false);
     importGeneration.current += 1;
     openSequence.current += 1;
     selectedProjectRef.current = null;
@@ -119,13 +124,23 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <aside className="rail">
+      <a className="skip-link" href="#main-content">跳到主要内容</a>
+      <aside className={`rail ${navOpen ? "is-expanded" : ""}`}>
         <button className="brand" onClick={goHome} aria-label="回到项目列表">
-          <span className="brand-name">Evalith</span>
-          <span className="brand-sub">评测工作台 · 阶段 1</span>
+          <span className="brand-name"><span className="brand-mark" aria-hidden="true">E</span>Evalith</span>
+          <span className="brand-sub">Agent 评测工作台</span>
+        </button>
+        <button className="mobile-nav-toggle btn btn-quiet"
+          aria-expanded={navOpen} aria-controls="project-navigation model-navigation"
+          onClick={() => setNavOpen((current) => !current)}>
+          {navOpen ? "收起导航" : "展开导航"}
         </button>
 
-        <div className="rail-body">
+        <div className="rail-body" id="project-navigation">
+          <button className={`overview-link ${view === "home" ? "is-active" : ""}`}
+            onClick={goHome} aria-current={view === "home" ? "page" : undefined}>
+            项目总览 <span>{projects.length}</span>
+          </button>
           <div className="rail-label">项目</div>
           <nav className="project-nav" aria-label="项目列表">
             {projects.length === 0 && (
@@ -135,8 +150,9 @@ export function App() {
               <button
                 key={project.id}
                 className={`project-nav-item ${
-                  detail?.project.id === project.id ? "is-active" : ""
+                  view === "project" && detail?.project.id === project.id ? "is-active" : ""
                 }`}
+                aria-current={view === "project" && detail?.project.id === project.id ? "page" : undefined}
                 onClick={() => void openProject(project)}
               >
                 <span className="project-nav-name">{project.name}</span>
@@ -153,7 +169,7 @@ export function App() {
           </button>
         </div>
 
-        <div className="rail-foot">
+        <div className="rail-foot" id="model-navigation">
           <button
             className={`rail-link ${view === "models" ? "is-active" : ""}`}
             onClick={openModels}
@@ -164,7 +180,13 @@ export function App() {
         </div>
       </aside>
 
-      <main className="main">
+      <main className="main" id="main-content" tabIndex={-1}>
+        <div className="topbar">
+          <span>工作台 <span aria-hidden="true">/</span> <strong>{
+            view === "project" ? detail?.project.name : view === "import" ? "导入项目" : view === "models" ? "模型与凭据" : "项目总览"
+          }</strong></span>
+          <span className="local-badge"><span aria-hidden="true" />本地工作区</span>
+        </div>
         {error && (
           <div className="global-error" role="alert">
             <span>{error}</span>
@@ -262,11 +284,10 @@ function Home({
   return (
     <div className="home">
       <header className="page-head">
-        <p className="kicker">本地项目 · 只读分析</p>
-        <h1>先理解项目，再决定评测方向。</h1>
+        <p className="kicker">项目工作区</p>
+        <h1>从项目理解开始评测</h1>
         <p className="lede">
-          Evalith 读取你明确选择的本地资料，形成一份区分已知、推断与未知的项目理解。
-          你可以纠正它，或在资料足够时继续。题目、环境与运行属于后续阶段。
+          导入本地项目，与模型核对流程、依据和未知项。每个项目保留一条持续会话。
         </p>
         <div className="page-head-actions">
           <button className="btn btn-primary" onClick={onImport}>
@@ -281,15 +302,15 @@ function Home({
       <section className="home-grid">
         <div className="list-block">
           <div className="section-heading">
-            <h2>项目</h2>
+            <h2>你的项目</h2>
             <span>{projects.length} 个</span>
           </div>
           {projects.length === 0 ? (
             <div className="empty-list">
-              <p>还没有项目。</p>
-              <p>
-                从左侧导入一个本地目录：只读、按选择范围读取、自动排除凭据与越界符号链接。
-              </p>
+              <span className="empty-symbol" aria-hidden="true">＋</span>
+              <h3>创建第一个项目工作区</h3>
+              <p>选择目录和分析范围，开始梳理 Agent 的工作流程。</p>
+              <button className="btn btn-primary" onClick={onImport}>导入项目</button>
             </div>
           ) : (
             <div className="project-grid">
@@ -299,6 +320,7 @@ function Home({
                   key={project.id}
                   onClick={() => onOpen(project)}
                 >
+                  <span className="project-initial" aria-hidden="true">{project.name.slice(0, 1).toUpperCase()}</span>
                   <span className="project-card-name">{project.name}</span>
                   <span className="project-card-path mono" title={project.root_path}>
                     {compactPath(project.root_path)}
@@ -319,7 +341,12 @@ function Home({
         </div>
 
         <aside className="home-aside">
-          <h2>当前状态</h2>
+          <h2>开始之前</h2>
+          <ol className="start-steps">
+            <li><strong>连接模型</strong><span>可先用确定性替身体验流程。</span></li>
+            <li><strong>选定资料</strong><span>按目录和文件控制分析范围。</span></li>
+            <li><strong>核对理解</strong><span>补充未知项，纠正评测方向。</span></li>
+          </ol>
           <dl className="stat-list">
             <div>
               <dt>模型配置</dt>

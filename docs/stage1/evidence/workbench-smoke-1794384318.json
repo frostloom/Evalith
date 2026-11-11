@@ -1,0 +1,156 @@
+{
+  "generated_at": "2026-11-11T08:05:18.147692+00:00",
+  "backend_url": "http://127.0.0.1:8080",
+  "frontend_url": "http://127.0.0.1:3000",
+  "source_build": "uv sync from workbench/.workbench/ee-free (no published image)",
+  "upstream_commit": "ce24bb1993fc545bb0ccb0d8b3951683ac14fff1",
+  "model": "deterministic local OpenAI-compatible stub; not a real model",
+  "build_info": {
+    "created_at": "2026-11-11T04:33:20Z",
+    "upstream_repository": "https://github.com/rhesis-ai/rhesis",
+    "upstream_commit": "ce24bb1993fc545bb0ccb0d8b3951683ac14fff1",
+    "upstream_version": "0.20.1",
+    "ee_removed": true,
+    "source_worktree_dirty": false,
+    "changes": [
+      "apps/backend/pyproject.toml: removed ee extra",
+      "apps/backend/pyproject.toml: removed rhesis-backend-ee path source",
+      "apps/backend/ee_bootstrap.py: documented community posture",
+      "initial_data.json: removed Rhesis-hosted seed endpoint",
+      "package.json: removed @rhesis/ee-frontend",
+      "package-lock.json: removed EE package entries",
+      "next.config.mjs: removed EE transpile package",
+      "src/ee_bootstrap.ts: no-op",
+      "jest.config.js: removed EE roots/mappings",
+      "removed public/logos/",
+      "removed public/elements/",
+      "removed public/auth/hero-wash.png",
+      "removed public/avatar.png",
+      "removed public/background.png",
+      "added Evalith mark and favicon",
+      "branding.ts: Evalith name and mark",
+      "branding-constants.ts: Evalith palette",
+      "ThemeAwareLogo.tsx: Evalith mark",
+      "BackgroundDecoration.tsx: neutral wash",
+      "TermsAcceptanceField.tsx: removed Rhesis legal links",
+      "src/app/(protected)/metrics/components/MetricCard.tsx: replaced inline Rhesis mark",
+      "src/components/common/SelectMetricsDialog.tsx: replaced inline Rhesis mark",
+      "model-providers.tsx: removed Rhesis/Polyphemus brand images",
+      "ComparisonView.tsx: Evalith mark",
+      "PolyphemusAccessModal.tsx: Evalith mark",
+      "removed Rhesis sales demo route",
+      "removed public/fonts/sora/ (no upstream OFL text)",
+      "removed public/fonts/sometype-mono/ (no upstream OFL text)",
+      "removed public/fonts/geist/ (no upstream OFL text)",
+      "fonts.css: keep only Be Vietnam Pro (OFL supplied)",
+      "authTokens.ts: removed unlicensed font families",
+      "technical cards: system monospace",
+      "layout.tsx: Evalith title and repository link",
+      "SupportDrawer.tsx: Evalith links",
+      "AuthPageShell.tsx: Evalith copy",
+      "empty-state links: Evalith repository",
+      "theme.ts: Evalith default palette",
+      "quota.ts: removed Rhesis pricing link",
+      "email imprint: replaced Rhesis GmbH legal details with internal-build notice",
+      "email base template: removed Rhesis lockup and link",
+      "email brand: removed Rhesis lockup asset URL",
+      "email settings: local asset base",
+      "email service: removed Rhesis sender identity",
+      "email welcome: Evalith documentation link"
+    ],
+    "builder": "workbench/build.py",
+    "dependency_locks": {
+      "apps/backend/uv.lock": {
+        "sha256": "2397650c50a30ff345408b0c346cd449865c82047ecdaa9daa8c6c4b52498daf",
+        "source": "/Users/a1/.dsh/state/superagent/work/open-source-base-stage1-08cb3653da88/workbench/locks/backend-uv.lock"
+      },
+      "apps/frontend/package-lock.json": {
+        "sha256": "b26762620bccaaa083551ccb8e381bfab3d4d269b6cc421da8facdb7fc4ee890",
+        "source": "/Users/a1/.dsh/state/superagent/work/open-source-base-stage1-08cb3653da88/workbench/locks/frontend-package-lock.json"
+      }
+    },
+    "tool_versions": {
+      "python": "3.12.15",
+      "uv": "0.13.1",
+      "node": "24.22.0",
+      "npm": "11.19.1"
+    }
+  },
+  "checks": {
+    "backend_health": {
+      "status": "ok",
+      "redis_replay_store": "ok"
+    },
+    "auth_quick_start": true,
+    "features": {
+      "license": {
+        "edition": "community",
+        "licensed": false,
+        "is_paid": false
+      },
+      "plan": {
+        "name": "Free",
+        "is_paid": false,
+        "is_active": false
+      },
+      "enabled": [],
+      "warnings": {},
+      "limits": {
+        "test_executions": null,
+        "tracing_spans": null,
+        "test_generation": null,
+        "model_tokens": null,
+        "seats": null,
+        "projects": null,
+        "endpoints": null
+      },
+      "is_local": true,
+      "rhesis_key_enabled": false,
+      "models_ready": true,
+      "embedding_model_ready": false
+    },
+    "community_edition": true,
+    "rhesis_platform_key_disabled": true,
+    "project_created": true,
+    "project_read": true,
+    "model_connection": {
+      "success": true,
+      "message": "Successfully connected to litellm_proxy. Model is responding correctly."
+    },
+    "model_connection_ok": true,
+    "architect_session_detail": true,
+    "architect_session_messages_visible": true,
+    "architect_session_user_message": true,
+    "architect_session_worker_reply": true,
+    "frontend_http_status": 200,
+    "frontend_title": true,
+    "frontend_uses_evalith_mark": true,
+    "artifact": {
+      "ee_directory_absent": true,
+      "frontend_ee_bootstrap_noop": true,
+      "backend_pyproject_no_ee": true,
+      "frontend_package_no_ee": true,
+      "brand_logo_dir_absent": true,
+      "unlicensed_font_families_absent": true,
+      "fonts_css_only_licensed_family": true,
+      "ee_package_not_importable": true,
+      "ee_package_not_installed": true,
+      "build_info_pinned": true,
+      "build_info_locked": true
+    },
+    "build_info_locked": true,
+    "all_artifact_checks": true,
+    "passed": true
+  },
+  "ids": {
+    "project_id": "dfd49497-07aa-45e3-8641-adb4af70ec1c",
+    "model_id": "1db5e429-dccd-4a7c-b332-2a60878d5256",
+    "architect_session_id": "7d387264-1b0c-42d6-bf6b-4a5f861dd410"
+  },
+  "errors": [],
+  "limitations": [
+    "No real model or real business data is used.",
+    "The Architect worker/model loop is exercised against the deterministic stub, not a real model.",
+    "Frontend verification is HTTP/HTML level in this script; screenshots are in docs/stage1/evidence."
+  ]
+}
