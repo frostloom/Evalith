@@ -7,6 +7,21 @@
       name="description"
       content="Evalith 评测工作台：只读分析本地项目，形成可追溯的项目理解与主会话。"
     />
+    <script>
+      try {
+        var preferred = localStorage.getItem("evalith.theme");
+        var initialTheme =
+          preferred === "light" || preferred === "dark"
+            ? preferred
+            : matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+        document.documentElement.dataset.theme = initialTheme;
+        document.documentElement.style.colorScheme = initialTheme;
+        document.documentElement.style.backgroundColor =
+          initialTheme === "dark" ? "#191a1e" : "#ffffff";
+      } catch (_) {}
+    </script>
     <title>Evalith · 项目工作区</title>
   </head>
   <body>

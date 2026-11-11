@@ -1,4 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Tab, Tabs } from "@mui/material";
+import RefreshRounded from "@mui/icons-material/RefreshRounded";
+import TuneOutlined from "@mui/icons-material/TuneOutlined";
+import FolderOutlined from "@mui/icons-material/FolderOutlined";
+import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
+import { FormDrawer, PageHeader } from "./ui";
 import { api, ApiError } from "./api";
 import type {
   Message,
@@ -7,6 +13,7 @@ import type {
   SentScope,
   Understanding,
   UnderstandingItem,
+  WorkspaceTab,
 } from "./types";
 
 function shortHash(value?: string | null) {
@@ -28,7 +35,9 @@ function itemText(item: UnderstandingItem | string | null | undefined): string {
   return "";
 }
 
-function itemHint(item: UnderstandingItem | string | null | undefined): string | null {
+function itemHint(
+  item: UnderstandingItem | string | null | undefined,
+): string | null {
   if (!item || typeof item !== "object") return null;
   return item.source ?? item.basis ?? item.why ?? null;
 }
@@ -41,8 +50,12 @@ export function Workspace({
   onHome,
   onError,
   onNotice,
+  tab,
+  onTabChange,
 }: {
   detail: ProjectDetail;
+  tab?: WorkspaceTab;
+  onTabChange?: (tab: WorkspaceTab) => void;
   models: ModelConfig[];
   busy: boolean;
   onDetail: (detail: ProjectDetail) => void;
@@ -85,7 +98,10 @@ export function Workspace({
     return null;
   }, [messages]);
 
-  const run = async (action: () => Promise<ProjectDetail>, success?: string) => {
+  const run = async (
+    action: () => Promise<ProjectDetail>,
+    success?: string,
+  ) => {
     const origin = project.id;
     setWorking(true);
     try {
@@ -105,7 +121,11 @@ export function Workspace({
         if (err instanceof ApiError && err.code === "understanding_stale") {
           try {
             const latest = await api.getProject(origin);
-            if (mountedRef.current && projectIdRef.current === origin && latest.project.id === origin) {
+            if (
+              mountedRef.current &&
+              projectIdRef.current === origin &&
+              latest.project.id === origin
+            ) {
               applyDetail(latest);
             }
           } catch {
@@ -162,54 +182,109 @@ export function Workspace({
   };
 
   const disabled = working || busy;
+  const [localTab, setLocalTab] = useState<WorkspaceTab>("overview");
+  const activeTab = tab ?? localTab;
+  const changeTab = (next: WorkspaceTab) => {
+    setLocalTab(next);
+    onTabChange?.(next);
+  };
+  const messagesEnd = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (activeTab === "conversation")
+      messagesEnd.current?.scrollIntoView?.({ block: "end" });
+  }, [activeTab, messages.length]);
 
   return (
     <div className="workspace">
-      <header className="workspace-head">
-        <div>
-          <button className="crumb" onClick={onHome}>
-            项目
-          </button>
-          <span className="crumb-sep">/</span>
-          <span className="crumb-current">{project.name}</span>
-          <h1>{project.name}</h1>
-          <p className="workspace-meta mono" title={project.root_path}>
-            {project.root_path} · {snapshot?.file_count ?? 0} 个文件 · 快照{" "}
-            {shortHash(snapshot?.digest)}
-          </p>
-        </div>
-        <div className="workspace-actions">
-          <button className="btn btn-quiet" onClick={() => setEditingModel(true)}>
-            模型
-          </button>
-          <button
-            className="btn btn-quiet"
-            onClick={() => void run(() => api.rescan(project.id), "资料范围已重新扫描。")}
-            disabled={disabled}
-          >
-            重新扫描
-          </button>
-          <button
-            className="btn btn-quiet"
-            onClick={() => void run(() => api.reanalyse(project.id), "已重新生成初步理解。")}
-            disabled={disabled}
-          >
-            重新分析
-          </button>
-          <button className="btn btn-primary" onClick={() => setEditingSources(true)}>
-            资料与范围
-          </button>
-        </div>
-      </header>
-
-      <div className="workspace-body">
-        <div className="document">
-          <nav className="workspace-sections" aria-label="项目工作区章节">
-            <a href="#project-understanding">项目理解</a>
-            <a href="#project-conversation">主会话 <span>{messages.length}</span></a>
-            <span>题集 <small>待开放</small></span>
-            <span>运行 <small>待开放</small></span>
-          </nav>
+      <PageHeader
+        title={project.name}
+        breadcrumb={
+          <>
+            <button className="link-button" onClick={onHome}>
+              项目
+            </button>
+          </>
+        }
+        actions={
+          <>
+            <Button
+              variant="text"
+              startIcon={<TuneOutlined />}
+              onClick={() => setEditingModel(true)}
+            >
+              模型
+            </Button>
+            <Button
+              variant="text"
+              startIcon={<RefreshRounded />}
+              onClick={() =>
+                void run(() => api.rescan(project.id), "资料范围已重新扫描。")
+              }
+              disabled={disabled}
+            >
+              重新扫描
+            </Button>
+            <Button
+              variant="text"
+              startIcon={<FolderOutlined />}
+              onClick={() => setEditingSources(true)}
+            >
+              资料与范围
+            </Button>
+          </>
+        }
+      />
+      <Tabs
+        selectionFollowsFocus
+        value={activeTab}
+        onChange={(_, value: WorkspaceTab) => changeTab(value)}
+        aria-label="项目工作区章节"
+        className="detail-tabs"
+        variant="scrollable"
+        scrollButtons="auto"
+      >
+        <Tab
+          value="conversation"
+          label="主会话"
+          id="tab-conversation"
+          aria-controls="panel-conversation"
+        />
+        <Tab
+          value="overview"
+          label="项目理解"
+          id="tab-overview"
+          aria-controls="panel-overview"
+        />
+        <Tab
+          value="sources"
+          label="资料来源"
+          id="tab-sources"
+          aria-controls="panel-sources"
+        />
+      </Tabs>
+      <div className="workspace-panels">
+        <div
+          hidden={activeTab !== "overview"}
+          role="tabpanel"
+          id="panel-overview"
+          aria-labelledby="tab-overview"
+          className="overview-panel"
+        >
+          <div className="section-toolbar">
+            <h2>项目理解</h2>
+            <Button
+              startIcon={<RefreshRounded />}
+              onClick={() =>
+                void run(
+                  () => api.reanalyse(project.id),
+                  "已重新生成初步理解。",
+                )
+              }
+              disabled={disabled}
+            >
+              重新分析
+            </Button>
+          </div>
           {understanding ? (
             <UnderstandingPanel understanding={understanding} />
           ) : (
@@ -218,7 +293,9 @@ export function Workspace({
             </section>
           )}
 
-          <section className={`readiness ${readiness.generation_allowed ? "is-open" : ""}`}>
+          <section
+            className={`readiness ${readiness.generation_allowed ? "is-open" : ""}`}
+          >
             <div className="readiness-state">
               <span className="status-dot" aria-hidden="true" />
               <div>
@@ -231,25 +308,29 @@ export function Workspace({
               </div>
             </div>
             <div className="readiness-actions">
-              {!readiness.generation_allowed && !understanding?.error && !understanding?.stale && (
-                <button
-                  className="btn btn-primary"
-                  onClick={() =>
-                    void run(
-                      () => api.continueProject(project.id),
-                      "已记录继续意愿；未知项仍未确认。",
-                    )
-                  }
-                  disabled={disabled}
-                >
-                  表示可以继续
-                </button>
-              )}
+              {!readiness.generation_allowed &&
+                !understanding?.error &&
+                !understanding?.stale && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() =>
+                      void run(
+                        () => api.continueProject(project.id),
+                        "已记录继续意愿；未知项仍未确认。",
+                      )
+                    }
+                    disabled={disabled}
+                  >
+                    表示可以继续
+                  </button>
+                )}
               <button
                 className="btn btn-quiet"
                 onClick={() => {
-                  composerRef.current?.focus();
-                  composerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  changeTab("conversation");
+                  window.requestAnimationFrame(() =>
+                    composerRef.current?.focus(),
+                  );
                 }}
               >
                 补充或纠正
@@ -257,16 +338,35 @@ export function Workspace({
               <span className="stage-tag">题目生成 · 阶段 2</span>
             </div>
           </section>
-
-          <section className="conversation" id="project-conversation" aria-label="项目主会话">
-            <div className="section-heading">
-              <h2>主会话</h2>
-              <span className="mono">每项目一条 · 重开恢复</span>
+        </div>
+        <section
+          hidden={activeTab !== "conversation"}
+          role="tabpanel"
+          id="panel-conversation"
+          aria-labelledby="tab-conversation"
+          className="conversation"
+          aria-label="项目主会话"
+        >
+          <div className="conversation-main">
+            <div className="conversation-heading">
+              <span>项目主会话</span>
+              <span>自动保存</span>
             </div>
             <div className="messages">
+              {messages.length === 0 && (
+                <div className="chat-empty">
+                  <h3>先一起了解这个项目</h3>
+                  <p>补充业务背景、纠正理解，或说明你希望重点评测的方向。</p>
+                </div>
+              )}
               {messages.map((item) => (
-                <MessageRow key={item.id} message={item} />
+                <MessageRow
+                  key={item.id}
+                  message={item}
+                  onInspect={() => changeTab("overview")}
+                />
               ))}
+              <div ref={messagesEnd} />
             </div>
             <div className="composer">
               <label className="sr-only" htmlFor="composer-input">
@@ -290,30 +390,124 @@ export function Workspace({
                     void send(message);
                   }
                 }}
-                rows={3}
+                rows={2}
                 placeholder="补充资料、纠正理解，或说明希望评测的方向。Enter 发送，Shift+Enter 换行。"
                 disabled={disabled}
               />
               <div className="composer-foot">
                 <span>
-                  模型：
-                  {models.find((item) => item.id === project.model_config_id)?.name ??
-                    "未配置"}
-                  {" · "}阶段 1 不生成题目
+                  <button
+                    className="composer-model"
+                    onClick={() => setEditingModel(true)}
+                    disabled={disabled}
+                  >
+                    <TuneOutlined />
+                    {models.find((item) => item.id === project.model_config_id)
+                      ?.name ?? "选择模型"}
+                  </button>
                 </span>
                 <button
-                  className="btn btn-primary"
+                  className="send-button"
+                  aria-label={working ? "处理中…" : "发送"}
                   onClick={() => void send(message)}
                   disabled={disabled || !message.trim()}
                 >
-                  {working ? "处理中…" : "发送"}
+                  <ArrowUpwardRounded fontSize="small" />
                 </button>
               </div>
             </div>
-          </section>
-        </div>
+          </div>
+          <aside className="conversation-context" aria-label="当前项目上下文">
+            <div className="context-section">
+              <div className="context-label">
+                {understanding?.stale ? "历史理解" : "当前理解"}
+                <button
+                  className="quiet-link"
+                  onClick={() => changeTab("overview")}
+                >
+                  查看详情
+                </button>
+              </div>
+              {understanding?.stale && (
+                <p className="context-warning" role="status">
+                  资料已变化，需重新核对。
+                </p>
+              )}
+              <p className="context-summary">
+                {understanding?.error
+                  ? "分析失败，请检查模型或资料后重试。"
+                  : understanding?.summary ||
+                    "还没有形成项目理解，可先配置模型或补充资料。"}
+              </p>
+              {understanding?.error && (
+                <p className="context-warning">{understanding.error}</p>
+              )}
+            </div>
+            <div className="context-section">
+              <div className="context-label">
+                待确认<span>{understanding?.unknowns.length ?? 0}</span>
+              </div>
+              <ul className="context-unknowns">
+                {understanding?.unknowns.slice(0, 2).map((item, index) => (
+                  <li key={index}>{itemText(item)}</li>
+                ))}
+              </ul>
+              {!understanding?.unknowns.length && (
+                <p className="context-muted">暂无待确认项</p>
+              )}
+            </div>
+            <div className="context-section">
+              <div className="context-label">
+                {understanding?.stale ? "原分析来源" : "参考资料"}
+                <button
+                  className="quiet-link"
+                  onClick={() => changeTab("sources")}
+                >
+                  {snapshot?.file_count ?? 0} 份
+                </button>
+              </div>
+              <ul className="context-files">
+                {(understanding?.sources ?? []).slice(0, 3).map((source) => (
+                  <li key={source.path}>
+                    <FolderOutlined />
+                    <span title={source.path}>{source.path}</span>
+                  </li>
+                ))}
+              </ul>
+              <button
+                className="context-add"
+                onClick={() => setEditingSources(true)}
+              >
+                <span>＋</span>补充项目资料
+              </button>
+            </div>
+            <div className="context-section context-next">
+              <div className="context-label">下一步</div>
+              <p className="context-muted">
+                {understanding?.stale
+                  ? "先重新分析最新资料，再确认评测方向。"
+                  : readiness.generation_allowed
+                    ? "已确认继续意愿。题目设计将在后续阶段开放。"
+                    : "讨论并确认理解，再进入题目设计。"}
+              </p>
+              <button
+                className="quiet-link"
+                onClick={() => changeTab("overview")}
+              >
+                {understanding?.stale ? "重新核对理解" : "查看准备状态"}
+              </button>
+            </div>
+          </aside>
+        </section>
 
-        <aside className="evidence" aria-label="资料来源与发送范围">
+        <aside
+          hidden={activeTab !== "sources"}
+          role="tabpanel"
+          id="panel-sources"
+          aria-labelledby="tab-sources"
+          className="evidence"
+          aria-label="资料来源与发送范围"
+        >
           <section>
             <div className="section-heading small">
               <h2>资料范围</h2>
@@ -322,7 +516,10 @@ export function Workspace({
             <p className="evidence-meta">
               快照 <span className="mono">{shortHash(snapshot?.digest)}</span>
               <br />
-              {snapshot?.created_at && new Date(snapshot.created_at).toLocaleString("zh-CN", { hour12: false })}
+              {snapshot?.created_at &&
+                new Date(snapshot.created_at).toLocaleString("zh-CN", {
+                  hour12: false,
+                })}
             </p>
             <ul className="file-list">
               {snapshot?.files.map((file) => (
@@ -379,7 +576,9 @@ export function Workspace({
               <dl className="scope-stats">
                 <div>
                   <dt>来源</dt>
-                  <dd>{lastScope.files_sent} / {lastScope.files_listed}</dd>
+                  <dd>
+                    {lastScope.files_sent} / {lastScope.files_listed}
+                  </dd>
                 </div>
                 <div>
                   <dt>内容</dt>
@@ -443,20 +642,44 @@ export function Workspace({
   );
 }
 
-function UnderstandingPanel({ understanding }: { understanding: Understanding }) {
+function UnderstandingPanel({
+  understanding,
+}: {
+  understanding: Understanding;
+}) {
   const stale = understanding.stale;
   const bands = [
-    { key: "known", title: stale ? "历史依据" : "已知", hint: stale ? "来自旧快照，需重新核对" : "有资料或用户输入依据", items: understanding.known },
-    { key: "inferred", title: stale ? "历史推断" : "推断", hint: "不是事实", items: understanding.inferred },
-    { key: "unknowns", title: stale ? "待重新核对" : "未知", hint: "影响评测方向", items: understanding.unknowns },
+    {
+      key: "known",
+      title: stale ? "历史依据" : "已知",
+      hint: stale ? "来自旧快照，需重新核对" : "有资料或用户输入依据",
+      items: understanding.known,
+    },
+    {
+      key: "inferred",
+      title: stale ? "历史推断" : "推断",
+      hint: "不是事实",
+      items: understanding.inferred,
+    },
+    {
+      key: "unknowns",
+      title: stale ? "待重新核对" : "未知",
+      hint: "影响评测方向",
+      items: understanding.unknowns,
+    },
   ] as const;
 
   return (
-    <section className={`understanding ${stale ? "is-stale" : ""}`} id="project-understanding">
+    <section
+      className={`understanding ${stale ? "is-stale" : ""}`}
+      id="project-understanding"
+    >
       {stale && (
         <div className="stale-notice" role="alert">
           <strong>资料已变化 · 理解待更新</strong>
-          <p>以下结论来自历史快照，不能作为当前依据。点击“重新分析”核对最新资料；历史会话保留。</p>
+          <p>
+            以下结论来自历史快照，不能作为当前依据。点击“重新分析”核对最新资料；历史会话保留。
+          </p>
         </div>
       )}
       <div className="understanding-head">
@@ -513,13 +736,26 @@ function UnderstandingPanel({ understanding }: { understanding: Understanding })
   );
 }
 
-function MessageRow({ message }: { message: Message }) {
+function MessageRow({
+  message,
+  onInspect,
+}: {
+  message: Message;
+  onInspect: () => void;
+}) {
   const kind = message.payload?.kind;
   if (kind === "understanding") {
+    const initial = message.payload?.understanding;
     return (
-      <div className="message message-system">
-        <span className="message-role">初步理解</span>
-        <p>已根据选定资料生成初步理解，见上方三个分区。继续讨论会保留未知项。</p>
+      <div className="message message-assistant message-understanding">
+        <span className="message-role">E</span>
+        <div className="message-content">
+          <span className="message-caption">项目理解已更新</span>
+          <p>{initial?.summary || "已根据选定资料更新项目理解。"}</p>
+          <button className="message-inspect" onClick={onInspect}>
+            查看理解与来源 <span>↗</span>
+          </button>
+        </div>
       </div>
     );
   }
@@ -534,7 +770,9 @@ function MessageRow({ message }: { message: Message }) {
   }
   return (
     <div className={`message message-${message.role}`}>
-      <span className="message-role">{message.role === "user" ? "你" : "助手"}</span>
+      <span className="message-role">
+        {message.role === "user" ? "你" : "E"}
+      </span>
       <p>{message.content}</p>
     </div>
   );
@@ -573,54 +811,56 @@ function ModelPicker({
   };
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="模型配置">
-      <div className="modal">
-        <header>
-          <div>
-            <p className="kicker">模型配置</p>
-            <h2>为项目选择模型服务</h2>
-          </div>
-          <button className="link-button" onClick={onClose}>
-            关闭
-          </button>
-        </header>
-        <div className="modal-body">
-          {models.length === 0 ? (
-            <p className="inline-note">
-              还没有模型配置。请先在“模型与凭据”中添加；保存项目模型不会创建新的主会话。
-            </p>
-          ) : (
-            <label className="field">
-              <span>模型服务</span>
-              <select value={modelId} onChange={(event) => setModelId(event.target.value)}>
-                <option value="">未配置（保留当前会话，暂停分析）</option>
-                {models.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name} · {model.provider === "stub" ? "确定性替身" : model.model_name}
-                  </option>
-                ))}
-              </select>
-              <small>
-                保存后如项目此前因缺少模型而分析失败，会自动重新分析；主会话与已有纠正保留。
-              </small>
-            </label>
-          )}
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
-        </div>
-        <footer>
-          <button className="btn btn-primary" onClick={() => void save()} disabled={busy || models.length === 0}>
+    <FormDrawer
+      title="模型配置"
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            className="btn btn-primary"
+            onClick={() => void save()}
+            disabled={busy || models.length === 0}
+          >
             {busy ? "保存并分析中…" : "保存模型"}
           </button>
           <button className="btn btn-quiet" onClick={onClose}>
             取消
           </button>
-        </footer>
+        </>
+      }
+    >
+      <div className="modal-body">
+        {models.length === 0 ? (
+          <p className="inline-note">
+            还没有模型配置。请先在“模型与凭据”中添加；保存项目模型不会创建新的主会话。
+          </p>
+        ) : (
+          <label className="field">
+            <span>模型服务</span>
+            <select
+              value={modelId}
+              onChange={(event) => setModelId(event.target.value)}
+            >
+              <option value="">未配置（保留当前会话，暂停分析）</option>
+              {models.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name} ·{" "}
+                  {model.provider === "stub" ? "确定性替身" : model.model_name}
+                </option>
+              ))}
+            </select>
+            <small>
+              保存后如项目此前因缺少模型而分析失败，会自动重新分析；主会话与已有纠正保留。
+            </small>
+          </label>
+        )}
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
       </div>
-    </div>
+    </FormDrawer>
   );
 }
 
@@ -635,7 +875,9 @@ export function SourceEditor({
   onSaved: (detail: ProjectDetail) => void;
   onError: (message: string) => void;
 }) {
-  const [includePaths, setIncludePaths] = useState(detail.project.include_paths.join("\n"));
+  const [includePaths, setIncludePaths] = useState(
+    detail.project.include_paths.join("\n"),
+  );
   const [excludePatterns, setExcludePatterns] = useState(
     detail.project.exclude_patterns.join("\n"),
   );
@@ -661,8 +903,14 @@ export function SourceEditor({
           content: item.content,
         }));
       const next = await api.updateSources(detail.project.id, {
-        include_paths: includePaths.split("\n").map((item) => item.trim()).filter(Boolean),
-        exclude_patterns: excludePatterns.split("\n").map((item) => item.trim()).filter(Boolean),
+        include_paths: includePaths
+          .split("\n")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        exclude_patterns: excludePatterns
+          .split("\n")
+          .map((item) => item.trim())
+          .filter(Boolean),
         supplemental: docs,
       });
       if (next.project.id !== detail.project.id) return;
@@ -677,120 +925,120 @@ export function SourceEditor({
   };
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="资料与范围">
-      <div className="modal">
-        <header>
-          <div>
-            <p className="kicker">资料与范围</p>
-            <h2>调整要分析的内容</h2>
-          </div>
-          <button className="link-button" onClick={onClose}>
-            关闭
-          </button>
-        </header>
-        <div className="modal-body">
-          <label className="field">
-            <span>只分析这些路径</span>
-            <textarea
-              value={includePaths}
-              onChange={(event) => setIncludePaths(event.target.value)}
-              rows={4}
-              className="mono"
-              placeholder="留空表示整个目录"
-            />
-            <small>相对项目根目录。保存后会重新扫描并重新分析。</small>
-          </label>
-          <label className="field">
-            <span>额外排除</span>
-            <textarea
-              value={excludePatterns}
-              onChange={(event) => setExcludePatterns(event.target.value)}
-              rows={3}
-              className="mono"
-            />
-            <small>敏感凭据规则始终生效，不能被这里的排除或选择覆盖。</small>
-          </label>
-          <fieldset className="supplement-field">
-            <legend>补充资料</legend>
-            {supplemental.length === 0 && (
-              <p className="inline-note">还没有补充资料。补充文档会作为独立来源参与分析。</p>
-            )}
-            {supplemental.map((doc, index) => (
-              <div className="supplement-editor" key={index}>
-                <label className="field">
-                  <span>标题</span>
-                  <input
-                    value={doc.title}
-                    onChange={(event) =>
-                      setSupplemental((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, title: event.target.value }
-                            : item,
-                        ),
-                      )
-                    }
-                    placeholder={`补充资料 ${index + 1}`}
-                  />
-                </label>
-                <label className="field">
-                  <span>内容</span>
-                  <textarea
-                    value={doc.content}
-                    onChange={(event) =>
-                      setSupplemental((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, content: event.target.value }
-                            : item,
-                        ),
-                      )
-                    }
-                    rows={4}
-                    placeholder="保留段落与空行；每个文档单独保存。"
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="link-button danger supplement-remove"
-                  onClick={() =>
-                    setSupplemental((current) =>
-                      current.filter((_, itemIndex) => itemIndex !== index),
-                    )
-                  }
-                >
-                  移除
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              className="btn btn-quiet"
-              onClick={() =>
-                setSupplemental((current) => [
-                  ...current,
-                  { title: `补充资料 ${current.length + 1}`, content: "" },
-                ])
-              }
-            >
-              添加补充资料
-            </button>
-          </fieldset>
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
-        </div>
-        <footer>
-          <button className="btn btn-primary" onClick={() => void save()} disabled={busy}>
+    <FormDrawer
+      title="资料与分析范围"
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            className="btn btn-primary"
+            onClick={() => void save()}
+            disabled={busy}
+          >
             {busy ? "扫描并分析中…" : "保存并重新分析"}
           </button>
           <button className="btn btn-quiet" onClick={onClose}>
             取消
           </button>
-        </footer>
+        </>
+      }
+    >
+      <div className="modal-body">
+        <label className="field">
+          <span>只分析这些路径</span>
+          <textarea
+            value={includePaths}
+            onChange={(event) => setIncludePaths(event.target.value)}
+            rows={4}
+            className="mono"
+            placeholder="留空表示整个目录"
+          />
+          <small>相对项目根目录。保存后会重新扫描并重新分析。</small>
+        </label>
+        <label className="field">
+          <span>额外排除</span>
+          <textarea
+            value={excludePatterns}
+            onChange={(event) => setExcludePatterns(event.target.value)}
+            rows={3}
+            className="mono"
+          />
+          <small>敏感凭据规则始终生效，不能被这里的排除或选择覆盖。</small>
+        </label>
+        <fieldset className="supplement-field">
+          <legend>补充资料</legend>
+          {supplemental.length === 0 && (
+            <p className="inline-note">
+              还没有补充资料。补充文档会作为独立来源参与分析。
+            </p>
+          )}
+          {supplemental.map((doc, index) => (
+            <div className="supplement-editor" key={index}>
+              <label className="field">
+                <span>标题</span>
+                <input
+                  value={doc.title}
+                  onChange={(event) =>
+                    setSupplemental((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index
+                          ? { ...item, title: event.target.value }
+                          : item,
+                      ),
+                    )
+                  }
+                  placeholder={`补充资料 ${index + 1}`}
+                />
+              </label>
+              <label className="field">
+                <span>内容</span>
+                <textarea
+                  value={doc.content}
+                  onChange={(event) =>
+                    setSupplemental((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index
+                          ? { ...item, content: event.target.value }
+                          : item,
+                      ),
+                    )
+                  }
+                  rows={4}
+                  placeholder="保留段落与空行；每个文档单独保存。"
+                />
+              </label>
+              <button
+                type="button"
+                className="link-button danger supplement-remove"
+                onClick={() =>
+                  setSupplemental((current) =>
+                    current.filter((_, itemIndex) => itemIndex !== index),
+                  )
+                }
+              >
+                移除
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="btn btn-quiet"
+            onClick={() =>
+              setSupplemental((current) => [
+                ...current,
+                { title: `补充资料 ${current.length + 1}`, content: "" },
+              ])
+            }
+          >
+            添加补充资料
+          </button>
+        </fieldset>
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
       </div>
-    </div>
+    </FormDrawer>
   );
 }

@@ -127,3 +127,5 @@ export type ProjectDetail = {
   understanding: Understanding | null;
   readiness: Readiness;
 };
+
+export type WorkspaceTab = "overview" | "conversation" | "sources";

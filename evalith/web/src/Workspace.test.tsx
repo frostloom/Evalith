@@ -1,9 +1,4 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -82,12 +77,15 @@ describe("workspace failure reconciliation", () => {
         onNotice={vi.fn()}
       />,
     );
+    await user.click(screen.getByRole("tab", { name: "主会话" }));
     await user.type(
       screen.getByPlaceholderText(/补充资料、纠正理解/),
       "不要继续",
     );
     await user.click(screen.getByRole("button", { name: "发送" }));
-    await waitFor(() => expect(apiMock.getProject).toHaveBeenCalledWith("prj_a"));
+    await waitFor(() =>
+      expect(apiMock.getProject).toHaveBeenCalledWith("prj_a"),
+    );
     await waitFor(() => expect(onDetail).toHaveBeenCalledWith(refreshed));
   });
 
@@ -127,8 +125,17 @@ describe("stale source evidence", () => {
     apiMock.continueProject.mockRejectedValue(error);
     apiMock.getProject.mockResolvedValue(refreshed);
     const onDetail = vi.fn();
-    render(<Workspace detail={makeDetail(false)} models={[]} busy={false}
-      onDetail={onDetail} onHome={vi.fn()} onError={vi.fn()} onNotice={vi.fn()} />);
+    render(
+      <Workspace
+        detail={makeDetail(false)}
+        models={[]}
+        busy={false}
+        onDetail={onDetail}
+        onHome={vi.fn()}
+        onError={vi.fn()}
+        onNotice={vi.fn()}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "表示可以继续" }));
     await waitFor(() => expect(onDetail).toHaveBeenCalledWith(refreshed));
   });
@@ -136,20 +143,75 @@ describe("stale source evidence", () => {
   it("labels previous conclusions as historical and requires reanalysis", () => {
     const detail = makeDetail(false);
     detail.understanding = {
-      summary: "Old policy summary", agent_or_flow: "Approval flow",
+      summary: "Old policy summary",
+      agent_or_flow: "Approval flow",
       known: [{ text: "Approval optional", source: "policy.md" }],
-      inferred: [], unknowns: [], sources: [], sufficient: false,
-      user_continued: false, sufficient_reason: "", model: "stub",
-      error: null, updated_at: "2026-11-06T00:00:00Z",
-      snapshot_id: "snp_old", stale: true,
+      inferred: [],
+      unknowns: [],
+      sources: [],
+      sufficient: false,
+      user_continued: false,
+      sufficient_reason: "",
+      model: "stub",
+      error: null,
+      updated_at: "2026-11-06T00:00:00Z",
+      snapshot_id: "snp_old",
+      stale: true,
     };
-    render(<Workspace detail={detail} models={[]} busy={false}
-      onDetail={vi.fn()} onHome={vi.fn()} onError={vi.fn()} onNotice={vi.fn()} />);
+    render(
+      <Workspace
+        detail={detail}
+        models={[]}
+        busy={false}
+        onDetail={vi.fn()}
+        onHome={vi.fn()}
+        onError={vi.fn()}
+        onNotice={vi.fn()}
+      />,
+    );
     expect(screen.getByRole("alert")).toHaveTextContent("资料已变化");
-    expect(screen.getByRole("heading", { name: "历史依据" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "已知" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "历史依据" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "已知" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Approval optional")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /继续/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /继续/ }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "重新分析" })).toBeEnabled();
+  });
+});
+
+describe("Rhesis detail navigation", () => {
+  it("switches real tab panels without losing the conversation draft", async () => {
+    const user = userEvent.setup();
+    render(
+      <Workspace
+        detail={makeDetail(false)}
+        models={[]}
+        busy={false}
+        onDetail={vi.fn()}
+        onHome={vi.fn()}
+        onError={vi.fn()}
+        onNotice={vi.fn()}
+      />,
+    );
+    const overview = screen.getByRole("tab", { name: "项目理解" });
+    expect(overview).toHaveAttribute("aria-selected", "true");
+    await user.click(screen.getByRole("tab", { name: /主会话/ }));
+    await user.type(
+      screen.getByRole("textbox", { name: "给主会话发送消息" }),
+      "未发送的纠正",
+    );
+    await user.click(screen.getByRole("tab", { name: "资料来源" }));
+    expect(
+      screen.queryByRole("textbox", { name: "给主会话发送消息" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: /主会话/ }));
+    expect(
+      screen.getByRole("textbox", { name: "给主会话发送消息" }),
+    ).toHaveValue("未发送的纠正");
   });
 });

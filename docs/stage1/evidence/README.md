@@ -1,5 +1,7 @@
 # Stage-1 evidence
 
+Latest frontend: see [Linear light/dark verification](../2026-11-11-Linear前端与PRD验证.md). The `evalith-linear-*.png` files capture the current desktop design at 1440×1000. Older screenshots below are retained as historical evidence.
+
 | File | What it is | How to regenerate |
 | --- | --- | --- |
 | `workbench-build-1794371993.json` | Pinned source, patch list, committed dependency-lock hashes and Python/uv/Node/npm versions for the locked EE-free tree. | `python3 workbench/build.py --source <rhesis checkout>` then copy `workbench/.workbench/ee-free/BUILD_INFO.json`. |

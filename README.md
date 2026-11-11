@@ -4,7 +4,7 @@ Evalith 是一个本地 Agent 评测工作台：读取选定的项目资料，�
 
 ## 阶段 1：项目工作区与开源底座
 
-- [最新修复与界面验证](docs/stage1/2026-11-11-接管修复与界面验证.md)
+- [最新 Linear 深浅主题与 PRD 验证](docs/stage1/2026-11-11-Linear前端与PRD验证.md)
 - [交付说明](docs/stage1/阶段1-交付说明.md)：EE-free 构建、项目访问边界、主会话、理解门、凭据保护和验证证据。
 - [本地项目访问边界](docs/stage1/project-access.md)
 - [EE-free Rhesis 工作台](workbench/README.md)
