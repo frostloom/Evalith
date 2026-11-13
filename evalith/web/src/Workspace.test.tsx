@@ -17,6 +17,7 @@ const apiMock = vi.hoisted(() => ({
 
 vi.mock("./api", () => ({
   api: apiMock,
+  request: vi.fn().mockResolvedValue({ items: [] }),
   ApiError: class ApiError extends Error {
     code = "test";
     status = 500;
@@ -247,7 +248,7 @@ describe("workspace failure reconciliation", () => {
     );
     await user.click(screen.getByRole("tab", { name: "主会话" }));
     await user.type(
-      screen.getByPlaceholderText(/补充资料、纠正理解/),
+      screen.getByRole("textbox", { name: "给主会话发送消息" }),
       "不要继续",
     );
     await user.click(screen.getByRole("button", { name: "发送" }));
@@ -265,13 +266,14 @@ describe("workspace failure reconciliation", () => {
         detail={makeDetail(true)}
         models={[]}
         busy={false}
+        tab="conversation"
         onDetail={onDetail}
         onHome={vi.fn()}
         onError={vi.fn()}
         onNotice={vi.fn()}
       />,
     );
-    const input = screen.getByPlaceholderText(/补充资料、纠正理解/);
+    const input = screen.getByRole("textbox", { name: "给主会话发送消息" });
     fireEvent.compositionStart(input);
     fireEvent.change(input, { target: { value: "继续" } });
     fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
@@ -384,7 +386,7 @@ describe("Rhesis detail navigation", () => {
   });
 });
 
-it("keeps the conversation focused without a permanently visible context sidebar", () => {
+it("keeps source fingerprints separate from the conversation", () => {
   render(
     <Workspace
       detail={makeDetail(false)}
@@ -443,4 +445,58 @@ it("renders model replies as readable headings, lists and code without enabling 
     "href",
     "javascript:alert(1)",
   );
+});
+
+it("keeps recovered analysis errors in history instead of showing a current failure", () => {
+  const detail = makeDetail(true);
+  const understanding = {
+    summary: "Current analysis succeeded",
+    agent_or_flow: "Agent",
+    known: [],
+    inferred: [],
+    unknowns: [],
+    sources: [],
+    sufficient: true,
+    sufficient_reason: "Scoped source",
+    stale: false,
+    error: null,
+    user_continued: false,
+    model: "stub",
+    updated_at: "2026-11-13T00:00:00Z",
+    snapshot_id: "snp_a",
+  };
+  detail.understanding = understanding as ProjectDetail["understanding"];
+  detail.messages = [
+    {
+      id: "old",
+      role: "system",
+      content: "Old parser failure",
+      payload: { kind: "error" },
+    },
+    {
+      id: "new",
+      role: "assistant",
+      content: "Current analysis succeeded",
+      payload: { kind: "understanding", understanding },
+    },
+  ] as ProjectDetail["messages"];
+  render(
+    <Workspace
+      detail={detail}
+      models={[]}
+      busy={false}
+      tab="conversation"
+      onDetail={vi.fn()}
+      onHome={vi.fn()}
+      onError={vi.fn()}
+      onNotice={vi.fn()}
+    />,
+  );
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.getByText("Old parser failure")).not.toBeVisible();
+  expect(
+    screen
+      .getAllByText("Current analysis succeeded")
+      .some((node) => node.closest("details") === null),
+  ).toBe(true);
 });

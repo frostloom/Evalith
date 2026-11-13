@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Button,
@@ -18,7 +18,6 @@ import {
   Play,
   Plus,
   Search,
-  Square,
   ChevronRight,
   WandSparkles,
 } from "lucide-react";
@@ -30,8 +29,9 @@ import type {
   EvalRun,
   EvalTask,
   GenerationJob,
+  TestSet,
 } from "./evaluationTypes";
-import type { ProjectDetail, WorkspaceTab } from "./types";
+import type { ModelConfig, ProjectDetail, WorkspaceTab } from "./types";
 import { PageHeader } from "./ui";
 import {
   AnalysisDialog,
@@ -40,51 +40,8 @@ import {
   TaskDialog,
 } from "./EvaluationDialogs";
 
-export const statusNames: Record<string, string> = {
-  passed: "通过",
-  failed: "失败",
-  completed: "已完成",
-  running: "运行中",
-  pending: "等待中",
-  validating: "验证中",
-  review_required: "待复核",
-  validation_error: "证据缺失",
-  execution_error: "执行错误",
-  budget_stopped: "预算停止",
-  cancelled: "已取消",
-  cancelling: "正在停止",
-  skipped: "已跳过",
-  interrupted: "已中断",
-  planned: "待确认",
-  preparing: "准备中",
-  ready: "已就绪",
-  missing_evidence: "缺少证据",
-  needs_judge: "待模型判断",
-};
-export const active = (status: string) =>
-  ["running", "pending", "validating", "preparing", "cancelling"].includes(
-    status,
-  );
-export function StateBadge({ status }: { status: string }) {
-  return (
-    <span className={`eval-state state-${status}`}>
-      <span />
-      {statusNames[status] ?? status}
-    </span>
-  );
-}
-export function UsageLine({ value }: { value: EvalRun["usage"] }) {
-  return (
-    <span className="usage-line">
-      {value.model_calls ?? "—"} 次调用{" "}
-      <span>
-        输入 {value.input_tokens?.toLocaleString() ?? "未知"} / 输出{" "}
-        {value.output_tokens?.toLocaleString() ?? "未知"} tokens
-      </span>
-      <span>费用未知</span>
-    </span>
-  );
-}
+import { active, StateBadge, UsageLine } from "./evaluationUi";
+import { EvaluationRunView } from "./EvaluationRunView";
 const date = (value: string) =>
   new Date(value).toLocaleString("zh-CN", {
     month: "numeric",
@@ -97,9 +54,13 @@ export function EvaluationWorkspace({
   detail,
   section,
   onSection,
+  models = [],
+  collection = null,
 }: {
   detail: ProjectDetail;
   section: WorkspaceTab;
+  models?: ModelConfig[];
+  collection?: TestSet | null;
   onSection: (section: WorkspaceTab) => void;
 }) {
   const pid = detail.project.id;
@@ -121,7 +82,6 @@ export function EvaluationWorkspace({
     ),
     [runId, setRunId] = useState<string | null>(null),
     [result, setResult] = useState<EvalResult | null>(null),
-    [resultFilter, setResultFilter] = useState("all"),
     [resultIds, setResultIds] = useState<string[]>([]);
   const live = useRef(true);
   useEffect(() => {
@@ -173,7 +133,10 @@ export function EvaluationWorkspace({
       if (live.current) setBusy(false);
     }
   };
-  const shown = tasks.filter(
+  const scopedTasks = collection
+    ? tasks.filter((t) => collection.task_ids.includes(t.id))
+    : tasks;
+  const shown = scopedTasks.filter(
     (t) =>
       (category === "all" || t.definition.category === category) &&
       `${t.definition.title} ${t.definition.objective}`
@@ -181,24 +144,11 @@ export function EvaluationWorkspace({
         .includes(query.toLowerCase()),
   );
   const run = runs.find((r) => r.id === runId) ?? runs[0];
-  const currentResults =
-    run?.results.filter(
-      (r) => resultFilter === "all" || r.status === resultFilter,
-    ) ?? [];
   const generation = jobs.find((j) => active(j.status));
   const selectedTasks = tasks.filter((t) => selected.includes(t.id));
   const selectedResult =
     (result && run?.results.find((r) => r.id === result.id)) || null;
   const reports = analyses.filter((a) => a.run_id === run?.id);
-  const summary = useMemo(() => {
-    const values = run?.results ?? [];
-    return {
-      passed: values.filter((r) => r.status === "passed").length,
-      failed: values.filter((r) => r.status === "failed").length,
-      unknown: values.filter((r) => r.score === null && !active(r.status))
-        .length,
-    };
-  }, [run]);
   return (
     <div
       className="evaluation-workspace"
@@ -208,10 +158,15 @@ export function EvaluationWorkspace({
     >
       <div className="eval-breadcrumb">
         <span>{detail.project.name}</span>
+        {collection && section === "tasks" && (
+          <button className="link-button" onClick={() => onSection("sets")}>
+            测试集 /
+          </button>
+        )}
         <ChevronRight size={13} />
         <strong>
           {section === "tasks"
-            ? "题目集"
+            ? (collection?.name ?? "测试题目")
             : section === "runs"
               ? "评测运行"
               : "结果分析"}
@@ -222,14 +177,15 @@ export function EvaluationWorkspace({
         <PageHeader
           title={
             section === "tasks"
-              ? "题目集"
+              ? (collection?.name ?? "测试题目")
               : section === "runs"
                 ? "评测运行"
                 : "结果分析"
           }
           description={
             section === "tasks"
-              ? "把项目资料变成可追溯的评测，再用证据检查实际表现。"
+              ? (collection?.description ??
+                "把项目资料变成可追溯的评测，再用证据检查实际表现。")
               : section === "runs"
                 ? "每次运行固定题目版本，逐题保存输出与检查结果。"
                 : "基于已结束的运行生成报告，原始结果独立保留。"
@@ -246,14 +202,18 @@ export function EvaluationWorkspace({
                   运行选中题目{selected.length ? ` (${selected.length})` : ""}
                 </Button>
                 <Button
-                  variant="contained"
-                  startIcon={<Plus />}
+                  variant={collection ? "outlined" : "contained"}
+                  startIcon={collection ? undefined : <Plus />}
                   disabled={
-                    !detail.readiness.generation_allowed || Boolean(generation)
+                    !collection &&
+                    (!detail.readiness.generation_allowed ||
+                      Boolean(generation))
                   }
-                  onClick={() => setDialog("generation")}
+                  onClick={() =>
+                    collection ? onSection("sets") : setDialog("generation")
+                  }
                 >
-                  生成题目
+                  {collection ? "管理测试集" : "生成题目"}
                 </Button>
               </>
             ) : section === "runs" ? (
@@ -343,7 +303,7 @@ export function EvaluationWorkspace({
               >
                 <MenuItem value="all">全部分类</MenuItem>
                 {Array.from(
-                  new Set(tasks.map((t) => t.definition.category)),
+                  new Set(scopedTasks.map((t) => t.definition.category)),
                 ).map((c) => (
                   <MenuItem key={c} value={c}>
                     {c}
@@ -465,217 +425,33 @@ export function EvaluationWorkspace({
             )}
           </>
         ) : runs.length ? (
-          <div className="eval-run-layout">
-            <div
-              className="eval-run-list"
-              role="navigation"
-              aria-label="运行批次"
-            >
-              {runs.map((r, index) => (
-                <button
-                  key={r.id}
-                  className={r.id === run?.id ? "is-active" : ""}
-                  onClick={() => {
-                    setRunId(r.id);
-                    setResult(null);
-                    setResultIds([]);
-                  }}
-                >
-                  <div>
-                    <strong>
-                      运行 {String(runs.length - index).padStart(2, "0")}
-                    </strong>
-                    <StateBadge status={r.status} />
-                  </div>
-                  <p>
-                    {r.tasks?.length ?? r.results.length} 道题目{" "}
-                    <span>{date(r.created_at)}</span>
-                  </p>
-                </button>
-              ))}
-            </div>
-            {run && (
-              <section className="eval-run-detail" aria-label="运行详情">
-                <div className="eval-run-title">
-                  <div>
-                    <h2>
-                      {section === "analyses" ? "本次运行分析" : "运行结果"}
-                    </h2>
-                    <p className="mono">{run.id.slice(-12)}</p>
-                  </div>
-                  <div>
-                    <StateBadge status={run.status} />
-                    {active(run.status) ? (
-                      <Button
-                        color="inherit"
-                        size="small"
-                        startIcon={<Square />}
-                        disabled={busy || run.status === "cancelling"}
-                        onClick={() => void act(() => ev.cancel(pid, run.id))}
-                      >
-                        停止运行
-                      </Button>
-                    ) : (
-                      <Button
-                        size="small"
-                        startIcon={<WandSparkles />}
-                        onClick={() => setDialog("analysis")}
-                      >
-                        分析结果
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                {run.error && (
-                  <Alert
-                    severity={run.status === "failed" ? "error" : "warning"}
-                  >
-                    {run.error}
-                  </Alert>
-                )}
-                <div className="eval-run-summary">
-                  <div>
-                    <strong>
-                      {run.results.filter((r) => !active(r.status)).length}
-                      <small>
-                        {" "}
-                        / {run.tasks?.length ?? run.results.length}
-                      </small>
-                    </strong>
-                    <span>已处理</span>
-                  </div>
-                  <div>
-                    <strong className="eval-good">{summary.passed}</strong>
-                    <span>通过</span>
-                  </div>
-                  <div>
-                    <strong className="eval-bad">{summary.failed}</strong>
-                    <span>未通过</span>
-                  </div>
-                  <div>
-                    <strong>{summary.unknown}</strong>
-                    <span>未评分</span>
-                  </div>
-                </div>
-                {active(run.status) && (
-                  <LinearProgress
-                    variant="determinate"
-                    value={
-                      (100 *
-                        run.results.filter((r) => !active(r.status)).length) /
-                      Math.max(run.tasks?.length ?? 1, 1)
-                    }
-                  />
-                )}
-                <div className="eval-run-meta">
-                  <span>{run.models?.target.model ?? "未调用模型"}</span>
-                  <span>调用上限 {run.budget?.max_model_calls ?? "—"} 次</span>
-                  <UsageLine value={run.usage} />
-                </div>
-                {section === "runs" ? (
-                  <>
-                    <div className="eval-results-toolbar">
-                      <h3>逐题结果</h3>
-                      <TextField
-                        select
-                        size="small"
-                        value={resultFilter}
-                        onChange={(e) => setResultFilter(e.target.value)}
-                        slotProps={{ htmlInput: { "aria-label": "结果筛选" } }}
-                      >
-                        <MenuItem value="all">全部结果</MenuItem>
-                        {Array.from(
-                          new Set(run.results.map((r) => r.status)),
-                        ).map((s) => (
-                          <MenuItem key={s} value={s}>
-                            {statusNames[s] ?? s}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </div>
-                    <div className="eval-result-list">
-                      {currentResults.map((r) => (
-                        <div className="eval-result-row" key={r.id}>
-                          <Checkbox
-                            size="small"
-                            checked={resultIds.includes(r.id)}
-                            inputProps={{
-                              "aria-label": `选择结果 ${r.task.definition.title}`,
-                            }}
-                            onChange={(e) =>
-                              setResultIds(
-                                e.target.checked
-                                  ? [...resultIds, r.id]
-                                  : resultIds.filter((id) => id !== r.id),
-                              )
-                            }
-                          />
-                          <button onClick={() => setResult(r)}>
-                            <div>
-                              <strong>{r.task.definition.title}</strong>
-                              <small>
-                                v{r.task.version} ·{" "}
-                                {r.duration_ms != null
-                                  ? `${(r.duration_ms / 1000).toFixed(1)} 秒`
-                                  : "等待执行"}
-                              </small>
-                            </div>
-                            <StateBadge status={r.status} />
-                            <span className="eval-score">
-                              {r.score === null
-                                ? "—"
-                                : `${Math.round(r.score * 100)}%`}
-                            </span>
-                            <ChevronRight size={14} />
-                          </button>
-                        </div>
-                      ))}
-                      {!run.results.length && (
-                        <p className="eval-inline-empty">
-                          运行已启动，正在准备第一道题目。
-                        </p>
-                      )}
-                    </div>
-                    {resultIds.length > 0 && (
-                      <Button
-                        startIcon={<WandSparkles />}
-                        disabled={active(run.status)}
-                        onClick={() => setDialog("analysis")}
-                      >
-                        分析选中 {resultIds.length} 项结果
-                      </Button>
-                    )}
-                  </>
-                ) : (
-                  <AnalysisReports
-                    reports={reports}
-                    onResult={(id) => {
-                      const r = run.results.find((r) => r.id === id);
-                      if (r) setResult(r);
-                    }}
-                    onAnalyze={() => setDialog("analysis")}
-                    disabled={active(run.status)}
-                  />
-                )}
-                <details className="eval-environment-details">
-                  <summary>运行环境与清理状态</summary>
-                  <p>
-                    {run.environment_snapshot?.plan?.write_directory ??
-                      run.environment_id}
-                  </p>
-                  <p>
-                    清理状态：
-                    {run.cleanup_status === "completed"
-                      ? "本次子进程已回收，证据文件保留"
-                      : run.cleanup_status}
-                  </p>
-                  {run.environment_snapshot?.plan?.limitations?.map((v) => (
-                    <p key={v}>{v}</p>
-                  ))}
-                </details>
-              </section>
-            )}
-          </div>
+          <EvaluationRunView
+            runs={runs}
+            run={run}
+            section={section}
+            selectedRunId={runId}
+            busy={busy}
+            selectedResultIds={resultIds}
+            onSelect={(id) => {
+              setRunId(id);
+              setResult(null);
+              setResultIds([]);
+            }}
+            onResult={setResult}
+            onSelection={setResultIds}
+            onAnalyze={() => setDialog("analysis")}
+            onCancel={() => void act(() => ev.cancel(pid, run!.id))}
+          >
+            <AnalysisReports
+              reports={reports}
+              onResult={(id) => {
+                const value = run?.results.find((r) => r.id === id);
+                if (value) setResult(value);
+              }}
+              onAnalyze={() => setDialog("analysis")}
+              disabled={run ? active(run.status) : true}
+            />
+          </EvaluationRunView>
         ) : (
           <Empty
             icon={<Play />}
@@ -716,6 +492,10 @@ export function EvaluationWorkspace({
           projectId={pid}
           tasks={selectedTasks}
           environments={environments}
+          models={models}
+          defaultModel={detail.project.model_config_id}
+          defaultGraderIds={collection?.grader_ids ?? []}
+          testSet={collection}
           onClose={() => setDialog(null)}
           onCreated={async (r) => {
             setDialog(null);
@@ -881,7 +661,7 @@ function TaskEvidenceDrawer({
       }
     | undefined;
   return (
-    <FormDrawer title="执行证据" onClose={onClose}>
+    <FormDrawer title="测试结果" width={1050} onClose={onClose}>
       <div className="evidence-heading">
         <StateBadge status={r.status} />
         <span>v{r.task.version}</span>
@@ -891,8 +671,8 @@ function TaskEvidenceDrawer({
       {r.error && <Alert severity="warning">{r.error}</Alert>}
       <div className="evidence-tabs">
         {[
-          ["response", "实际输出"],
-          ["checks", "评分检查"],
+          ["response", "对话"],
+          ["checks", "评估"],
           ["raw", "完整证据"],
         ].map(([id, label]) => (
           <button
@@ -909,16 +689,34 @@ function TaskEvidenceDrawer({
           {r.checks.map((c, index) => (
             <section key={index}>
               <StateBadge status={c.status ?? "pending"} />
-              <h4>{c.description || c.type}</h4>
+              <h4>{c.grader_name || c.description || c.type}</h4>
+              {c.threshold !== undefined && (
+                <p>
+                  标准 v{c.grader_version} · 通过阈值 ≥ {c.threshold} ·{" "}
+                  {c.judge_model ?? "确定性检查"}
+                </p>
+              )}
               <p>{c.reason}</p>
               <dl>
                 <dt>期望</dt>
                 <dd>
-                  <pre>{JSON.stringify(c.expected, null, 2)}</pre>
+                  <pre>
+                    {typeof c.expected === "string"
+                      ? c.expected
+                      : JSON.stringify(c.expected, null, 2)}
+                  </pre>
                 </dd>
-                <dt>实际</dt>
+                <dt>{c.type === "judge" ? "模型评分" : "实际"}</dt>
                 <dd>
-                  <pre>{JSON.stringify(c.actual ?? null, null, 2)}</pre>
+                  <pre>
+                    {c.type === "judge"
+                      ? c.score == null
+                        ? "尚未评分"
+                        : `${c.score} / 1`
+                      : c.actual === undefined
+                        ? "未返回实际值"
+                        : JSON.stringify(c.actual, null, 2)}
+                  </pre>
                 </dd>
               </dl>
               {c.evidence?.map((quote, i) => (

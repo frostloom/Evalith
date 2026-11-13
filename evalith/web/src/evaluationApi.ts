@@ -6,6 +6,9 @@ import type {
   EvalTask,
   GenerationJob,
   TaskDefinition,
+  Grader,
+  GraderDefinition,
+  TestSet,
 } from "./evaluationTypes";
 const base = (id: string) => `/api/projects/${encodeURIComponent(id)}`;
 const send = (body: unknown) => ({
@@ -13,6 +16,25 @@ const send = (body: unknown) => ({
   body: JSON.stringify(body),
 });
 export const evaluationApi = {
+  getSet:(id:string,sid:string)=>request<TestSet>(`${base(id)}/test-sets/${encodeURIComponent(sid)}`),
+  graders: (id: string) => request<{ items: Grader[] }>(`${base(id)}/graders`),
+  saveGrader: (id: string, body: GraderDefinition, gid?: string) =>
+    request<Grader>(`${base(id)}/graders${gid ? "/" + gid : ""}`, {
+      ...send(body),
+      method: gid ? "PUT" : "POST",
+    }),
+  archiveGrader: (id: string, gid: string) =>
+    request<void>(`${base(id)}/graders/${gid}`, { method: "DELETE" }),
+  sets: (id: string) => request<{ items: TestSet[] }>(`${base(id)}/test-sets`),
+  saveSet: (
+    id: string,
+    body: Pick<TestSet, "name" | "description" | "task_ids" | "grader_ids">,
+    sid?: string,
+  ) =>
+    request<TestSet>(`${base(id)}/test-sets${sid ? "/" + sid : ""}`, {
+      ...send(body),
+      method: sid ? "PUT" : "POST",
+    }),
   tasks: (id: string) => request<{ items: EvalTask[] }>(`${base(id)}/tasks`),
   jobs: (id: string) => request<{ items: GenerationJob[] }>(`${base(id)}/jobs`),
   generate: (id: string, count: number, direction: string) =>

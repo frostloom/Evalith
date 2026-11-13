@@ -22,6 +22,7 @@ const apiMock = vi.hoisted(() => ({
 
 vi.mock("./api", () => ({
   api: apiMock,
+  request: vi.fn().mockResolvedValue({items:[]}),
   ApiError: class ApiError extends Error {
     code = "test";
     status = 500;

@@ -16,6 +16,9 @@ import type {
 import { ImportSheet } from "./ImportSheet";
 import { ModelSettings } from "./ModelSettings";
 import { ExecutorSettings } from "./ExecutorSettings";
+import { evaluationApi as evaluation } from "./evaluationApi";
+import { EvaluationLibraryPage } from "./EvaluationLibraryPage";
+import type { TestSet } from "./evaluationTypes";
 import { EvaluationWorkspace } from "./EvaluationWorkspace";
 import { Workspace } from "./Workspace";
 import { Navigation } from "./Navigation";
@@ -60,6 +63,7 @@ function AppContent() {
   const [workspaceTab, setWorkspaceTab] =
     useState<WorkspaceTab>("conversation");
   const [loaded, setLoaded] = useState(false);
+  const [activeTestSet, setActiveTestSet] = useState<TestSet | null>(null);
   const importReturnView = useRef<"home" | "project">("home");
   const selectedProjectRef = useRef<string | null>(null);
   const displayedProjectRef = useRef<string | null>(null);
@@ -100,20 +104,32 @@ function AppContent() {
     tab: WorkspaceTab = "conversation",
   ) => {
     setNavOpen(false);
+    setActiveTestSet(null);
     importGeneration.current += 1;
     const sequence = ++openSequence.current;
+    const routeSet =
+      tab === "tasks" &&
+      window.location.hash.startsWith(`#/projects/${project.id}?`)
+        ? new URLSearchParams(window.location.hash.split("?")[1]).get("set")
+        : null;
     selectedProjectRef.current = project.id;
     setBusy(true);
     setError(null);
     try {
       const next = await api.enterProject(project.id);
+      const restoredSet = routeSet
+        ? await evaluation.getSet(project.id, routeSet)
+        : null;
       if (sequence !== openSequence.current) return;
       if (next.project.id !== selectedProjectRef.current) return;
+      setActiveTestSet(restoredSet);
       displayedProjectRef.current = next.project.id;
       setDetail(next);
       setView("project");
       setWorkspaceTab(tab);
-      writeRoute(`#/projects/${project.id}?tab=${tab}`);
+      writeRoute(
+        `#/projects/${project.id}?tab=${tab}${routeSet ? `&set=${encodeURIComponent(routeSet)}` : ""}`,
+      );
     } catch (err) {
       if (sequence === openSequence.current) {
         selectedProjectRef.current = displayedProjectRef.current;
@@ -255,7 +271,9 @@ function AppContent() {
               tab === "sources" ||
               tab === "tasks" ||
               tab === "runs" ||
-              tab === "analyses"
+              tab === "analyses" ||
+              tab === "graders" ||
+              tab === "sets"
               ? tab
               : "conversation",
           );
@@ -307,7 +325,10 @@ function AppContent() {
         onExecutors={openExecutors}
         onImport={startImport}
         onOpen={(project) => void openProject(project)}
-        onSection={changeTab}
+        onSection={(tab) => {
+          if (tab === "tasks") setActiveTestSet(null);
+          changeTab(tab);
+        }}
       />
       <main id="main-content" className="main" tabIndex={-1} aria-busy={busy}>
         {error && (
@@ -342,11 +363,27 @@ function AppContent() {
         )}
         {effectiveView === "project" &&
           detail &&
-          (["tasks", "runs", "analyses"].includes(workspaceTab) ? (
+          (workspaceTab === "graders" || workspaceTab === "sets" ? (
+            <EvaluationLibraryPage
+              key={detail.project.id + workspaceTab}
+              detail={detail}
+              section={workspaceTab}
+              models={models}
+              onOpenSet={(set) => {
+                setActiveTestSet(set);
+                changeTab("tasks");
+                writeRoute(
+                  `#/projects/${detail.project.id}?tab=tasks&set=${encodeURIComponent(set.id)}`,
+                );
+              }}
+            />
+          ) : ["tasks", "runs", "analyses"].includes(workspaceTab) ? (
             <EvaluationWorkspace
               key={detail.project.id}
               detail={detail}
               section={workspaceTab}
+              models={models}
+              collection={activeTestSet}
               onSection={changeTab}
             />
           ) : (

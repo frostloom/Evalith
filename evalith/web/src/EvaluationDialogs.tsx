@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import {
   Alert,
+  Checkbox,
   Button,
   LinearProgress,
   MenuItem,
   TextField,
+  Tab,
+  Tabs,
 } from "@mui/material";
 import { Check, ChevronRight, Play, Plus, Trash2 } from "lucide-react";
 import { FormDrawer } from "./ui";
@@ -16,7 +19,8 @@ import type {
   EvalTask,
   TaskDefinition,
 } from "./evaluationTypes";
-import type { ExecutorConfig } from "./types";
+import type { Grader, TestSet } from "./evaluationTypes";
+import type { ModelConfig, ExecutorConfig } from "./types";
 const errorText = (e: unknown) =>
   e instanceof Error ? e.message : "操作失败，请重试。";
 function ErrorNotice({ value }: { value: string }) {
@@ -112,6 +116,10 @@ export function TaskDialog({
   onClose: () => void;
   onSaved: (task: EvalTask) => Promise<void>;
 }) {
+  const [detailTab, setDetailTab] = useState("input");
+  const [fixtureText, setFixtureText] = useState(
+    JSON.stringify(task.definition.input.fixture ?? {}, null, 2),
+  );
   const [editing, setEditing] = useState(false),
     [draft, setDraft] = useState<TaskDefinition>(
       structuredClone(task.definition),
@@ -146,6 +154,8 @@ export function TaskDialog({
     setBusy(true);
     try {
       const input = JSON.parse(inputText) as Record<string, unknown>;
+      if (draft.kind === "conversation")
+        input.fixture = JSON.parse(fixtureText);
       const saved = await ev.edit(projectId, task.task_id || task.id, {
         ...draft,
         input,
@@ -190,6 +200,9 @@ export function TaskDialog({
               onClick={() => {
                 setDraft(structuredClone(task.definition));
                 setInputText(JSON.stringify(task.definition.input, null, 2));
+                setFixtureText(
+                  JSON.stringify(task.definition.input.fixture ?? {}, null, 2),
+                );
                 setRefs(task.definition.source_refs.join("\n"));
                 setEditing(true);
               }}
@@ -221,19 +234,81 @@ export function TaskDialog({
               value={draft.objective}
               onChange={(e) => change({ objective: e.target.value })}
             />
-            <TextField
-              label="输入数据（JSON）"
-              className="json-field"
-              multiline
-              minRows={5}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              helperText={
-                draft.kind === "conversation"
-                  ? "turns 为用户消息数组，fixture 为合成数据。"
-                  : "输入不得包含执行命令，程序由确认的环境提供。"
-              }
-            />
+            {draft.kind === "conversation" ? (
+              <section className="turn-editor">
+                <div className="eval-field-heading">
+                  <h3>对话输入</h3>
+                  <Button
+                    size="small"
+                    startIcon={<Plus />}
+                    onClick={() => {
+                      const input = JSON.parse(inputText);
+                      setInputText(
+                        JSON.stringify(
+                          { ...input, turns: [...(input.turns ?? []), ""] },
+                          null,
+                          2,
+                        ),
+                      );
+                    }}
+                  >
+                    添加一轮
+                  </Button>
+                </div>
+                {((JSON.parse(inputText).turns ?? []) as string[]).map(
+                  (turn, index) => (
+                    <div className="turn-editor-row" key={index}>
+                      <TextField
+                        label={`用户消息 ${index + 1}`}
+                        value={turn}
+                        multiline
+                        minRows={2}
+                        onChange={(e) => {
+                          const input = JSON.parse(inputText);
+                          input.turns[index] = e.target.value;
+                          setInputText(JSON.stringify(input, null, 2));
+                        }}
+                      />
+                      <Button
+                        aria-label={`删除对话 ${index + 1}`}
+                        disabled={
+                          (JSON.parse(inputText).turns ?? []).length <= 1
+                        }
+                        onClick={() => {
+                          const input = JSON.parse(inputText);
+                          input.turns = input.turns.filter(
+                            (_: unknown, i: number) => i !== index,
+                          );
+                          setInputText(JSON.stringify(input, null, 2));
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </Button>
+                    </div>
+                  ),
+                )}
+                <details>
+                  <summary>合成数据与高级输入</summary>
+                  <TextField
+                    label="合成数据（JSON）"
+                    multiline
+                    minRows={4}
+                    value={fixtureText}
+                    onChange={(e) => setFixtureText(e.target.value)}
+                  />
+                </details>
+              </section>
+            ) : (
+              <TextField
+                label="输入数据（JSON）"
+                className="json-field"
+                multiline
+                minRows={5}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                helperText="只包含输入，执行程序由运行环境提供。"
+              />
+            )}
             <TextField
               label="评分说明"
               multiline
@@ -384,7 +459,19 @@ export function TaskDialog({
                   </MenuItem>
                 ))}
             </TextField>
-            <section className="task-detail-section">
+            <Tabs
+              value={detailTab}
+              onChange={(_, v: string) => setDetailTab(v)}
+              aria-label="题目详情章节"
+            >
+              <Tab value="input" label="测试输入" />
+              <Tab value="rubric" label="Rubric 与检查" />
+              <Tab value="history" label="版本历史" />
+            </Tabs>
+            <section
+              className="task-detail-section"
+              hidden={detailTab !== "input"}
+            >
               <h4>输入</h4>
               {shown.definition.kind === "conversation" ? (
                 (shown.definition.input.turns as string[]).map(
@@ -399,7 +486,10 @@ export function TaskDialog({
                 <pre>{JSON.stringify(shown.definition.input, null, 2)}</pre>
               )}
             </section>
-            <section className="task-detail-section">
+            <section
+              className="task-detail-section"
+              hidden={detailTab !== "rubric"}
+            >
               <h4>评分规则</h4>
               <p>{shown.definition.rubric}</p>
               {shown.definition.checks.map((check, index) => (
@@ -414,7 +504,33 @@ export function TaskDialog({
                 </div>
               ))}
             </section>
-            <section className="task-detail-section">
+            <section
+              className="task-detail-section version-history"
+              hidden={detailTab !== "history"}
+            >
+              <h4>不可变的题目版本</h4>
+              {[task, ...versions.filter((v) => v.version !== task.version)]
+                .sort((a, b) => b.version - a.version)
+                .map((v) => (
+                  <button
+                    key={v.version}
+                    onClick={() => {
+                      setVersion(v.version);
+                      setDetailTab("input");
+                    }}
+                  >
+                    <strong>v{v.version}</strong>
+                    <span>{v.definition.title}</span>
+                    <small>
+                      {new Date(v.created_at).toLocaleDateString("zh-CN")}
+                    </small>
+                  </button>
+                ))}
+            </section>
+            <section
+              className="task-detail-section"
+              hidden={detailTab === "history"}
+            >
               <h4>资料来源</h4>
               {shown.definition.source_refs.map((ref) => (
                 <code className="task-source" key={ref}>
@@ -440,16 +556,48 @@ export function RunDialog({
   projectId,
   tasks,
   environments,
+  models = [],
+  defaultModel = null,
+  defaultGraderIds = [],
+  testSet = null,
   onClose,
   onCreated,
 }: {
   projectId: string;
   tasks: EvalTask[];
   environments: Environment[];
+  models?: ModelConfig[];
+  defaultModel?: string | null;
+  defaultGraderIds?: string[];
+  testSet?: TestSet | null;
   onClose: () => void;
   onCreated: (run: EvalRun) => Promise<void>;
 }) {
   const ready = environments.filter((e) => e.status === "ready");
+  const [runName, setRunName] = useState(testSet?.name ?? "本地评测");
+  const [graders, setGraders] = useState<Grader[]>([]),
+    [gradersLoaded, setGradersLoaded] = useState(false),
+    [graderIds, setGraderIds] = useState<string[]>(defaultGraderIds),
+    [targetModel, setTargetModel] = useState(defaultModel ?? ""),
+    [judgeModel, setJudgeModel] = useState(defaultModel ?? "");
+  useEffect(() => {
+    let live = true;
+    setGradersLoaded(false);
+    void ev
+      .graders(projectId)
+      .then((r) => {
+        if (live) {
+          setGraders(r.items);
+          setGradersLoaded(true);
+        }
+      })
+      .catch((e) => {
+        if (live) setError(`无法加载评价标准，请关闭后重试：${errorText(e)}`);
+      });
+    return () => {
+      live = false;
+    };
+  }, [projectId]);
   const [configs, setConfigs] = useState<ExecutorConfig[]>([]),
     [choice, setChoice] = useState(
       ready[0]?.id ??
@@ -500,6 +648,9 @@ export function RunDialog({
     };
   }, [env, projectId]);
   const valid =
+    gradersLoaded &&
+    graderIds.every((id) => graders.some((g) => g.id === id)) &&
+    runName.trim().length > 0 &&
     Number.isInteger(limit) &&
     limit >= 0 &&
     limit <= 64 &&
@@ -515,6 +666,11 @@ export function RunDialog({
             version_ids: tasks.map((t) => t.version_id),
             max_model_calls: limit,
             budget_usd: money === "" ? null : Number(money),
+            grader_ids: graderIds,
+            name: runName,
+            test_set_id: testSet?.id,
+            target_model_config_id: targetModel || undefined,
+            judge_model_config_id: judgeModel || undefined,
           }),
         );
       } else if (env?.status === "planned") {
@@ -584,6 +740,92 @@ export function RunDialog({
           已选 {tasks.length} 道题目。运行将固定当前版本，每题的证据会立即保存。
         </p>
         <ErrorNotice value={error} />
+        <TextField
+          label="运行名称"
+          value={runName}
+          onChange={(e) => setRunName(e.target.value)}
+          inputProps={{ maxLength: 120 }}
+        />
+        {models.length > 0 && (
+          <section className="run-model-section">
+            <h3>模型与评分</h3>
+            <div className="eval-budget-fields">
+              <TextField
+                select
+                label="被测 Agent 模型"
+                value={targetModel}
+                onChange={(e) => setTargetModel(e.target.value)}
+              >
+                {models.map((m) => (
+                  <MenuItem key={m.id} value={m.id}>
+                    {m.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="默认评分模型"
+                value={judgeModel}
+                onChange={(e) => setJudgeModel(e.target.value)}
+              >
+                {models.map((m) => (
+                  <MenuItem key={m.id} value={m.id}>
+                    {m.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </div>
+          </section>
+        )}
+        <section className="run-standard-section">
+          <h3>评价标准</h3>
+          <p className="field-note">
+            {graderIds.length
+              ? "使用选定标准替换题目内置检查。每项标准的模型与阈值会固定在本次运行。"
+              : "当前使用各题目内置的检查规则与 Rubric。"}
+          </p>
+          {graders.map((g) => (
+            <label className="asset-selection" key={g.id}>
+              <Checkbox
+                size="small"
+                checked={graderIds.includes(g.id)}
+                onChange={(e) =>
+                  setGraderIds(
+                    e.target.checked
+                      ? [...graderIds, g.id]
+                      : graderIds.filter((id) => id !== g.id),
+                  )
+                }
+              />
+              <span>
+                <strong>{g.name}</strong>
+                <small>
+                  v{g.version} ·{" "}
+                  {g.check.type === "judge"
+                    ? `模型判分 ≥ ${Math.round(g.threshold * 100)}%`
+                    : "确定性检查"}
+                </small>
+              </span>
+            </label>
+          ))}
+          {graderIds
+            .filter((id) => !graders.some((g) => g.id === id))
+            .map((id) => (
+              <label className="asset-selection" key={id}>
+                <Checkbox
+                  size="small"
+                  checked
+                  onChange={() =>
+                    setGraderIds(graderIds.filter((g) => g !== id))
+                  }
+                />
+                <span>
+                  <strong>已归档或不可用的标准</strong>
+                  <small>取消关联后，选择其他标准 · {id}</small>
+                </span>
+              </label>
+            ))}
+        </section>
         <TextField
           label="运行环境"
           select

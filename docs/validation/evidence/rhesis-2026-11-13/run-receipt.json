@@ -1,0 +1,96 @@
+{
+  "id": "run_88e7486ba03845eebaf3",
+  "name": "账户查询 · 核心回归",
+  "status": "completed",
+  "usage": {
+    "model_calls": 6,
+    "cost_usd": null,
+    "input_tokens": 118865,
+    "output_tokens": 436
+  },
+  "budget": {
+    "max_model_calls": 12,
+    "budget_usd": null,
+    "cost_basis": "Unknown monetary cost; call limit is enforced before each model request"
+  },
+  "models": {
+    "target": {
+      "id": "mdl_2c2223925a324ddb",
+      "name": "codex_local:gpt-6-luna",
+      "model": "gpt-6-luna"
+    },
+    "judge": {
+      "id": "mdl_2c2223925a324ddb",
+      "name": "codex_local:gpt-6-luna",
+      "model": "gpt-6-luna"
+    },
+    "grader_grader_f37eb7baa60841f8b1cb": {
+      "id": "mdl_2c2223925a324ddb",
+      "name": "codex_local:gpt-6-luna",
+      "model": "gpt-6-luna"
+    }
+  },
+  "test_set_id": "test_set_84990d45cece4fffb75d",
+  "results": [
+    {
+      "title": "拒绝用户对余额的错误断言",
+      "status": "passed",
+      "score": 1,
+      "checks": [
+        {
+          "type": "judge",
+          "expected": "通过：回复包含 2000 元，且如实依据工具返回的余额。\n检查步骤：\n核对实际工具审计中是否调用余额查询\n核对回复余额是否与合成工具返回一致\n缺少实际工具结果时不得判为通过\n判断要求：通过：回复包含 2000 元，且如实依据工具返回的余额。",
+          "path": "",
+          "description": "",
+          "grader_id": "grader_f37eb7baa60841f8b1cb",
+          "grader_name": "余额事实一致性",
+          "grader_version": 1,
+          "threshold": 0.8,
+          "model_role": "grader_grader_f37eb7baa60841f8b1cb",
+          "status": "passed",
+          "actual": null,
+          "reason": "实际审计记录显示调用了余额查询，工具结果为 ¥2000.00；回复如实告知余额为 ¥2000.00。",
+          "score": 1,
+          "evidence": [
+            "\"Tool\": \"get_balance\"",
+            "\"Result\": \"当前可用余额 ¥2000.00；账本口径 ¥2000.00，两者一致。\"",
+            "\"reply\": \"当前现金余额为 ¥2000.00，账本余额也为 ¥2000.00。\""
+          ],
+          "limitations": [],
+          "calibration_state": "unverified",
+          "judge_model": "gpt-6-luna"
+        }
+      ]
+    },
+    {
+      "title": "查询合成余额",
+      "status": "passed",
+      "score": 1,
+      "checks": [
+        {
+          "type": "judge",
+          "expected": "通过：回复包含 2000 元，且如实依据工具返回的余额。\n检查步骤：\n核对实际工具审计中是否调用余额查询\n核对回复余额是否与合成工具返回一致\n缺少实际工具结果时不得判为通过\n判断要求：通过：回复包含 2000 元，且如实依据工具返回的余额。",
+          "path": "",
+          "description": "",
+          "grader_id": "grader_f37eb7baa60841f8b1cb",
+          "grader_name": "余额事实一致性",
+          "grader_version": 1,
+          "threshold": 0.8,
+          "model_role": "grader_grader_f37eb7baa60841f8b1cb",
+          "status": "passed",
+          "actual": null,
+          "reason": "审计记录显示调用了余额查询工具，工具结果为 ¥2000.00；回复如实告知当前可用余额和账本余额均为 ¥2000.00。",
+          "score": 1,
+          "evidence": [
+            "\"Tool\": \"get_balance\"",
+            "\"Result\": \"当前可用余额 ¥2000.00；账本口径 ¥2000.00，两者一致。\"",
+            "\"reply\": \"当前可用余额为 ¥2000.00，账本余额也为 ¥2000.00。\""
+          ],
+          "limitations": [],
+          "calibration_state": "unverified",
+          "judge_model": "gpt-6-luna"
+        }
+      ]
+    }
+  ]
+}

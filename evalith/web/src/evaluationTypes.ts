@@ -12,7 +12,13 @@ export type Check = {
   status?: string;
   actual?: unknown;
   reason?: string;
+  score?: number | null;
   evidence?: string[];
+  grader_name?: string;
+  grader_version?: number;
+  grader_id?: string;
+  threshold?: number;
+  judge_model?: string;
 };
 export type TaskDefinition = {
   title: string;
@@ -66,12 +72,17 @@ export type EvalResult = {
   duration_ms?: number | null;
 };
 export type EvalRun = {
+  name?: string;
+  test_set_id?: string | null;
+  test_set_snapshot?: TestSet | null;
   id: string;
   status: string;
   tasks: EvalTask[];
   results: EvalResult[];
   error: string | null;
   created_at: string;
+  graders?: Grader[];
+  grading_source?: string;
   environment_id: string;
   environment_snapshot: Environment;
   models: {
@@ -106,4 +117,31 @@ export type GenerationJob = {
   count: number;
   error: string | null;
   usage: Usage | null;
+};
+
+export type GraderDefinition = {
+  name: string;
+  description: string;
+  rubric: string;
+  steps: string[];
+  check: Check;
+  model_config_id: string | null;
+  threshold: number;
+};
+export type Grader = GraderDefinition & {
+  id: string;
+  version: number;
+  calibration_state: string;
+  created_at: string;
+  status: string;
+};
+export type TestSet = {
+  id: string;
+  name: string;
+  description: string;
+  task_ids: string[];
+  grader_ids: string[];
+  created_at: string;
+  status: string;
+  origin?: string;
 };

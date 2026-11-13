@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Popover, Tab, Tabs } from "@mui/material";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { ProjectWorkflow } from "./ProjectWorkflow";
 import { EvalithMark, FormDrawer, PageHeader } from "./ui";
 import { api, ApiError } from "./api";
 import type {
@@ -91,6 +92,15 @@ export function Workspace({
     if (mountedRef.current) onNotice(message);
   };
   const { project, understanding, readiness, snapshot, messages } = detail;
+  const latestUnderstanding = messages.reduce(
+    (last, item, index) =>
+      item.payload?.kind === "understanding" ? index : last,
+    -1,
+  );
+  const historical = (item: Message, index: number) =>
+    item.role === "system" &&
+    (item.payload?.kind !== "error" ||
+      (!understanding?.error && latestUnderstanding > index));
   const [message, setMessage] = useState("");
   const [composing, setComposing] = useState(false);
   const [working, setWorking] = useState(false);
@@ -375,6 +385,16 @@ export function Workspace({
           aria-label="项目主会话"
         >
           <div className="conversation-main">
+            <div className="chat-workflow-header">
+              <div>
+                <span className="chat-assistant-dot" />
+                <strong>评测助手</strong>
+                <span>理解项目，设计测试，查看证据</span>
+              </div>
+              <button onClick={() => changeTab("overview")}>
+                项目理解 <ArrowDown size={13} />
+              </button>
+            </div>
             <div
               className="messages"
               onScroll={(event) => {
@@ -395,18 +415,11 @@ export function Workspace({
                     </button>
                   </div>
                 )}
-                {messages.some(
-                  (item) =>
-                    item.role === "system" && item.payload?.kind !== "error",
-                ) && (
+                {messages.some((item, index) => historical(item, index)) && (
                   <details className="session-record">
                     <summary>项目活动记录</summary>
                     {messages
-                      .filter(
-                        (item) =>
-                          item.role === "system" &&
-                          item.payload?.kind !== "error",
-                      )
+                      .filter((item, index) => historical(item, index))
                       .map((item) => (
                         <p key={item.id}>{item.content}</p>
                       ))}
@@ -415,15 +428,12 @@ export function Workspace({
 
                 {messages.length === 0 && (
                   <div className="chat-empty">
-                    <h3>先一起了解这个项目</h3>
+                    <h2>先一起了解这个项目</h2>
                     <p>补充业务背景、纠正理解，或说明你希望重点评测的方向。</p>
                   </div>
                 )}
                 {messages
-                  .filter(
-                    (item) =>
-                      item.role !== "system" || item.payload?.kind === "error",
-                  )
+                  .filter((item, index) => !historical(item, index))
                   .map((item) => (
                     <MessageRow
                       key={item.id}
@@ -489,7 +499,7 @@ export function Workspace({
                     }
                   }}
                   rows={2}
-                  placeholder="补充资料、纠正理解，或聊聊你想评测什么…"
+                  placeholder="描述你要验证的行为，或补充一段项目规则…"
                   disabled={disabled}
                 />
                 <div className="composer-foot">
@@ -531,6 +541,9 @@ export function Workspace({
           </div>
         </section>
 
+        {activeTab === "conversation" && (
+          <ProjectWorkflow detail={detail} onSection={changeTab} />
+        )}
         <aside
           hidden={activeTab !== "sources"}
           role="tabpanel"
@@ -794,7 +807,7 @@ function MessageRow({
           <p>{initial?.summary || "已根据选定资料更新项目理解。"}</p>
           {!!initial?.unknowns.length && (
             <div className="chat-findings">
-              <h3>还需要一起确认</h3>
+              <h2>还需要一起确认</h2>
               <ul>
                 {initial.unknowns.slice(0, 2).map((item, index) => (
                   <li key={index}>{itemText(item)}</li>

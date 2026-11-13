@@ -1,0 +1,13 @@
+# Rhesis-informed Evalith workflow
+
+User rejected the previous UI and explicitly requests Rhesis as the reference. Prior authorization: implement directly without questions, personally, keep ai-gateway and the reference checkout untouched; all artifacts in Evalith. Keep project-first entry and desktop dark/light themes. Use the existing React/MUI/FastAPI stack.
+
+Reference evidence inspected: Rhesis official screenshots in rhesis/docs/src/public/screenshots (architect-chat, metrics, metric-detail, test-sets, test-run-details, test-results-conversation) and corresponding architect, metric form, test-set client and result drawer source. Learn structure/interaction, do not copy product branding or market screenshots into Evalith.
+
+Gaps to fix: navigation has no reusable evaluation standards; all tasks are mislabeled a test set; results lack clear summary/test/config tabs; chat is a long transcript without an actionable project workflow. Rubric and graders need product surfaces, not JSON configuration.
+
+Implement independent project-scoped evaluation standards with editable name, description, criterion/rubric, steps, judge model and threshold (0–1), or a deterministic check. Selected standards are frozen into runs, including model identity; archived/foreign standards cannot execute. Existing task-embedded checks stay the default. Model scores remain uncalibrated, evidence required. Add sets with named membership and selected standard IDs; show historical generation groups without altering old task revisions.
+
+Frontend: grouped project navigation (project context / evaluation assets / runs and analysis), 14px body and clear controls; neutral light/dark canvas, blue focus/action accent. Chat uses compact header, readable message panels, collapsed source metadata and a project workflow rail with real counts. Standards have a card library and two-step configuration/review form. Test sets are genuine collections; task detail separates input/rubric/history and edits conversation turns without raw JSON. Runs start from a table and open a detail view with summary/tests/configuration, then a wide evidence drawer with conversation/evaluation tabs. Run setup exposes target/judge model and selected standards. All displayed values come from existing APIs or new persisted records.
+
+Non-goals: implementing Harbor in this UI iteration, importing Rhesis EE code, fabricating live results, changing original ai-gateway, adding multi-session chat or arbitrary executable graders. Verify backend scoping/snapshots/threshold/model use, UI interactions and desktop screenshots. Preserve existing history and source protection.

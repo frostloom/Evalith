@@ -1058,7 +1058,7 @@ a {
   padding: 0 0 0 18px;
   border-left: 2px solid var(--border-strong);
 }
-.chat-findings h3 {
+.chat-findings h2 {
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 10px;
@@ -1185,7 +1185,7 @@ a {
   text-align: center;
   padding: 70px 20px;
 }
-.chat-empty h3 {
+.chat-empty h2 {
   font-size: 24px;
   font-weight: 600;
   letter-spacing: -0.04em;

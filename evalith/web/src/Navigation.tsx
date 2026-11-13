@@ -8,8 +8,6 @@ import {
   ListItemButton,
   ListItemText,
   Popover,
-  Tab,
-  Tabs,
   TextField,
   Tooltip,
 } from "@mui/material";
@@ -28,6 +26,8 @@ import {
   FlaskConical,
   Play,
   ChartNoAxesCombined,
+  ShieldCheck,
+  Layers3,
 } from "lucide-react";
 import { ThemeToggle } from "./theme";
 import { EvalithMark } from "./ui";
@@ -226,63 +226,87 @@ export function Navigation({
                 <ListItemText primary="建立项目" sx={{ ml: 1 }} />
               </ListItemButton>
             </Popover>
-            <Tabs
-              orientation="vertical"
-              value={section}
-              onChange={(_, value: WorkspaceTab) => onSection(value)}
-              selectionFollowsFocus
+            <div
+              className="project-nav-groups"
+              role="tablist"
               aria-label="项目工作区章节"
-              className="project-nav"
+              aria-orientation="vertical"
             >
-              <Tab
-                id="tab-conversation"
-                aria-controls="panel-conversation"
-                value="conversation"
-                icon={<MessageSquare />}
-                iconPosition="start"
-                label="主会话"
-              />
-              <Tab
-                id="tab-overview"
-                aria-controls="panel-overview"
-                value="overview"
-                icon={<ListChecks />}
-                iconPosition="start"
-                label="项目理解"
-              />
-              <Tab
-                id="tab-sources"
-                aria-controls="panel-sources"
-                value="sources"
-                icon={<Files />}
-                iconPosition="start"
-                label="资料来源"
-              />
-              <Tab
-                id="tab-tasks"
-                aria-controls="panel-tasks"
-                value="tasks"
-                icon={<FlaskConical />}
-                iconPosition="start"
-                label="题目集"
-              />
-              <Tab
-                id="tab-runs"
-                aria-controls="panel-runs"
-                value="runs"
-                icon={<Play />}
-                iconPosition="start"
-                label="评测运行"
-              />
-              <Tab
-                id="tab-analyses"
-                aria-controls="panel-analyses"
-                value="analyses"
-                icon={<ChartNoAxesCombined />}
-                iconPosition="start"
-                label="结果分析"
-              />
-            </Tabs>
+              {[
+                {
+                  label: "项目上下文",
+                  items: [
+                    ["conversation", "主会话", MessageSquare],
+                    ["overview", "项目理解", ListChecks],
+                    ["sources", "资料来源", Files],
+                  ],
+                },
+                {
+                  label: "评测资产",
+                  items: [
+                    ["graders", "评价标准", ShieldCheck],
+                    ["tasks", "测试题目", FlaskConical],
+                    ["sets", "测试集", Layers3],
+                  ],
+                },
+                {
+                  label: "执行与改进",
+                  items: [
+                    ["runs", "评测运行", Play],
+                    ["analyses", "结果分析", ChartNoAxesCombined],
+                  ],
+                },
+              ].map((group) => (
+                <div className="project-nav-group" key={group.label}>
+                  <p>{group.label}</p>
+                  {group.items.map(([id, label, Icon]) => (
+                    <button
+                      key={String(id)}
+                      role="tab"
+                      id={"tab-" + id}
+                      aria-controls={section === id ? "panel-" + id : undefined}
+                      aria-selected={section === id}
+                      tabIndex={section === id ? 0 : -1}
+                      className={section === id ? "is-active" : ""}
+                      onClick={() => onSection(id as WorkspaceTab)}
+                      onKeyDown={(event) => {
+                        if (
+                          !["ArrowDown", "ArrowUp", "Home", "End"].includes(
+                            event.key,
+                          )
+                        )
+                          return;
+                        event.preventDefault();
+                        const tabs = Array.from(
+                          event.currentTarget
+                            .closest('[role="tablist"]')!
+                            .querySelectorAll<HTMLButtonElement>(
+                              '[role="tab"]',
+                            ),
+                        );
+                        const index = tabs.indexOf(event.currentTarget);
+                        const next =
+                          event.key === "Home"
+                            ? tabs[0]
+                            : event.key === "End"
+                              ? tabs[tabs.length - 1]
+                              : tabs[
+                                  (index +
+                                    (event.key === "ArrowDown" ? 1 : -1) +
+                                    tabs.length) %
+                                    tabs.length
+                                ];
+                        next.focus();
+                        next.click();
+                      }}
+                    >
+                      {typeof Icon !== "string" && <Icon />}
+                      <span>{String(label)}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         )}
         <div className="sidebar-bottom">

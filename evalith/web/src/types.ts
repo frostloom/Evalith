@@ -128,7 +128,7 @@ export type ProjectDetail = {
   readiness: Readiness;
 };
 
-export type WorkspaceTab = "overview" | "conversation" | "sources" | "tasks" | "runs" | "analyses";
+export type WorkspaceTab = "overview" | "conversation" | "sources" | "tasks" | "runs" | "analyses" | "graders" | "sets";
 
 export type ExecutorDefinition = {
   name: string;

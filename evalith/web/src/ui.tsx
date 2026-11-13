@@ -11,6 +11,7 @@ export function FormDrawer({
   footer,
   busy = false,
   presentation = "drawer",
+  width,
 }: {
   title: string;
   onClose: () => void;
@@ -18,6 +19,7 @@ export function FormDrawer({
   footer?: ReactNode;
   busy?: boolean;
   presentation?: "dialog" | "drawer";
+  width?: number;
 }) {
   const titleId = useId();
   const content = (
@@ -75,7 +77,7 @@ export function FormDrawer({
           role: "dialog",
           "aria-modal": true,
           "aria-label": title,
-          sx: { width: { xs: "100%", sm: ui.drawer }, maxWidth: "100%" },
+          sx: { width: { xs: "100%", sm: width ?? ui.drawer }, maxWidth: "100%" },
         },
       }}
     >
