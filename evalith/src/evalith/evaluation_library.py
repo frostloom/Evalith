@@ -37,7 +37,8 @@ class GraderSpec(BaseModel):
         if (
             isinstance(value, dict)
             and "task_kinds" not in value
-            and str((value.get("check") or {}).get("type", "")).startswith("file_")
+            and isinstance(value.get("check"), dict)
+            and str(value["check"].get("type", "")).startswith("file_")
         ):
             return {**value, "task_kinds": ["command"]}
         return value

@@ -86,6 +86,59 @@ def test_preparation_saves_linked_graders_tasks_and_one_real_collection(
     )
 
 
+def test_preparation_cannot_drop_unconfirmed_project_rules(
+    client, project_root, monkeypatch
+):
+    pid, _model, assets = setup(client, project_root)
+    detail = assets.workspace.get_project_detail(pid)
+    understanding = {
+        **detail["understanding"],
+        "unknowns": [{"text": "是否允许透支尚未确认", "why": "不能臆定财务规则"}],
+    }
+    assets.workspace._store_understanding(
+        assets.workspace.db.get_project(pid), understanding, error=None
+    )
+    monkeypatch.setattr(ModelGateway, "complete_json", lambda *_: bundle())
+    result = assets.prepare(pid, count=1)
+    for item in [*result["graders"], *[t["definition"] for t in result["items"]]]:
+        assert any("是否允许透支尚未确认" in text for text in item["uncertainties"])
+
+
+def test_editing_generated_scoring_rules_detaches_defaults_but_preserves_old_version(
+    client, project_root, monkeypatch
+):
+    pid, _model, assets = setup(client, project_root)
+    monkeypatch.setattr(ModelGateway, "complete_json", lambda *_: bundle())
+    task = assets.prepare(pid, count=1)["items"][0]
+    revised = {
+        **task["definition"],
+        "rubric": "New stricter criteria",
+        "checks": [{"type": "judge", "expected": "Require a signed tool trace"}],
+    }
+    changed = assets.edit(pid, task["id"], revised)
+    assert changed["default_grader_ids"] == []
+    assert (
+        assets.store.task_version(pid, task["version_id"])["default_grader_ids"]
+        == task["default_grader_ids"]
+    )
+
+
+def test_retaining_project_unknowns_keeps_all_model_notes_at_schema_limit(
+    client, project_root, monkeypatch
+):
+    pid, _model, assets = setup(client, project_root)
+    value = bundle()
+    notes = [f"Model limitation {i}" for i in range(30)]
+    value["graders"][0]["uncertainties"] = notes[:]
+    value["tasks"][0]["definition"]["uncertainties"] = notes[:]
+    monkeypatch.setattr(ModelGateway, "complete_json", lambda *_: value)
+    result = assets.prepare(pid, count=1)
+    for item in [*result["graders"], *[t["definition"] for t in result["items"]]]:
+        assert len(item["uncertainties"]) <= 30
+        assert all(note in "\n".join(item["uncertainties"]) for note in notes)
+        assert "项目待确认" in "\n".join(item["uncertainties"])
+
+
 @pytest.mark.parametrize(
     "invalid", ["reference", "source", "threshold", "scope", "model"]
 )

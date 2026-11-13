@@ -180,3 +180,87 @@ def test_reviewed_plan_digest_rejects_changed_grader_configuration(
             pid, {**payload, "plan_digest": preview["plan_digest"]}, background=False
         )
     assert error.value.code == "grading_plan_changed" and not store.list(pid, "run")
+
+
+def test_embedded_plan_keeps_asset_revision_unchanged_and_compiles_its_rubric(
+    client, project_root
+):
+    pid, store, _library, runner, payload, _first, _other = configured(
+        client, project_root
+    )
+    original = store.task_version(pid, payload["version_ids"][0])
+    task = store.save_task(
+        pid,
+        {
+            **original,
+            "definition": {
+                **original["definition"],
+                "rubric": "Require signed evidence",
+                "checks": [{"type": "judge", "expected": "Read the tool trace"}],
+            },
+        },
+        task_id=original["task_id"],
+    )
+    preview = runner.preview(
+        pid, {**payload, "version_ids": [task["version_id"]], "grader_ids": []}
+    )
+    assert preview["tasks"][0]["definition"] == task["definition"]
+    check = preview["grading_plan"]["tasks"][0]["checks"][0]
+    assert "Require signed evidence" in check["expected"]
+    assert check["judge_model"] == preview["models"]["judge"]["model"]
+
+
+def test_grader_uncertainties_reach_the_actual_judge_criteria(
+    client, project_root, monkeypatch
+):
+    pid, store, library, runner, payload, _first, _other = configured(
+        client, project_root
+    )
+    grader = library.save_grader(
+        pid,
+        {
+            "name": "Unconfirmed rule",
+            "rubric": "Only use observed facts",
+            "check": {"type": "judge", "expected": "Read actual output"},
+            "uncertainties": ["Overdraft policy is unconfirmed"],
+        },
+    )
+    criteria = []
+
+    def judge(self, system, value):
+        criteria.extend(value["criteria"])
+        return {
+            "checks": [
+                {
+                    "index": 0,
+                    "passed": True,
+                    "score": 1,
+                    "reason": "Observed greeting only",
+                    "evidence": ["hello"],
+                    "limitations": [],
+                }
+            ]
+        }
+
+    from evalith.model_gateway import ModelGateway
+
+    monkeypatch.setattr(ModelGateway, "complete_json", judge)
+    monkeypatch.setattr(
+        runner, "execute_task", lambda *_: {"stdout": "hello", "exit_code": 0}
+    )
+    run = runner.start(
+        pid,
+        {
+            **payload,
+            "version_ids": payload["version_ids"][:1],
+            "grader_ids": [grader["id"]],
+            "max_model_calls": 1,
+        },
+        background=False,
+    )
+    assert run["status"] == "completed"
+    assert criteria[0]["uncertainties"] == ["Overdraft policy is unconfirmed"]
+    assert (
+        store.get(pid, "run", run["id"])["results"][0]["checks"][0]["uncertainties"]
+        == criteria[0]["uncertainties"]
+    )

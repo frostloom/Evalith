@@ -219,6 +219,12 @@ export function TaskDialog({
         <ErrorNotice value={error} />
         {editing ? (
           <>
+            {!!task.default_grader_ids?.length && (
+              <Alert severity="info">
+                修改 Rubric 或检查后，新版本会改用内置规则；历史版本和共享
+                Grader 不变。运行前仍需核对测试集或本次覆盖。
+              </Alert>
+            )}
             <TextField
               label="题目名称"
               value={draft.title}
@@ -492,7 +498,13 @@ export function TaskDialog({
               className="task-detail-section"
               hidden={detailTab !== "rubric"}
             >
-              <h4>评分规则</h4>
+              <h4>题目内置评分规则</h4>
+              {!!shown.default_grader_ids?.length && (
+                <Alert severity="info">
+                  当前默认使用绑定的
+                  Grader，下方为内置备选规则。实际评分方案可在运行前预检查看。
+                </Alert>
+              )}
               <p>{shown.definition.rubric}</p>
               {shown.definition.checks.map((check, index) => (
                 <div className="task-rule" key={index}>

@@ -19,6 +19,7 @@ export type Check = {
   grader_id?: string;
   threshold?: number;
   judge_model?: string;
+  uncertainties?: string[];
 };
 export type TaskDefinition = {
   title: string;

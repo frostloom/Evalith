@@ -104,3 +104,24 @@ it("blocks generation when project readiness is closed", async () => {
   ).toBeDisabled();
   expect(screen.getByText("资料已变化")).toBeInTheDocument();
 });
+it("explains bound graders before editing a generated task's fallback rules", async () => {
+  const user = userEvent.setup();
+  mock.tasks.mockResolvedValue({
+    items: [{ ...task, default_grader_ids: ["g"] }],
+  });
+  mock.versions.mockResolvedValue({
+    items: [{ ...task, default_grader_ids: ["g"] }],
+  });
+  render(
+    <EvaluationWorkspace detail={detail} section="tasks" onSection={vi.fn()} />,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "查看题目 余额查询" }),
+  );
+  await user.click(screen.getByRole("tab", { name: "Rubric 与检查" }));
+  expect(screen.getByText(/当前默认使用绑定的 Grader/)).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "编辑题目" }));
+  expect(
+    screen.getByText(/修改 Rubric 或检查后，新版本会改用内置规则/),
+  ).toBeVisible();
+});

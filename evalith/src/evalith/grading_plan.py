@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 from .evaluation_library import EvaluationLibrary
@@ -15,6 +16,7 @@ def grader_check(grader: dict[str, Any]) -> dict[str, Any]:
         "grader_name": grader["name"],
         "grader_version": grader["version"],
         "threshold": grader["threshold"],
+        "uncertainties": grader.get("uncertainties", []),
     }
     if check["type"] == "judge":
         check["expected"] = (
@@ -68,7 +70,14 @@ def build_grading_plan(
             else:
                 checks.append(grader_check(grader))
         if not ids:
-            checks = task["definition"]["checks"]
+            checks = deepcopy(task["definition"]["checks"])
+            for check in checks:
+                if check["type"] == "judge":
+                    check["expected"] = (
+                        task["definition"]["rubric"]
+                        + "\n判断要求："
+                        + str(check["expected"])
+                    )
         if not checks:
             raise WorkspaceError(
                 "题目“"

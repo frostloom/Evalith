@@ -713,6 +713,9 @@ function TaskEvidenceDrawer({
                 </p>
               )}
               <p>{c.reason}</p>
+              {!!c.uncertainties?.length && (
+                <Alert severity="warning">{c.uncertainties.join("；")}</Alert>
+              )}
               <dl>
                 <dt>期望</dt>
                 <dd>

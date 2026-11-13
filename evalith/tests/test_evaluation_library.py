@@ -45,6 +45,17 @@ def grader(model):
     }
 
 
+@pytest.mark.parametrize("malformed", ["judge", ["judge"], 42, True])
+def test_malformed_check_returns_validation_error_instead_of_crashing(
+    client, project_root, malformed
+):
+    pid, model, _ws, _store, _task = setup(client, project_root)
+    response = client.post(
+        f"/api/projects/{pid}/graders", json={**grader(model), "check": malformed}
+    )
+    assert response.status_code == 422
+
+
 def test_standard_and_set_apis_validate_scope_and_persist_configuration(
     client, project_root
 ):

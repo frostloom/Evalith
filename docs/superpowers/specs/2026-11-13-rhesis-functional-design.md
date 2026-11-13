@@ -10,4 +10,6 @@ At execution resolve graders in this order: explicit run override (including exp
 
 Connect existing generation and standard forms to these operations without visual redesign. Show generation counts and actual links in job results, expose inheritance versus overrides and allow reviewing preflight before starting. A main-session action opens preparation with current conversation context; it never starts target execution automatically. Keep explicit environment confirmation, current call budgets, source protection and historical runs.
 
+Review clarification: editing a task's rubric/checks replaces that revision's default grader binding with its embedded rules; non-scoring edits preserve the binding. Old revisions and shared graders remain intact, and explicit set/run overrides remain higher priority. Preserve project unknowns in prepared assets/drafts independently of the model response, pass grader unknowns to actual judge criteria, and compile checks without mutating the task definition.
+
 Validate the complete chain with a small real aigateway snapshot run using gpt-6-luna and generated graders. Keep limitations explicit: arbitrary repositories, adaptive multi-turn agents, grader tuning/calibration and Harbor execution are separate capabilities and cannot be reported as implemented by this change.

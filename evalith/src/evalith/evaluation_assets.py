@@ -83,6 +83,29 @@ checks type 支持 contains/not_contains(输出文本包含/不包含 expected),
 fixture 仅合成数据，不携带真实凭据或生产标识。需要多轮确认时可给多轮 turns。生成数量不超过请求 count，不要重复题目。'''
 
 
+def retain_project_unknowns(
+    uncertainties: list[str], understanding: dict[str, Any] | None
+) -> list[str]:
+    """A generated asset cannot silently confirm unresolved project requirements."""
+    unknowns = [
+        item.get("text", "") if isinstance(item, dict) else item
+        for item in (understanding or {}).get("unknowns", [])
+    ]
+    unknowns = list(dict.fromkeys(
+        text for text in unknowns if isinstance(text, str) and text.strip()
+    ))
+    result = list(uncertainties)
+    if unknowns:
+        pending = "项目待确认（不作为已确认评分真值）：\n" + "\n".join(unknowns)
+        if not any(pending in entry for entry in result):
+            if len(result) < 30:
+                result.append(pending)
+            else:
+                # Keep every model note and pending rule within the schema's 30 entries.
+                result[-1] += "\n" + pending
+    return result
+
+
 class EvaluationAssets:
     def __init__(self, workspace: WorkspaceService, store: EvaluationStore):
         self.workspace, self.store = workspace, store
@@ -140,13 +163,34 @@ class EvaluationAssets:
             items=[self.store.save_task(project_id,{'definition':definition,'source_snapshot_id':project['snapshot_id'],'source_digest':fresh.digest,'generation_id':generation['id'],'model':gateway.name,'calibration_state':'unverified','preparation_state':'needs_environment','preparation_reasons':['尚未关联并验证运行环境'],'usage':gateway.last_usage}) for definition in definitions]
             return {'items':items,'generation_id':generation['id'],'usage':gateway.last_usage}
 
-    def edit(self, project_id: str, task_id: str, raw: dict[str,Any]) -> dict[str,Any]:
+    def edit(self, project_id: str, task_id: str, raw: dict[str, Any]) -> dict[str, Any]:
         with self.workspace._project_lock(project_id):
-            current=self.store.get(project_id,'task',task_id)
-            detail,project,sources,_=self._context(project_id,require_ready=False)
-            allowed={source['path'] for source in sources if source.get('sent')}
-            definition=self._definition(raw,allowed)
-            return self.store.save_task(project_id,{**{key:current[key] for key in ('generation_id','model','default_grader_ids') if key in current},'definition':definition,'source_snapshot_id':project['snapshot_id'],'source_digest':detail['snapshot']['digest'],'calibration_state':'unverified','preparation_state':'needs_environment','preparation_reasons':['题目或规则已修改，需重新检查环境与验证方式']},task_id=task_id)
+            current = self.store.get(project_id, 'task', task_id)
+            detail, project, sources, _ = self._context(project_id, require_ready=False)
+            allowed = {source['path'] for source in sources if source.get('sent')}
+            definition = self._definition(raw, allowed)
+            retained = {
+                key: current[key]
+                for key in ('generation_id', 'model', 'default_grader_ids')
+                if key in current
+            }
+            rules_changed = any(
+                definition[key] != current['definition'][key]
+                for key in ('rubric', 'checks')
+            )
+            reasons = ['题目或规则已修改，需重新检查环境与验证方式']
+            if rules_changed and current.get('default_grader_ids'):
+                retained['default_grader_ids'] = []
+                reasons.append('已修改内置评分规则，新版本不再默认继承原 Grader；运行前请核对测试集或本次覆盖')
+            return self.store.save_task(project_id, {
+                **retained,
+                'definition': definition,
+                'source_snapshot_id': project['snapshot_id'],
+                'source_digest': detail['snapshot']['digest'],
+                'calibration_state': 'unverified',
+                'preparation_state': 'needs_environment',
+                'preparation_reasons': reasons,
+            }, task_id=task_id)
 
     def add(self, project_id: str, raw: dict[str,Any]) -> dict[str,Any]:
         with self.workspace._project_lock(project_id):

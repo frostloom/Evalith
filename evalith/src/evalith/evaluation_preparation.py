@@ -7,7 +7,12 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from .evaluation_assets import GENERATION_PROMPT, EvaluationAssets, TaskSpec
+from .evaluation_assets import (
+    GENERATION_PROMPT,
+    EvaluationAssets,
+    TaskSpec,
+    retain_project_unknowns,
+)
 from .evaluation_library import EvaluationLibrary, GraderSpec
 from .evaluation_store import EvaluationStore, new_id
 from .service import WorkspaceError, WorkspaceService
@@ -118,6 +123,9 @@ class EvaluationPreparation:
             draft = self._validate_grader(
                 value.get("grader"), allowed, project["model_config_id"]
             )
+            draft["uncertainties"] = retain_project_unknowns(
+                draft["uncertainties"], detail["understanding"]
+            )
             self._fresh(project, detail)
             draft.pop("key")
             return {
@@ -188,6 +196,10 @@ class EvaluationPreparation:
                 self._validate_grader(g, allowed, project["model_config_id"])
                 for g in bundle["graders"]
             ]
+            for grader in graders:
+                grader["uncertainties"] = retain_project_unknowns(
+                    grader["uncertainties"], detail["understanding"]
+                )
             by_key = {g["key"]: g for g in graders}
             names = [g["name"].casefold() for g in graders]
             if (
@@ -200,6 +212,9 @@ class EvaluationPreparation:
             for task in bundle["tasks"]:
                 task["definition"] = self.assets._definition(
                     task["definition"], allowed
+                )
+                task["definition"]["uncertainties"] = retain_project_unknowns(
+                    task["definition"]["uncertainties"], detail["understanding"]
                 )
                 keys = task["grader_keys"]
                 if len(set(keys)) != len(keys) or any(k not in by_key for k in keys):
