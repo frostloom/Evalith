@@ -14,6 +14,7 @@ import { Button, Popover, Tab, Tabs } from "@mui/material";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ProjectWorkflow } from "./ProjectWorkflow";
+import { GenerationDialog } from "./EvaluationDialogs";
 import { EvalithMark, FormDrawer, PageHeader } from "./ui";
 import { api, ApiError } from "./api";
 import type {
@@ -105,6 +106,7 @@ export function Workspace({
   const [composing, setComposing] = useState(false);
   const [working, setWorking] = useState(false);
   const [editingSources, setEditingSources] = useState(false);
+  const [preparingAssets, setPreparingAssets] = useState(false);
   const [modelAnchor, setModelAnchor] = useState<HTMLElement | null>(null);
   const [followingMessages, setFollowingMessages] = useState(true);
   const followingRef = useRef(true);
@@ -394,6 +396,13 @@ export function Workspace({
               <button onClick={() => changeTab("overview")}>
                 项目理解 <ArrowDown size={13} />
               </button>
+              <Button
+                size="small"
+                disabled={!readiness.generation_allowed || disabled}
+                onClick={() => setPreparingAssets(true)}
+              >
+                生成评测资产
+              </Button>
             </div>
             <div
               className="messages"
@@ -543,6 +552,16 @@ export function Workspace({
 
         {activeTab === "conversation" && (
           <ProjectWorkflow detail={detail} onSection={changeTab} />
+        )}
+        {preparingAssets && (
+          <GenerationDialog
+            projectId={project.id}
+            onClose={() => setPreparingAssets(false)}
+            onCreated={async () => {
+              setPreparingAssets(false);
+              changeTab("tasks");
+            }}
+          />
         )}
         <aside
           hidden={activeTab !== "sources"}

@@ -8,6 +8,7 @@ const ev = vi.hoisted(() => ({
   saveGrader: vi.fn(),
   saveSet: vi.fn(),
   archiveGrader: vi.fn(),
+  synthesizeGrader: vi.fn(),
 }));
 vi.mock("./evaluationApi", () => ({ evaluationApi: ev }));
 import { EvaluationLibraryPage } from "./EvaluationLibraryPage";
@@ -29,6 +30,54 @@ beforeEach(() => {
   ev.tasks.mockResolvedValue({ items: [] });
   ev.sets.mockResolvedValue({ items: [] });
   ev.saveGrader.mockResolvedValue({ id: "g" });
+});
+it("fills an editable grader draft from a requirement without saving it automatically", async () => {
+  const user = userEvent.setup();
+  ev.synthesizeGrader.mockResolvedValue({
+    draft: {
+      name: "工具事实",
+      description: "Check actual traces",
+      rubric: "Only pass with observed evidence",
+      steps: ["Locate evidence", "Compare claims", "Score"],
+      check: { type: "judge", expected: "Use facts" },
+      threshold: 0.9,
+      model_config_id: "m",
+      task_kinds: ["conversation"],
+      source_refs: ["README.md"],
+      uncertainties: [],
+    },
+  });
+  render(
+    <EvaluationLibraryPage
+      detail={detail}
+      section="graders"
+      models={models}
+      onOpenSet={vi.fn()}
+    />,
+  );
+  await user.click(await screen.findByRole("button", { name: "新建评价标准" }));
+  await user.click(screen.getByRole("textbox", { name: "评分要求" }));
+  await user.paste("Check tool-backed balance facts");
+  await user.click(screen.getByRole("button", { name: "生成 Grader 草稿" }));
+  await waitFor(() =>
+    expect(screen.getByRole("textbox", { name: "评分 Rubric" })).toHaveValue(
+      "Only pass with observed evidence",
+    ),
+  );
+  expect(ev.saveGrader).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "下一步：确认配置" }));
+  await user.click(screen.getByRole("button", { name: "创建评价标准" }));
+  await waitFor(() =>
+    expect(ev.saveGrader).toHaveBeenCalledWith(
+      "p",
+      expect.objectContaining({
+        rubric: "Only pass with observed evidence",
+        threshold: 0.9,
+        task_kinds: ["conversation"],
+      }),
+      undefined,
+    ),
+  );
 });
 it("lets a collection explicitly remove an archived standard before saving", async () => {
   ev.tasks.mockResolvedValue({

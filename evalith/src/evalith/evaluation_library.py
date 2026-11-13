@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, Response
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from .evaluation_assets import CheckSpec, EvaluationAssets
 from .evaluation_store import EvaluationStore
@@ -23,6 +23,34 @@ class GraderSpec(BaseModel):
     check: CheckSpec
     model_config_id: str | None = None
     threshold: float = Field(default=0.8, ge=0, le=1, strict=True)
+    task_kinds: list[Literal["conversation", "command", "http"]] = Field(
+        default_factory=lambda: ["conversation", "command", "http"],
+        min_length=1,
+        max_length=3,
+    )
+    source_refs: list[str] = Field(default_factory=list, max_length=30)
+    uncertainties: list[str] = Field(default_factory=list, max_length=30)
+
+    @model_validator(mode="before")
+    @classmethod
+    def infer_file_scope(cls, value):
+        if (
+            isinstance(value, dict)
+            and "task_kinds" not in value
+            and str((value.get("check") or {}).get("type", "")).startswith("file_")
+        ):
+            return {**value, "task_kinds": ["command"]}
+        return value
+
+    @model_validator(mode="after")
+    def valid_scope(self):
+        if len(set(self.task_kinds)) != len(self.task_kinds):
+            raise ValueError("标准适用类型不能重复")
+        if self.check.type.startswith("file_") and self.task_kinds != ["command"]:
+            raise ValueError("文件检查仅适用于 command 题目")
+        if any(not s.strip() or len(s) > 1200 for s in self.steps):
+            raise ValueError("检查步骤无效")
+        return self
 
 
 class SetSpec(BaseModel):
@@ -52,6 +80,15 @@ class EvaluationLibrary:
     ):
         with self.workspace._project_lock(pid):
             existing = self.list_graders(pid)
+            old = self.grader(pid, identifier) if identifier else {}
+            payload = {
+                **{
+                    k: old[k]
+                    for k in ("task_kinds", "source_refs", "uncertainties")
+                    if k in old
+                },
+                **payload,
+            }
             try:
                 safe = json.loads(
                     self.workspace._scrub_saved_secrets(
@@ -87,11 +124,15 @@ class EvaluationLibrary:
 
     def list_sets(self, pid: str):
         tasks = EvaluationAssets(self.workspace, self.store).list(pid)
+        persisted = self.store.list(pid, "test_set")
+        prepared = {s.get("generation_id") for s in persisted if s.get("generation_id")}
         groups = {}
         for task in tasks:
             groups.setdefault(task.get("generation_id") or "manual", []).append(task)
         result = {}
         for group, items in groups.items():
+            if group in prepared:
+                continue
             identifier = "set_auto_" + hashlib.sha256(group.encode()).hexdigest()[:16]
             categories = list(dict.fromkeys(t["definition"]["category"] for t in items))
             result[identifier] = {
@@ -109,7 +150,7 @@ class EvaluationLibrary:
                 "origin": "generated" if group != "manual" else "manual",
                 "created_at": items[-1]["created_at"],
             }
-        for record in self.store.list(pid, "test_set"):
+        for record in persisted:
             if record["status"] == "archived":
                 result.pop(record["id"], None)
             else:

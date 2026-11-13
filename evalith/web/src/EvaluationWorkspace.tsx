@@ -262,7 +262,7 @@ export function EvaluationWorkspace({
             <WandSparkles />
             <div>
               <strong>正在生成 {generation.count} 道题目</strong>
-              <p>模型正在核对资料与评分规则，完成后会出现在题目集中。</p>
+              <p>模型正在生成题目、Rubric 与 Grader，完成后自动组成测试集。</p>
               <LinearProgress />
             </div>
           </div>
@@ -270,6 +270,22 @@ export function EvaluationWorkspace({
         {section === "tasks" && !generation && jobs[0]?.status === "failed" && (
           <Alert severity="error">题目生成失败：{jobs[0].error}</Alert>
         )}
+        {section === "tasks" &&
+          !generation &&
+          jobs[0]?.status === "completed" &&
+          jobs[0].operation === "preparation" && (
+            <Alert severity="success">
+              已准备 {jobs[0].result?.task_ids.length ?? 0} 道题目、
+              {jobs[0].result?.grader_ids.length ?? 0} 项 Grader
+              和测试集。评分标准未校准，执行环境仍需确认。
+              <Button size="small" onClick={() => onSection("sets")}>
+                查看测试集
+              </Button>
+              <Button size="small" onClick={() => onSection("graders")}>
+                查看 Grader
+              </Button>
+            </Alert>
+          )}
         {!loaded ? (
           <div className="eval-empty">
             <Clock3 />

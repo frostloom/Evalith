@@ -18,6 +18,7 @@ import type {
   EvalRun,
   EvalTask,
   TaskDefinition,
+  RunPreview,
 } from "./evaluationTypes";
 import type { Grader, TestSet } from "./evaluationTypes";
 import type { ModelConfig, ExecutorConfig } from "./types";
@@ -43,7 +44,7 @@ export function GenerationDialog({
     setBusy(true);
     setError("");
     try {
-      await ev.generate(projectId, count, direction);
+      await ev.prepare(projectId, count, direction);
       await onCreated();
     } catch (e) {
       setError(errorText(e));
@@ -75,7 +76,8 @@ export function GenerationDialog({
     >
       <div className="eval-form">
         <p className="dialog-description">
-          根据当前理解和资料设计可编辑的题目。未确认的业务规则会保留为限制。
+          根据项目资料和主会话，一起生成题目、Rubric、Grader
+          与测试集，并自动关联。生成后仍需确认执行环境，评分标准保持未校准。
         </p>
         <ErrorNotice value={error} />
         <TextField
@@ -575,6 +577,8 @@ export function RunDialog({
 }) {
   const ready = environments.filter((e) => e.status === "ready");
   const [runName, setRunName] = useState(testSet?.name ?? "本地评测");
+  const [gradingMode, setGradingMode] = useState("inherit");
+  const [preview, setPreview] = useState<RunPreview | null>(null);
   const [graders, setGraders] = useState<Grader[]>([]),
     [gradersLoaded, setGradersLoaded] = useState(false),
     [graderIds, setGraderIds] = useState<string[]>(defaultGraderIds),
@@ -649,30 +653,58 @@ export function RunDialog({
   }, [env, projectId]);
   const valid =
     gradersLoaded &&
-    graderIds.every((id) => graders.some((g) => g.id === id)) &&
+    (gradingMode !== "selected" ||
+      graderIds.every((id) => graders.some((g) => g.id === id))) &&
     runName.trim().length > 0 &&
     Number.isInteger(limit) &&
     limit >= 0 &&
     limit <= 64 &&
     (money === "" || (Number.isFinite(Number(money)) && Number(money) >= 0));
+  const versionSignature = tasks.map((t) => t.version_id).join(",");
+  const graderSignature = graderIds.join(",");
+  useEffect(
+    () => setPreview(null),
+    [
+      runName,
+      gradingMode,
+      versionSignature,
+      graderSignature,
+      targetModel,
+      judgeModel,
+      limit,
+      money,
+      env?.id,
+      testSet?.id,
+    ],
+  );
   const perform = async () => {
     setBusy(true);
     setError("");
     try {
       if (env?.status === "ready") {
-        await onCreated(
-          await ev.start(projectId, {
-            environment_id: env.id,
-            version_ids: tasks.map((t) => t.version_id),
-            max_model_calls: limit,
-            budget_usd: money === "" ? null : Number(money),
-            grader_ids: graderIds,
-            name: runName,
-            test_set_id: testSet?.id,
-            target_model_config_id: targetModel || undefined,
-            judge_model_config_id: judgeModel || undefined,
-          }),
-        );
+        const request = {
+          environment_id: env.id,
+          version_ids: tasks.map((t) => t.version_id),
+          max_model_calls: limit,
+          budget_usd: money === "" ? null : Number(money),
+          ...(gradingMode === "selected"
+            ? { grader_ids: graderIds }
+            : gradingMode === "embedded"
+              ? { grader_ids: [] }
+              : {}),
+          name: runName,
+          test_set_id: testSet?.id,
+          target_model_config_id: targetModel || undefined,
+          judge_model_config_id: judgeModel || undefined,
+        };
+        if (!preview) setPreview(await ev.preview(projectId, request));
+        else
+          await onCreated(
+            await ev.start(projectId, {
+              ...request,
+              plan_digest: preview.plan_digest,
+            }),
+          );
       } else if (env?.status === "planned") {
         setEnv(await ev.confirm(projectId, env));
       } else {
@@ -687,6 +719,7 @@ export function RunDialog({
       }
     } catch (e) {
       setError(errorText(e));
+      setPreview(null);
     } finally {
       setBusy(false);
     }
@@ -725,7 +758,9 @@ export function RunDialog({
             {busy
               ? "处理中…"
               : env?.status === "ready"
-                ? "启动评测"
+                ? preview
+                  ? "确认并启动评测"
+                  : "预检评分方案"
                 : env?.status === "planned"
                   ? "确认并准备环境"
                   : env?.status === "preparing"
@@ -779,23 +814,38 @@ export function RunDialog({
         )}
         <section className="run-standard-section">
           <h3>评价标准</h3>
+          <TextField
+            select
+            label="评分规则来源"
+            value={gradingMode}
+            onChange={(e) => setGradingMode(e.target.value)}
+          >
+            <MenuItem value="inherit">
+              自动继承测试集 / 各题目的 Grader
+            </MenuItem>
+            <MenuItem value="selected">使用下方选定标准覆盖</MenuItem>
+            <MenuItem value="embedded">仅使用题目内置检查</MenuItem>
+          </TextField>
           <p className="field-note">
-            {graderIds.length
-              ? "使用选定标准替换题目内置检查。每项标准的模型与阈值会固定在本次运行。"
-              : "当前使用各题目内置的检查规则与 Rubric。"}
+            {gradingMode === "inherit"
+              ? "优先使用测试集指定标准，否则使用各题目生成时绑定的 Grader；没有绑定时使用内置检查。预检将列出每题实际使用的规则。"
+              : gradingMode === "selected" && graderIds.length
+                ? "使用选定标准替换题目内置检查。每项标准的模型与阈值会固定在本次运行。"
+                : "当前使用各题目内置的检查规则与 Rubric。"}
           </p>
           {graders.map((g) => (
             <label className="asset-selection" key={g.id}>
               <Checkbox
                 size="small"
                 checked={graderIds.includes(g.id)}
-                onChange={(e) =>
+                onChange={(e) => {
+                  setGradingMode("selected");
                   setGraderIds(
                     e.target.checked
                       ? [...graderIds, g.id]
                       : graderIds.filter((id) => id !== g.id),
-                  )
-                }
+                  );
+                }}
               />
               <span>
                 <strong>{g.name}</strong>
@@ -826,6 +876,45 @@ export function RunDialog({
               </label>
             ))}
         </section>
+        {preview && (
+          <section className="run-standard-section" aria-label="实际评分方案">
+            <h3>预检通过：逐题评分方案</h3>
+            <p className="field-note">
+              预检不执行题目、不调用模型。确认后才开始运行；配置变化将要求重新预检。
+            </p>
+            {preview.grading_plan.tasks.map((task, index) => (
+              <article key={task.version_id ?? index}>
+                <h4>{task.title}</h4>
+                <small>
+                  来源：
+                  {{
+                    task: "题目绑定",
+                    test_set: "测试集覆盖",
+                    run: "本次覆盖",
+                    embedded: "题目内置检查",
+                  }[task.source] ?? task.source}
+                </small>
+                {task.checks.map((check, i) => (
+                  <p key={i}>
+                    <strong>
+                      {check.grader_name ?? check.description ?? check.type}
+                    </strong>
+                    {check.threshold !== undefined
+                      ? ` · 阈值 ${check.threshold}`
+                      : ""}
+                    {check.grader_version ? ` · v${check.grader_version}` : ""}
+                    {check.judge_model ? ` · ${check.judge_model}` : ""}
+                  </p>
+                ))}
+                {task.not_applicable.map((g) => (
+                  <p key={g.grader_id}>
+                    {g.grader_name}：不适用 · {g.reason}
+                  </p>
+                ))}
+              </article>
+            ))}
+          </section>
+        )}
         <TextField
           label="运行环境"
           select

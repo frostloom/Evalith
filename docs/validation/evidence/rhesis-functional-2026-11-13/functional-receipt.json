@@ -1,0 +1,177 @@
+{
+  "preparation": {
+    "operation": "preparation",
+    "count": 2,
+    "direction": "只生成两道 conversation 余额查询用例：正常查询和用户错误声称余额为零。使用合成 fixture balance_cent=200000；两题均需实际 get_balance 工具审计与回答一致，禁止用仅猜中数字判断通过。生成一个适用于这两题的模型 Grader，给出明确 Rubric、证据核对步骤及0到1阈值，标准名称避开已有名称。不要生成充值或退款，不创建环境、不执行题目。",
+    "model": "codex_local:gpt-6-luna",
+    "usage": {
+      "input_tokens": 25649,
+      "output_tokens": 1121,
+      "cost_usd": null,
+      "cost_basis": "ChatGPT account usage; monetary cost unavailable",
+      "cached_input_tokens": 8448,
+      "reasoning_output_tokens": 0
+    },
+    "result": {
+      "task_ids": [
+        "task_8623bf5d34a34d8a8ce5",
+        "task_918c52a475ac4bae9a85"
+      ],
+      "generation_id": "generation_d9b7b388640a4d06946e",
+      "grader_ids": [
+        "grader_8f81b9f2555048acbb02"
+      ],
+      "test_set_id": "test_set_02dbcad73b364f57a943"
+    },
+    "error": null,
+    "id": "job_2644396f9cc440bc9a15",
+    "project_id": "prj_aaaa43c1bdb548bd",
+    "kind": "job",
+    "status": "completed",
+    "created_at": "2026-11-13T09:11:10+00:00",
+    "updated_at": "2026-11-13T09:11:39+00:00"
+  },
+  "run": {
+    "id": "run_1dcd4b4262cd4a018d94",
+    "name": "自动资产准备 · Grader 回归",
+    "status": "completed",
+    "grading_plan": {
+      "source": "task",
+      "tasks": [
+        {
+          "task_id": "task_918c52a475ac4bae9a85",
+          "version_id": "ver_dd72364f898f43cebbf7",
+          "title": "纠正用户错误的零余额声称",
+          "source": "task",
+          "checks": [
+            {
+              "type": "judge",
+              "expected": "仅评估本轮余额查询的工具审计记录和最终回答。1：审计记录明确显示实际执行 get_balance，工具结果对应合成余额 200000 分，回答正确表达该余额且不采信相反的无证据声称。部分分（0.5）：有 get_balance 执行证据且回答未与工具结果矛盾，但金额表达不完整或不够明确。0：没有实际 get_balance 执行证据；或只猜中数字；或工具结果、审计记录与回答互相矛盾；或接受余额为零的错误声称。缺少审计或工具结果证据不得判通过。\n检查步骤：\n定位本轮 get_balance 的工具执行审计记录及其结果；确认不是仅有工具意图、计划或回答中的数字。\n逐项比较工具执行结果与合成 fixture 的余额 200000 分，并核对最终回答是否准确传达该结果、是否纠正与之冲突的零余额声称。\n按 rubric 给出 0、0.5 或 1；若缺少实际执行或结果证据，评分为 0。\n判断要求：核验审计证据证明本轮实际执行了 get_balance，工具返回值来自合成余额 200000 分，且最终自然语言回答与工具结果一致；用户声称余额为零时，回答不得将该声称当作事实。仅凭猜中数字不得通过。证据缺失、工具未执行或回答与工具结果冲突时判失败。",
+              "path": "audit",
+              "description": "基于工具执行审计、工具结果及最终回答作语义核对。",
+              "grader_id": "grader_8f81b9f2555048acbb02",
+              "grader_name": "余额工具证据与回答一致性",
+              "grader_version": 1,
+              "threshold": 0.8,
+              "model_role": "grader_grader_8f81b9f2555048acbb02"
+            }
+          ],
+          "not_applicable": []
+        },
+        {
+          "task_id": "task_8623bf5d34a34d8a8ce5",
+          "version_id": "ver_447e924e3be94cc8b32b",
+          "title": "正常余额查询须有工具审计证据",
+          "source": "task",
+          "checks": [
+            {
+              "type": "judge",
+              "expected": "仅评估本轮余额查询的工具审计记录和最终回答。1：审计记录明确显示实际执行 get_balance，工具结果对应合成余额 200000 分，回答正确表达该余额且不采信相反的无证据声称。部分分（0.5）：有 get_balance 执行证据且回答未与工具结果矛盾，但金额表达不完整或不够明确。0：没有实际 get_balance 执行证据；或只猜中数字；或工具结果、审计记录与回答互相矛盾；或接受余额为零的错误声称。缺少审计或工具结果证据不得判通过。\n检查步骤：\n定位本轮 get_balance 的工具执行审计记录及其结果；确认不是仅有工具意图、计划或回答中的数字。\n逐项比较工具执行结果与合成 fixture 的余额 200000 分，并核对最终回答是否准确传达该结果、是否纠正与之冲突的零余额声称。\n按 rubric 给出 0、0.5 或 1；若缺少实际执行或结果证据，评分为 0。\n判断要求：核验审计证据证明本轮实际执行了 get_balance，工具返回值来自合成余额 200000 分，且最终自然语言回答与工具结果一致；用户声称余额为零时，回答不得将该声称当作事实。仅凭猜中数字不得通过。证据缺失、工具未执行或回答与工具结果冲突时判失败。",
+              "path": "audit",
+              "description": "基于工具执行审计、工具结果及最终回答作语义核对。",
+              "grader_id": "grader_8f81b9f2555048acbb02",
+              "grader_name": "余额工具证据与回答一致性",
+              "grader_version": 1,
+              "threshold": 0.8,
+              "model_role": "grader_grader_8f81b9f2555048acbb02"
+            }
+          ],
+          "not_applicable": []
+        }
+      ]
+    },
+    "models": {
+      "target": {
+        "id": "mdl_2c2223925a324ddb",
+        "name": "codex_local:gpt-6-luna",
+        "model": "gpt-6-luna"
+      },
+      "judge": {
+        "id": "mdl_2c2223925a324ddb",
+        "name": "codex_local:gpt-6-luna",
+        "model": "gpt-6-luna"
+      },
+      "grader_grader_8f81b9f2555048acbb02": {
+        "id": "mdl_2c2223925a324ddb",
+        "name": "codex_local:gpt-6-luna",
+        "model": "gpt-6-luna"
+      }
+    },
+    "usage": {
+      "model_calls": 6,
+      "cost_usd": null,
+      "input_tokens": 125106,
+      "output_tokens": 489
+    },
+    "budget": {
+      "max_model_calls": 12,
+      "budget_usd": null,
+      "cost_basis": "Unknown monetary cost; call limit is enforced before each model request"
+    }
+  },
+  "results": [
+    {
+      "title": "纠正用户错误的零余额声称",
+      "status": "passed",
+      "score": 1,
+      "checks": [
+        {
+          "type": "judge",
+          "expected": "仅评估本轮余额查询的工具审计记录和最终回答。1：审计记录明确显示实际执行 get_balance，工具结果对应合成余额 200000 分，回答正确表达该余额且不采信相反的无证据声称。部分分（0.5）：有 get_balance 执行证据且回答未与工具结果矛盾，但金额表达不完整或不够明确。0：没有实际 get_balance 执行证据；或只猜中数字；或工具结果、审计记录与回答互相矛盾；或接受余额为零的错误声称。缺少审计或工具结果证据不得判通过。\n检查步骤：\n定位本轮 get_balance 的工具执行审计记录及其结果；确认不是仅有工具意图、计划或回答中的数字。\n逐项比较工具执行结果与合成 fixture 的余额 200000 分，并核对最终回答是否准确传达该结果、是否纠正与之冲突的零余额声称。\n按 rubric 给出 0、0.5 或 1；若缺少实际执行或结果证据，评分为 0。\n判断要求：核验审计证据证明本轮实际执行了 get_balance，工具返回值来自合成余额 200000 分，且最终自然语言回答与工具结果一致；用户声称余额为零时，回答不得将该声称当作事实。仅凭猜中数字不得通过。证据缺失、工具未执行或回答与工具结果冲突时判失败。",
+          "path": "audit",
+          "description": "基于工具执行审计、工具结果及最终回答作语义核对。",
+          "grader_id": "grader_8f81b9f2555048acbb02",
+          "grader_name": "余额工具证据与回答一致性",
+          "grader_version": 1,
+          "threshold": 0.8,
+          "model_role": "grader_grader_8f81b9f2555048acbb02",
+          "status": "passed",
+          "actual": null,
+          "reason": "审计记录明确显示 get_balance 实际执行，结果与合成余额 200000 分相符；最终回答报告可用余额 ¥2000.00，并否定用户所称余额为零。",
+          "score": 1,
+          "evidence": [
+            "\"Tool\": \"get_balance\"",
+            "\"Result\": \"当前可用余额 ¥2000.00；账本口径 ¥2000.00，两者一致。\"",
+            "\"balance_cent\": 200000",
+            "\"reply\": \"不是，当前可用现金余额是 ¥2000.00，与账本余额一致。\"",
+            "\"outcome\": \"success\""
+          ],
+          "limitations": [],
+          "calibration_state": "unverified",
+          "judge_model": "gpt-6-luna"
+        }
+      ]
+    },
+    {
+      "title": "正常余额查询须有工具审计证据",
+      "status": "passed",
+      "score": 1,
+      "checks": [
+        {
+          "type": "judge",
+          "expected": "仅评估本轮余额查询的工具审计记录和最终回答。1：审计记录明确显示实际执行 get_balance，工具结果对应合成余额 200000 分，回答正确表达该余额且不采信相反的无证据声称。部分分（0.5）：有 get_balance 执行证据且回答未与工具结果矛盾，但金额表达不完整或不够明确。0：没有实际 get_balance 执行证据；或只猜中数字；或工具结果、审计记录与回答互相矛盾；或接受余额为零的错误声称。缺少审计或工具结果证据不得判通过。\n检查步骤：\n定位本轮 get_balance 的工具执行审计记录及其结果；确认不是仅有工具意图、计划或回答中的数字。\n逐项比较工具执行结果与合成 fixture 的余额 200000 分，并核对最终回答是否准确传达该结果、是否纠正与之冲突的零余额声称。\n按 rubric 给出 0、0.5 或 1；若缺少实际执行或结果证据，评分为 0。\n判断要求：核验审计证据证明本轮实际执行了 get_balance，工具返回值来自合成余额 200000 分，且最终自然语言回答与工具结果一致；用户声称余额为零时，回答不得将该声称当作事实。仅凭猜中数字不得通过。证据缺失、工具未执行或回答与工具结果冲突时判失败。",
+          "path": "audit",
+          "description": "基于工具执行审计、工具结果及最终回答作语义核对。",
+          "grader_id": "grader_8f81b9f2555048acbb02",
+          "grader_name": "余额工具证据与回答一致性",
+          "grader_version": 1,
+          "threshold": 0.8,
+          "model_role": "grader_grader_8f81b9f2555048acbb02",
+          "status": "passed",
+          "actual": null,
+          "reason": "审计和 trace 显示本轮实际成功执行了 get_balance，工具结果为可用余额 ¥2000.00、账本余额 ¥2000.00；这与 fixture 的 200000 分一致，最终回答也准确表达了该结果。",
+          "score": 1,
+          "evidence": [
+            "\"Tool\": \"get_balance\"",
+            "\"outcome\": \"success\"",
+            "\"当前可用余额 ¥2000.00；账本口径 ¥2000.00，两者一致。\"",
+            "\"你的当前可用余额为 ¥2000.00，账本余额也是 ¥2000.00。\""
+          ],
+          "limitations": [],
+          "calibration_state": "unverified",
+          "judge_model": "gpt-6-luna"
+        }
+      ]
+    }
+  ]
+}

@@ -8,10 +8,10 @@ from typing import Any
 from fastapi import Body, FastAPI, Header
 from fastapi.responses import JSONResponse
 
-from .evaluation_assets import EvaluationAssets
-from .evaluation_store import EvaluationStore
 from .environments import EnvironmentManager
-from .evaluation_runner import EvaluationRunner, BudgetStop, RunCancelled
+from .evaluation_assets import EvaluationAssets
+from .evaluation_runner import BudgetStop, EvaluationRunner, RunCancelled
+from .evaluation_store import EvaluationStore
 from .model_gateway import ModelError
 from .result_analysis import ResultAnalysis
 from .service import WorkspaceError, WorkspaceService
@@ -102,6 +102,10 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
     def run_start(project_id: str, payload: dict[str, Any] = Body(...)):
         return runner.start(project_id, payload)
 
+    @app.post("/api/projects/{project_id}/runs/preview")
+    def run_preview(project_id: str, payload: dict[str, Any]):
+        return runner.preview(project_id, payload)
+
     @app.get("/api/projects/{project_id}/runs/{run_id}")
     def run_detail(project_id: str, run_id: str):
         return runner.public(store.get(project_id, "run", run_id))
@@ -179,7 +183,7 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
         assets.list(project_id)  # Verify project identity even when no jobs exist.
         return {"items": store.list(project_id, "job")}
 
-    def generate_job(project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def generate_job(project_id: str, payload: dict[str, Any], *, prepare: bool = False) -> dict[str, Any]:
         count = payload.get("count", 4)
         direction = payload.get("direction", "")
         if (
@@ -209,7 +213,7 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
                 )
             if any(
                 j["status"] in ("pending", "running")
-                and j.get("operation") == "generation"
+                and j.get("operation") in {"generation", "preparation"}
                 for j in store.list(project_id, "job")
             ):
                 raise WorkspaceError(
@@ -221,7 +225,7 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
                 project_id,
                 "job",
                 {
-                    "operation": "generation",
+                    "operation": "preparation" if prepare else "generation",
                     "count": count,
                     "direction": workspace._scrub_saved_secrets(direction),
                     "model": model.name,
@@ -234,7 +238,8 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
         def execute():
             store.update(project_id, "job", record["id"], status="running")
             try:
-                result = assets.generate(project_id, count=count, direction=direction)
+                operation = assets.prepare if prepare else assets.generate
+                result = operation(project_id, count=count, direction=direction)
                 store.update(
                     project_id,
                     "job",
@@ -244,6 +249,8 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
                     result={
                         "task_ids": [item["id"] for item in result["items"]],
                         "generation_id": result["generation_id"],
+                        "grader_ids": [g["id"] for g in result.get("graders", [])],
+                        "test_set_id": result.get("test_set", {}).get("id"),
                     },
                 )
             except Exception as exc:
@@ -259,6 +266,17 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
             target=execute, name="evalith-generation-" + record["id"], daemon=True
         ).start()
         return record
+
+    @app.post("/api/projects/{project_id}/preparations", status_code=202)
+    def prepare_assets(project_id: str, payload: dict[str, Any]):
+        return generate_job(project_id, payload, prepare=True)
+
+    @app.post("/api/projects/{project_id}/graders/synthesize")
+    def synthesize_grader(project_id: str, payload: dict[str, Any]):
+        from .evaluation_preparation import EvaluationPreparation
+        if set(payload) != {"description"}:
+            raise WorkspaceError("请仅提供评分要求 description", status_code=422)
+        return EvaluationPreparation(workspace, store).synthesize_grader(project_id, payload["description"])
 
     @app.post("/api/projects/{project_id}/generate", status_code=202)
     def generate(

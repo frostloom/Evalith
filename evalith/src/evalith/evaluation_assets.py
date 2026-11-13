@@ -92,6 +92,10 @@ class EvaluationAssets:
             raise WorkspaceError('项目不存在',status_code=404)
         return self.store.list(project_id,'task')
 
+    def prepare(self, project_id: str, *, count: int = 4, direction: str = '') -> dict[str, Any]:
+        from .evaluation_preparation import EvaluationPreparation
+        return EvaluationPreparation(self.workspace, self.store).prepare(project_id, count=count, direction=direction)
+
     def _context(self, project_id: str, *, require_ready: bool) -> tuple[dict[str,Any],Any,list[dict[str,Any]],str]:
         detail=self.workspace.get_project_detail(project_id)
         if require_ready and not detail['readiness']['generation_allowed']:
@@ -142,7 +146,7 @@ class EvaluationAssets:
             detail,project,sources,_=self._context(project_id,require_ready=False)
             allowed={source['path'] for source in sources if source.get('sent')}
             definition=self._definition(raw,allowed)
-            return self.store.save_task(project_id,{**{key:current[key] for key in ('generation_id','model') if key in current},'definition':definition,'source_snapshot_id':project['snapshot_id'],'source_digest':detail['snapshot']['digest'],'calibration_state':'unverified','preparation_state':'needs_environment','preparation_reasons':['题目或规则已修改，需重新检查环境与验证方式']},task_id=task_id)
+            return self.store.save_task(project_id,{**{key:current[key] for key in ('generation_id','model','default_grader_ids') if key in current},'definition':definition,'source_snapshot_id':project['snapshot_id'],'source_digest':detail['snapshot']['digest'],'calibration_state':'unverified','preparation_state':'needs_environment','preparation_reasons':['题目或规则已修改，需重新检查环境与验证方式']},task_id=task_id)
 
     def add(self, project_id: str, raw: dict[str,Any]) -> dict[str,Any]:
         with self.workspace._project_lock(project_id):

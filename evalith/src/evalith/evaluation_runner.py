@@ -47,9 +47,7 @@ class EvaluationRunner:
     def public(record: dict[str, Any]) -> dict[str, Any]:
         return {key: value for key, value in record.items() if not key.startswith("_")}
 
-    def start(
-        self, project_id: str, payload: dict[str, Any], *, background: bool = True
-    ) -> dict[str, Any]:
+    def _plan(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         if set(payload) - {
             "environment_id",
             "version_ids",
@@ -60,6 +58,7 @@ class EvaluationRunner:
             "grader_ids",
             "name",
             "test_set_id",
+            "plan_digest",
         }:
             raise WorkspaceError("运行请求包含未知字段", status_code=422)
         limit = payload.get("max_model_calls", 8)
@@ -135,10 +134,16 @@ class EvaluationRunner:
         name = payload.get("name", collection["name"] if collection else "本地评测")
         if not isinstance(name, str) or not name.strip() or len(name) > 120:
             raise WorkspaceError("运行名称应为 1–120 字", status_code=422)
-        graders = [
-            EvaluationLibrary(self.workspace, self.store).grader(project_id, g)
-            for g in grader_ids
-        ]
+        from .grading_plan import build_grading_plan
+
+        graders, grading_plan = build_grading_plan(
+            self.workspace,
+            self.store,
+            project_id,
+            tasks,
+            collection,
+            grader_ids if "grader_ids" in payload else None,
+        )
         models = {}
         fingerprints = {}
         for role in ("target", "judge"):
@@ -154,7 +159,12 @@ class EvaluationRunner:
             }
             fingerprints[role] = self.model_fingerprint(gateway)
         for grader in graders:
-            if grader["check"]["type"] != "judge":
+            applied = any(
+                c.get("grader_id") == grader["id"]
+                for t in grading_plan["tasks"]
+                for c in t["checks"]
+            )
+            if grader["check"]["type"] != "judge" or not applied:
                 continue
             role = "grader_" + grader["id"]
             model_id = grader["model_config_id"] or models["judge"]["id"]
@@ -165,41 +175,70 @@ class EvaluationRunner:
                 "model": gateway.config.model_name if gateway.config else None,
             }
             fingerprints[role] = self.model_fingerprint(gateway)
-        record = self.store.create(
-            project_id,
-            "run",
-            {
-                "tasks": tasks,
-                "name": name.strip(),
-                "test_set_id": collection["id"] if collection else None,
-                "test_set_snapshot": collection,
-                "graders": graders,
-                "grading_source": "standards" if graders else "task",
-                "environment_id": env["id"],
-                "environment_snapshot": self.environments.public(env),
-                "models": models,
-                "_model_fingerprints": fingerprints,
-                "budget": {
-                    "max_model_calls": limit,
-                    "budget_usd": money,
-                    "cost_basis": "Unknown monetary cost; call limit is enforced before each model request",
-                },
-                "calls": [],
-                "usage": {
-                    "model_calls": 0,
-                    "input_tokens": 0,
-                    "output_tokens": 0,
-                    "cost_usd": None,
-                },
-                "results": [],
-                "error": None,
-                "cleanup_status": "not_started",
-                "_bridge_token": self.workspace.cipher.encrypt(
-                    secrets.token_urlsafe(32)
-                ),
+        for planned_task in grading_plan["tasks"]:
+            for check in planned_task["checks"]:
+                if check["type"] == "judge":
+                    check["judge_model"] = models[check.get("model_role", "judge")][
+                        "model"
+                    ]
+        plan = {
+            "tasks": tasks,
+            "name": name.strip(),
+            "test_set_id": collection["id"] if collection else None,
+            "test_set_snapshot": collection,
+            "graders": graders,
+            "grading_source": grading_plan["source"],
+            "grading_plan": grading_plan,
+            "environment_id": env["id"],
+            "environment_snapshot": self.environments.public(env),
+            "models": models,
+            "_model_fingerprints": fingerprints,
+            "budget": {
+                "max_model_calls": limit,
+                "budget_usd": money,
+                "cost_basis": "Unknown monetary cost; call limit is enforced before each model request",
             },
-            status="running",
-        )
+        }
+        digest = hashlib.sha256(
+            json.dumps(plan, sort_keys=True, ensure_ascii=False).encode()
+        ).hexdigest()
+        if "plan_digest" in payload and payload["plan_digest"] != digest:
+            raise WorkspaceError(
+                "评分配置或环境已变化，请重新预检后确认",
+                status_code=409,
+                code="grading_plan_changed",
+            )
+        return {**plan, "plan_digest": digest}
+
+    def preview(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.public(self._plan(project_id, payload))
+
+    def start(
+        self, project_id: str, payload: dict[str, Any], *, background: bool = True
+    ) -> dict[str, Any]:
+        with self.workspace._project_lock(project_id):
+            plan = self._plan(project_id, payload)
+            record = self.store.create(
+                project_id,
+                "run",
+                {
+                    **plan,
+                    "calls": [],
+                    "usage": {
+                        "model_calls": 0,
+                        "input_tokens": 0,
+                        "output_tokens": 0,
+                        "cost_usd": None,
+                    },
+                    "results": [],
+                    "error": None,
+                    "cleanup_status": "not_started",
+                    "_bridge_token": self.workspace.cipher.encrypt(
+                        secrets.token_urlsafe(32)
+                    ),
+                },
+                status="running",
+            )
         if background:
             threading.Thread(
                 target=self._run,
@@ -501,6 +540,12 @@ class EvaluationRunner:
 
     @staticmethod
     def checks_for(run: dict[str, Any], task: dict[str, Any]) -> list[dict[str, Any]]:
+        if run.get("grading_plan"):
+            return next(
+                p["checks"]
+                for p in run["grading_plan"]["tasks"]
+                if p["version_id"] == task["version_id"]
+            )
         if not run.get("graders"):
             return task["definition"]["checks"]
         checks = []

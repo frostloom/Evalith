@@ -1,5 +1,6 @@
 import { request } from "./api";
 import type {
+  RunPreview,
   Analysis,
   Environment,
   EvalRun,
@@ -16,7 +17,8 @@ const send = (body: unknown) => ({
   body: JSON.stringify(body),
 });
 export const evaluationApi = {
-  getSet:(id:string,sid:string)=>request<TestSet>(`${base(id)}/test-sets/${encodeURIComponent(sid)}`),
+  getSet: (id: string, sid: string) =>
+    request<TestSet>(`${base(id)}/test-sets/${encodeURIComponent(sid)}`),
   graders: (id: string) => request<{ items: Grader[] }>(`${base(id)}/graders`),
   saveGrader: (id: string, body: GraderDefinition, gid?: string) =>
     request<Grader>(`${base(id)}/graders${gid ? "/" + gid : ""}`, {
@@ -39,6 +41,18 @@ export const evaluationApi = {
   jobs: (id: string) => request<{ items: GenerationJob[] }>(`${base(id)}/jobs`),
   generate: (id: string, count: number, direction: string) =>
     request<GenerationJob>(`${base(id)}/generate`, send({ count, direction })),
+  prepare: (id: string, count: number, direction: string) =>
+    request<GenerationJob>(
+      `${base(id)}/preparations`,
+      send({ count, direction }),
+    ),
+  synthesizeGrader: (id: string, description: string) =>
+    request<{ draft: GraderDefinition; usage: unknown }>(
+      `${base(id)}/graders/synthesize`,
+      send({ description }),
+    ),
+  preview: (id: string, body: unknown) =>
+    request<RunPreview>(`${base(id)}/runs/preview`, send(body)),
   edit: (id: string, task: string, body: TaskDefinition) =>
     request<EvalTask>(`${base(id)}/tasks/${task}`, {
       ...send(body),

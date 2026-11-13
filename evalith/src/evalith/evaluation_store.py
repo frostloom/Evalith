@@ -50,6 +50,34 @@ class EvaluationStore:
             raise WorkspaceError('评测记录不存在', status_code=404, code='evaluation_not_found')
         return self._record(row)
 
+    def create_bundle(self, project_id: str, records: list[dict[str, Any]]) -> None:
+        """Commit a validated preparation and its initial task revisions together."""
+        now = utc_now()
+        with self.db.connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            for record in records:
+                encoded = json.dumps(
+                    record["data"], ensure_ascii=False, allow_nan=False
+                )
+                connection.execute(
+                    "INSERT INTO evaluation_records VALUES (?,?,?,?,?,?,?)",
+                    (
+                        record["id"],
+                        project_id,
+                        record["kind"],
+                        record["status"],
+                        encoded,
+                        now,
+                        now,
+                    ),
+                )
+                if record["kind"] == "task":
+                    data = record["data"]
+                    connection.execute(
+                        "INSERT INTO evaluation_task_versions VALUES (?,?,?,?,?,?)",
+                        (data["version_id"], record["id"], project_id, 1, encoded, now),
+                    )
+
     def list(self, project_id: str, kind: str) -> list[dict[str, Any]]:
         with self.db.connection() as connection:
             rows = connection.execute('SELECT * FROM evaluation_records WHERE project_id=? AND kind=? ORDER BY rowid DESC LIMIT 200', (project_id, kind)).fetchall()

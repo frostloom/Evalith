@@ -229,7 +229,7 @@ export function EvaluationLibraryPage({
                   <span>
                     {s.grader_ids.length
                       ? `${s.grader_ids.length} 项标准`
-                      : "题目内置规则"}
+                      : "继承题目规则"}
                   </span>
                   <span>
                     {new Date(s.created_at).toLocaleDateString("zh-CN", {
@@ -308,6 +308,9 @@ function StandardForm({
           check: value.check,
           model_config_id: value.model_config_id,
           threshold: value.threshold,
+          task_kinds: value.task_kinds,
+          source_refs: value.source_refs,
+          uncertainties: value.uncertainties,
         }
       : {
           name: "",
@@ -323,6 +326,19 @@ function StandardForm({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [source, setSource] = useState("");
+  const [requirement, setRequirement] = useState("");
+  const synthesize = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const result = await api.synthesizeGrader(projectId, requirement);
+      setDraft(result.draft);
+    } catch (e) {
+      setError(failure(e));
+    } finally {
+      setBusy(false);
+    }
+  };
   const change = (patch: Partial<GraderDefinition>) =>
     setDraft({ ...draft, ...patch });
   const valid =
@@ -408,6 +424,24 @@ function StandardForm({
       {error && <Alert severity="error">{error}</Alert>}
       {step === 0 ? (
         <div className="standard-form">
+          <section>
+            <h3>让模型编写 Grader</h3>
+            <TextField
+              label="评分要求"
+              multiline
+              minRows={2}
+              value={requirement}
+              onChange={(e) => setRequirement(e.target.value)}
+              inputProps={{ maxLength: 4000 }}
+              helperText="结合当前项目来源生成 Rubric、检查步骤、适用范围与阈值；生成后可修改并确认保存。"
+            />
+            <Button
+              disabled={busy || !requirement.trim()}
+              onClick={() => void synthesize()}
+            >
+              {busy ? "正在编写…" : "生成 Grader 草稿"}
+            </Button>
+          </section>
           <section>
             <h3>基本信息</h3>
             {!value && tasks.length > 0 && (
@@ -542,6 +576,31 @@ function StandardForm({
               </>
             )}
           </section>
+          <TextField
+            select
+            label="适用任务类型"
+            value={draft.task_kinds?.join(",") ?? "conversation,command,http"}
+            onChange={(e) => change({ task_kinds: e.target.value.split(",") })}
+          >
+            <MenuItem value="conversation,command,http">全部类型</MenuItem>
+            <MenuItem value="conversation">对话</MenuItem>
+            <MenuItem value="command">命令 / 文件</MenuItem>
+            <MenuItem value="http">HTTP API</MenuItem>
+            {draft.task_kinds &&
+              ![
+                "conversation,command,http",
+                "conversation",
+                "command",
+                "http",
+              ].includes(draft.task_kinds.join(",")) && (
+                <MenuItem value={draft.task_kinds.join(",")}>
+                  {draft.task_kinds.join(" / ")}
+                </MenuItem>
+              )}
+          </TextField>
+          {!!draft.uncertainties?.length && (
+            <Alert severity="warning">{draft.uncertainties.join("；")}</Alert>
+          )}
         </div>
       ) : (
         <div className="standard-review">
@@ -686,7 +745,8 @@ function SetForm({
             评价标准 <small>{gids.length} 项</small>
           </h3>
           <p className="field-note">
-            未选择时使用题目内置规则。运行前仍可调整。
+            未选择时继承各题目绑定的
+            Grader；未绑定时使用内置检查。运行前仍可覆盖。
           </p>
           {graders.map((g) => (
             <label className="asset-selection" key={g.id}>

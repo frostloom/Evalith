@@ -41,6 +41,7 @@ export type EvalTask = {
   source_digest: string;
   model: string;
   created_at: string;
+  default_grader_ids?: string[];
 };
 export type Environment = {
   id: string;
@@ -83,6 +84,7 @@ export type EvalRun = {
   created_at: string;
   graders?: Grader[];
   grading_source?: string;
+  grading_plan?: GradingPlan;
   environment_id: string;
   environment_snapshot: Environment;
   models: {
@@ -117,6 +119,12 @@ export type GenerationJob = {
   count: number;
   error: string | null;
   usage: Usage | null;
+  operation?: string;
+  result?: {
+    task_ids: string[];
+    grader_ids: string[];
+    test_set_id?: string | null;
+  };
 };
 
 export type GraderDefinition = {
@@ -127,6 +135,9 @@ export type GraderDefinition = {
   check: Check;
   model_config_id: string | null;
   threshold: number;
+  task_kinds?: string[];
+  source_refs?: string[];
+  uncertainties?: string[];
 };
 export type Grader = GraderDefinition & {
   id: string;
@@ -144,4 +155,25 @@ export type TestSet = {
   created_at: string;
   status: string;
   origin?: string;
+};
+
+export type GradingPlan = {
+  source: string;
+  tasks: {
+    task_id: string;
+    version_id: string;
+    title: string;
+    source: string;
+    checks: Check[];
+    not_applicable: {
+      grader_id: string;
+      grader_name: string;
+      reason: string;
+    }[];
+  }[];
+};
+export type RunPreview = {
+  plan_digest: string;
+  grading_plan: GradingPlan;
+  models: EvalRun["models"];
 };
