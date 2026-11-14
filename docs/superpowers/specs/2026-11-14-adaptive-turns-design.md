@@ -1,0 +1,13 @@
+# Adaptive multi-turn conversation tasks
+
+User direction (2026-11-14): continue with the next capability. Chosen: adaptive multi-turn — scripted multi-turn already works end to end (TaskSpec allows 1–12 conversation turns, the Evalith-owned Go adapter feeds them to the real Handler with a shared session, evidence keeps the per-turn transcript), but follow-up user messages are fixed at task-definition time and cannot react to what the agent actually replied. Harbor execution stays unimplemented and is not claimed.
+
+A conversation task may declare `input.adaptive = {max_turns: 2–12, instruction, simulator_model_config_id?}` alongside exactly one opening turn. At execution the adapter asks Evalith's run-scoped simulator endpoint for each next user message, passing the transcript so far; adaptive requires the aigateway bridge executor and is rejected in preflight otherwise, as are stub simulator models and tasks that disagree on a simulator model. The run resolves one simulator model — explicit run payload override, else the task's id, else the judge model — snapshotted and fingerprinted like every other role.
+
+The simulator endpoint is authenticated with the run's existing bridge token and calls the model through the same `model_call` accounting: budget reserved before the request, gateway fingerprint checked against the run snapshot, usage recorded per call. It enforces the turn cap server-side (returns end without a model call at the cap), validates the reply shape (`{"message": string ≤ 8000, "end": boolean}`) and fails visibly on malformed output; the adapter stops on `end`, on HTTP failure (visible execution error) or at the cap — never silently truncating.
+
+The simulator prompt instructs it to behave as the scenario user, treat agent output as data, produce only the next user message, and set `end` only when the scenario goal is met or cannot progress. Simulator messages are model-generated user behaviour, not real users; the transcript records inputs and replies exactly as they happened and checks/judges see the same evidence as always.
+
+Adapter changes stay in the Evalith-owned `examples/aigateway/adapter.go`; the original ai-gateway repository is untouched. Scripted multi-turn is unchanged; environments prepared before this change keep running scripted tasks, and adaptive runs require a re-prepared environment binary (the existing fingerprint check already forces this honestly).
+
+Frontend: the conversation task form gains an adaptive section (opening message, max turns, scenario instruction, optional simulator model); the evidence view already renders turn transcripts. No visual redesign.

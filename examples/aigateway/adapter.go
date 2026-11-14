@@ -31,9 +31,43 @@ func main() {
 	}
 }
 
+// nextTurn asks the Evalith simulator endpoint for the follow-up user
+// message given the transcript so far. Errors surface as execution failures;
+// the server-side cap can also end the conversation without a model call.
+func nextTurn(url, token, taskID string, turns []map[string]any) (string, bool, error) {
+	body, _ := json.Marshal(map[string]any{"task_id": taskID, "turns_executed": len(turns), "transcript": turns})
+	request, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	if err != nil {
+		return "", false, err
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+token)
+	response, err := (&http.Client{Timeout: 60 * time.Second, Transport: &http.Transport{Proxy: nil, MaxConnsPerHost: 1}}).Do(request)
+	if err != nil {
+		return "", false, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		raw, _ := io.ReadAll(io.LimitReader(response.Body, 4000))
+		return "", false, fmt.Errorf("simulator endpoint status %d: %s", response.StatusCode, string(raw))
+	}
+	var result struct {
+		Message string `json:"message"`
+		End     bool   `json:"end"`
+	}
+	if err := json.NewDecoder(io.LimitReader(response.Body, 100000)).Decode(&result); err != nil {
+		return "", false, err
+	}
+	return result.Message, result.End, nil
+}
+
 func run() error {
 	var input struct {
-		Turns   []string `json:"turns"`
+		Turns    []string `json:"turns"`
+		Adaptive *struct {
+			MaxTurns    int    `json:"max_turns"`
+			Instruction string `json:"instruction"`
+		} `json:"adaptive"`
 		Fixture struct {
 			BalanceCent *int64 `json:"balance_cent"`
 		} `json:"fixture"`
@@ -43,6 +77,15 @@ func run() error {
 	}
 	if len(input.Turns) == 0 || len(input.Turns) > 12 {
 		return fmt.Errorf("1–12 turns required")
+	}
+	simulatorURL := os.Getenv("EVALITH_SIMULATOR_URL")
+	if input.Adaptive != nil {
+		if simulatorURL == "" || os.Getenv("EVALITH_MODEL_TOKEN") == "" {
+			return fmt.Errorf("adaptive turns require the Evalith simulator endpoint")
+		}
+		if input.Adaptive.MaxTurns < 2 || input.Adaptive.MaxTurns > 12 || len(input.Turns) != 1 {
+			return fmt.Errorf("adaptive requires one opening turn and max_turns in 2–12")
+		}
 	}
 	work := os.Getenv("EVALITH_CASE_DIR")
 	if work == "" || os.Getenv("EVALITH_MODEL_URL") == "" || os.Getenv("EVALITH_MODEL_TOKEN") == "" {
@@ -111,7 +154,8 @@ func run() error {
 	handler.SetAdminAccess("evalith-owned-fixture", 42)
 	turns := make([]map[string]any, 0, len(input.Turns))
 	reply := ""
-	for _, message := range input.Turns {
+	for index := 0; index < len(input.Turns); index++ {
+		message := input.Turns[index]
 		raw, _ := json.Marshal(map[string]any{"session_id": "evalith-case", "message": message})
 		request := httptest.NewRequest("POST", "http://evalith.local/chat", bytes.NewReader(raw))
 		request.Header.Set("Content-Type", "application/json")
@@ -132,6 +176,17 @@ func run() error {
 		if response.Code != 200 {
 			break
 		}
+		if input.Adaptive == nil || len(turns) >= input.Adaptive.MaxTurns {
+			continue
+		}
+		next, done, err := nextTurn(simulatorURL, os.Getenv("EVALITH_MODEL_TOKEN"), os.Getenv("EVALITH_TASK_ID"), turns)
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		input.Turns = append(input.Turns, next)
 	}
 	var audit []store.AgentAuditLog
 	if err = database.Order("id ASC").Find(&audit).Error; err != nil {

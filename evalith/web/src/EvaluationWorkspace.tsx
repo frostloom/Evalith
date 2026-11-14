@@ -486,6 +486,7 @@ export function EvaluationWorkspace({
           key={task.id}
           projectId={pid}
           task={task}
+          models={models}
           onClose={() => setTask(null)}
           onSaved={async (t) => {
             setTask(t);

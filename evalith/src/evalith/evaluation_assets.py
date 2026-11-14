@@ -46,7 +46,22 @@ class TaskSpec(BaseModel):
             turns=self.input.get('turns')
             if not isinstance(turns,list) or not 1 <= len(turns) <= 12 or any(not isinstance(v,str) or not v.strip() or len(v)>8000 for v in turns):
                 raise ValueError('conversation requires 1–12 text turns')
-            if set(self.input) - {'turns','fixture'}:
+            adaptive=self.input.get('adaptive')
+            if adaptive is not None:
+                if not isinstance(adaptive,dict) or set(adaptive)-{'max_turns','instruction','simulator_model_config_id'}:
+                    raise ValueError('unknown adaptive fields')
+                max_turns=adaptive.get('max_turns')
+                if not isinstance(max_turns,int) or isinstance(max_turns,bool) or not 2<=max_turns<=12:
+                    raise ValueError('adaptive max_turns must be an integer in 2–12')
+                instruction=adaptive.get('instruction')
+                if not isinstance(instruction,str) or not instruction.strip() or len(instruction)>2000:
+                    raise ValueError('adaptive instruction must be 1–2000 chars')
+                simulator=adaptive.get('simulator_model_config_id')
+                if simulator is not None and (not isinstance(simulator,str) or not simulator.strip()):
+                    raise ValueError('adaptive simulator_model_config_id must be a model id string')
+                if len(turns)!=1:
+                    raise ValueError('adaptive conversation needs exactly one opening turn')
+            if set(self.input) - {'turns','fixture','adaptive'}:
                 raise ValueError('unknown conversation input fields')
         if self.kind == 'http':
             path=self.input.get('path')

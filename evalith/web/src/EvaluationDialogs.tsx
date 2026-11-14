@@ -3,6 +3,7 @@ import {
   Alert,
   Checkbox,
   Button,
+  FormControlLabel,
   LinearProgress,
   MenuItem,
   TextField,
@@ -110,11 +111,13 @@ export function GenerationDialog({
 export function TaskDialog({
   projectId,
   task,
+  models = [],
   onClose,
   onSaved,
 }: {
   projectId: string;
   task: EvalTask;
+  models?: ModelConfig[];
   onClose: () => void;
   onSaved: (task: EvalTask) => Promise<void>;
 }) {
@@ -249,6 +252,7 @@ export function TaskDialog({
                   <Button
                     size="small"
                     startIcon={<Plus />}
+                    disabled={!!JSON.parse(inputText).adaptive}
                     onClick={() => {
                       const input = JSON.parse(inputText);
                       setInputText(
@@ -295,6 +299,110 @@ export function TaskDialog({
                     </div>
                   ),
                 )}
+                <div className="adaptive-editor">
+                  {(() => {
+                    const input = JSON.parse(inputText) as {
+                      turns?: string[];
+                      adaptive?: {
+                        max_turns?: number;
+                        instruction?: string;
+                        simulator_model_config_id?: string | null;
+                      };
+                    };
+                    const adaptive = input.adaptive;
+                    const update = (patch: Record<string, unknown>) => {
+                      const next = JSON.parse(inputText);
+                      Object.assign(next, patch);
+                      setInputText(JSON.stringify(next, null, 2));
+                    };
+                    return (
+                      <>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={!!adaptive}
+                              onChange={(e) =>
+                                update(
+                                  e.target.checked
+                                    ? {
+                                        turns: [(input.turns ?? [])[0] ?? ""],
+                                        adaptive: {
+                                          max_turns: 3,
+                                          instruction: "",
+                                          simulator_model_config_id: null,
+                                        },
+                                      }
+                                    : { adaptive: undefined },
+                                )
+                              }
+                            />
+                          }
+                          label="自适应后续轮次（根据对话进展生成）"
+                        />
+                        {adaptive && (
+                          <>
+                            <TextField
+                              label="最多轮次（2–12）"
+                              type="number"
+                              value={adaptive.max_turns ?? 3}
+                              slotProps={{
+                                htmlInput: { min: 2, max: 12 },
+                              }}
+                              onChange={(e) =>
+                                update({
+                                  adaptive: {
+                                    ...adaptive,
+                                    max_turns: Number(e.target.value),
+                                  },
+                                })
+                              }
+                            />
+                            <TextField
+                              label="场景指令（模拟器如何扮演用户）"
+                              multiline
+                              minRows={2}
+                              value={adaptive.instruction ?? ""}
+                              onChange={(e) =>
+                                update({
+                                  adaptive: {
+                                    ...adaptive,
+                                    instruction: e.target.value,
+                                  },
+                                })
+                              }
+                            />
+                            <TextField
+                              select
+                              label="模拟器模型"
+                              value={adaptive.simulator_model_config_id ?? ""}
+                              onChange={(e) =>
+                                update({
+                                  adaptive: {
+                                    ...adaptive,
+                                    simulator_model_config_id:
+                                      e.target.value || null,
+                                  },
+                                })
+                              }
+                            >
+                              <MenuItem value="">跟随运行评分模型</MenuItem>
+                              {models
+                                .filter((m) => m.provider === "openai_compatible")
+                                .map((m) => (
+                                  <MenuItem key={m.id} value={m.id}>
+                                    {m.name} · {m.model_name}
+                                  </MenuItem>
+                                ))}
+                            </TextField>
+                            <p className="inline-note">
+                              开场消息为第 1 轮；后续用户消息由模拟器模型按场景指令与已发生对话生成，每次调用计入运行预算。模拟器消息是模型生成的用户行为，不代表真实用户。
+                            </p>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
                 <details>
                   <summary>合成数据与高级输入</summary>
                   <TextField
