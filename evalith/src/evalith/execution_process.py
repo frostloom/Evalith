@@ -121,7 +121,9 @@ def bounded_process(
     safe_env.update(env or {})
     started = time.monotonic()
     stdin_file = directory / "stdin.txt"
-    if not stdin_file.exists():
+    if unsandboxed and not stdin_file.exists():
+        # Sandbox callers always stage stdin.txt themselves; only the
+        # orchestrator mode may start without one.
         stdin_file.touch()
     with (
         (directory / "stdout.txt").open("wb") as out,

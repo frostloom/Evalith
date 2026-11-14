@@ -22,3 +22,15 @@
 - 后端新增 `test_harbor_executor.py` 5 例先失败后通过：环境方案与准备（含 CLI/Docker 版本记录、执行器配置必需）、假 CLI 按真实产物契约回放的观察映射（stdout/exit_code/evidence/harbor 元数据）与任务物化内容（task.toml 字段、Dockerfile COPY、solve.sh 的 stdin/文件 base64 与目标命令）、CLI 失败显式报错、预检仅收 command 题目、非沙箱模式的超时与正常执行。全量回归结果见下。
 - **真实运行**（本机 harbor 0.24.0 + Docker 29.8.2，合成项目 file-transform，零模型调用）：环境准备事件记录 CLI/Docker 版本与 2 个源文件副本；最终 run（66 秒，镜像已缓存）包含一过一败两题——通过题在无网络容器内真实执行 `python3 main.py`（stdin 喂入 JSON），stdout 为真实目标输出 `{"count": 2, "total_cent": 350}`，file_contains 与 exit_code 检查通过（score 1）；失败题为刻意错误预期（score 0）——**同时关闭了阶段 0 调研遗留的失败路径未执行缺口**。verifier 以 separate 容器真实运行（reward.txt=1、test-stdout.txt 存在，作为元数据记录）；产物（report.json、stdout、exit_code、stderr、源文件）完整回收为证据。回执：[real-run-receipt.json](evidence/harbor-2026-11-14/real-run-receipt.json)、[environment.json](evidence/harbor-2026-11-14/environment.json)。首次全量构建约 150–250 秒/批。
 - 调试过程中真实暴露并修复的三类问题（均有留痕）：0.24 要求任务名为 `org/name`；Harbor 构建上下文是 `environment/` 目录（项目副本需置于其内）；verifier 镜像独立拉取遇注册表超时（已统一基础镜像）。
+
+## 合并前双轴复评与修复
+
+两轴并行复评。Spec 轴核实主要承诺均已实现（CLI 解析/探测、任务物化、oracle 执行、非沙箱受管进程、产物回收进既有判定链、预检限制、真实回执与文档相符）。据两轴发现修复五项（提交见历史）：
+
+1. **solve.sh 注入加固**（两轴共同指出）：输入文件路径、工作目录与命令首段全部 `shlex.quote`——模型生成的输入键含单引号也无法逃逸重定向伪造 stdout/退出码证据；新增注入回归测试断言完整 quote 后的行与不可逃逸性。
+2. **嵌套输入目录**：solve.sh 对每个输入文件先 `mkdir -p` 父目录（对齐 local_command 行为），深层路径不再静默丢失输入。
+3. **试录选择取最新**：按 `result.json` mtime 排序取最新试录，重试后不会给陈旧产物评分；假 CLI 同时生成一小时前的陈旧试录作回归。
+4. **回执修正**：逐项检查字段提取路径纠正（checks 在结果顶层），回执现在完整记录 file_contains/exit_code 的通过与失败。
+5. **stdin.txt 触碰范围**：非沙箱模式专属，沙箱路径行为逐字节不变。
+
+评审判定可接受、未改动并披露：environments 方案四适配器条件链（建议下次抽每适配器方案片段）、`_execute_harbor` 物化与收集同函数（约 205 行，与每适配器一方法的既有形状一致）、copytree+符号链接守卫三连重复、instruction.md 附带 Rubric（透明性意图）。修复后 harbor 套件 6 例通过；全量回归结果见提交说明。

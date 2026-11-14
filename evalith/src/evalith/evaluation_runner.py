@@ -677,25 +677,28 @@ class EvaluationRunner:
         files = definition["input"].get("files", {}) or {}
         for relative in files:
             evidence_path(work, str(relative))
+        # Every interpolated path segment is model-generated or configured;
+        # quote it so solve.sh can only ever write inside /app/source.
+        inside = lambda *parts: shlex.quote(str(Path("/app/source", working_rel, *parts)))
         stdin_b64 = base64.b64encode(
             str(definition["input"].get("stdin", "")).encode()
         ).decode()
         script = ["#!/bin/sh", "set +e"]
         for relative, content in files.items():
             encoded = base64.b64encode(str(content).encode()).decode()
-            script.append(
-                f"printf '%s' '{encoded}' | base64 -d > '/app/source/{working_rel}/{relative}'"
-            )
+            target = inside(relative)
+            script.append(f"mkdir -p -- $(dirname -- {target})")
+            script.append(f"printf '%s' '{encoded}' | base64 -d > {target}")
         program = [
             arg.replace("{workdir}", f"/app/source/{working_rel}").replace(
                 "{source}", "/app/source"
             )
             for arg in [
-                runtime["command"][0],
+                shlex.quote(runtime["command"][0]),
                 *[shlex.quote(arg) for arg in runtime["command"][1:]],
             ]
         ]
-        script.append(f"cd '/app/source/{working_rel}'")
+        script.append(f"cd {inside()}")
         script.append(
             f"printf '%s' '{stdin_b64}' | base64 -d | {' '.join(program)} "
             "> /app/out/stdout.txt 2> /app/out/stderr.txt"
@@ -794,13 +797,19 @@ class EvaluationRunner:
         trials = sorted(
             (harbor_root / "jobs" / case).glob(task_dir.name + "__*")
         )
+        # Retries append trial directories; score the newest, never a stale one.
+        trials.sort(
+            key=lambda item: (item / "result.json").stat().st_mtime
+            if (item / "result.json").is_file()
+            else 0
+        )
         if not trials:
             raise WorkspaceError(
                 "Harbor 未产生本次用例的产物目录",
                 status_code=422,
                 code="harbor_artifacts_missing",
             )
-        trial = trials[0]
+        trial = trials[-1]
         app = trial / "artifacts" / "app"
         out = app / "out"
         stdout_file = out / "stdout.txt"

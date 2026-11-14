@@ -60,6 +60,15 @@ def fake_harbor(tmp_path: Path, *, exit_code: int = 0) -> str:
         "(trial / 'verifier').mkdir(parents=True, exist_ok=True)\n"
         "(trial / 'verifier' / 'reward.txt').write_text('1')\n"
         "(trial / 'result.json').write_text('{\\\"verifier_environment_mode\\\": \\\"separate\\\"}')\n"
+        "import os as _os, time as _time\n"
+        "stale = jobs / name / 'task__aaastale'\n"
+        "(stale / 'artifacts' / 'app' / 'out').mkdir(parents=True, exist_ok=True)\n"
+        "(stale / 'artifacts' / 'app' / 'out' / 'stdout.txt').write_text('stale-output')\n"
+        "(stale / 'artifacts' / 'app' / 'out' / 'exit_code.txt').write_text('9')\n"
+        "(stale / 'verifier').mkdir(parents=True, exist_ok=True)\n"
+        "(stale / 'result.json').write_text('{}')\n"
+        "old = _time.time() - 3600\n"
+        "_os.utime(stale / 'result.json', (old, old))\n"
         "print('fake harbor ok')\n"
         f"sys.exit({exit_code})\n"
     )
@@ -286,3 +295,42 @@ def test_bounded_process_unsandboxed_mode_still_bounds(tmp_path):
         unsandboxed=True,
     )
     assert slow["process_error"] == "timeout"
+
+
+def test_solve_script_is_injection_safe_and_creates_nested_input_dirs(
+    client, project_root, tmp_path
+):
+    import shlex
+    from pathlib import PurePosixPath
+
+    pid, ws, store, assets, _envs = fixture(client, project_root)
+    malicious = "in'; touch /app/out/pwned; #.txt"
+    task = command_task(
+        assets, pid, files={malicious: "x", "data/nested.txt": "y"}
+    )
+    source = tmp_path / "source3"
+    source.mkdir()
+    runtime = {
+        "command": ["python3", "main.py"],
+        "harbor_command": [fake_harbor(tmp_path)],
+        "timeout_seconds": 30,
+        "source_copy": str(source),
+        "working_relative": ".",
+        "harbor_version": "0.24.0",
+        "docker_version": "29.8.2",
+    }
+    env = harbor_env(store, pid, task["source_digest"], runtime)
+    runner = EvaluationRunner(ws, store, None)
+    work = tmp_path / "case-inj"
+    observed = runner.execute_task(
+        stub_run(store, pid, env, "run_inj"), task, work
+    )
+    solve = (work / "harbor" / "task" / "solution" / "solve.sh").read_text()
+    expected = shlex.quote(str(PurePosixPath("/app/source", malicious)))
+    assert f"base64 -d > {expected}" in solve
+    assert "touch /app/out/pwned" not in solve.replace(expected, "")
+    nested = shlex.quote(str(PurePosixPath("/app/source", "data", "nested.txt")))
+    assert f"mkdir -p -- $(dirname -- {nested})" in solve
+    # The newest trial wins over the stale one the fake also creates.
+    assert observed["stdout"] == "harbor-target-stdout\n"
+    assert observed["exit_code"] == 0

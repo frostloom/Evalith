@@ -8,7 +8,18 @@
       "title": "Harbor 汇总正确",
       "status": "passed",
       "score": 1,
-      "checks": [],
+      "checks": [
+        {
+          "type": "file_contains",
+          "status": "passed",
+          "path": "report.json"
+        },
+        {
+          "type": "exit_code",
+          "status": "passed",
+          "path": ""
+        }
+      ],
       "observation": {
         "exit_code": 0,
         "stdout": "{\"count\": 2, \"total_cent\": 350}\n",
@@ -25,7 +36,13 @@
       "title": "Harbor 预期不符",
       "status": "failed",
       "score": 0,
-      "checks": [],
+      "checks": [
+        {
+          "type": "file_contains",
+          "status": "failed",
+          "path": "report.json"
+        }
+      ],
       "observation": {
         "exit_code": 0,
         "stdout": "{\"count\": 2, \"total_cent\": 350}\n",
