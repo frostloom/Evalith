@@ -23,3 +23,9 @@
 - 前端 **56 passed**（新增 TaskDialog 自适应编辑测例）+ Vite 生产构建通过；gofmt 后适配器重编译通过。
 - 改动模块 Ruff 无新增告警（evaluation_api 新增路由沿用全仓既有 `Body(...)` 写法，属披露基线）。
 - 实机验证（`./scripts/start-local.sh`，127.0.0.1:8093，真实数据库）：题目编辑对话框出现“自适应后续轮次”开关，开启后展示最多轮次（默认 3）、场景指令与模拟器模型选择并锁定单条开场消息；仅切换未保存，未改动真实题目版本。截图：[adaptive-editor.png](evidence/adaptive-2026-11-14/adaptive-editor.png)。
+
+## 合并前双轴复评与修复
+
+两轴并行复评。Spec 轴结论：无缺失、无范围蔓延、无错误实现——解析顺序与快照/摘要一致性、端点鉴权/上限/预算/指纹/双重脱敏、适配器循环失败可见性、TaskSpec 边界、前端无保存副作用均逐条核实。Standards 轴批准但指出一处真实重复：simulator 路由逐字复制了 model 桥接路由的令牌提取与异常映射链，runner 内令牌门重复两份。
+
+修复（行为等价重构）：`evaluation_api` 抽出共享 `_bridge_response`（BudgetStop→429 / RunCancelled→409 / ModelError→502 脱敏）与 `_bearer` 提取，两条桥接路由共用；runner 抽出 `_require_bridge_token` 供 bridge 与 simulator 复用。聚焦回归 19 passed（含桥接契约旧测），Ruff 无新增类别（余量均为披露基线）。评审判定可接受未改：TaskSpec 校验器内联风格（与文件一致，建议下次新增字段时再拆）、前端 `update({adaptive: undefined})` 依赖 stringify 丢弃 undefined（等价于 delete）、适配器 60 秒模拟器客户端独立超时（有意为之）。

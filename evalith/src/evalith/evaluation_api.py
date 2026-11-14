@@ -116,20 +116,16 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
     def run_cancel(project_id: str, run_id: str):
         return runner.cancel(project_id, run_id)
 
-    @app.post("/api/projects/{project_id}/runs/{run_id}/model/v1/chat/completions")
-    def model_bridge(
-        project_id: str,
-        run_id: str,
-        payload: dict[str, Any] = Body(...),
-        authorization: str = Header(default=""),
-    ):
-        token = (
+    def _bearer(authorization: str) -> str:
+        return (
             authorization.removeprefix("Bearer ")
             if authorization.startswith("Bearer ")
             else ""
         )
+
+    def _bridge_response(call, project_id: str, run_id: str, token: str, payload):
         try:
-            return runner.bridge(project_id, run_id, token, payload)
+            return call(project_id, run_id, token, payload)
         except BudgetStop as exc:
             store.update(project_id, "run", run_id, budget_stop_reason=str(exc))
             return JSONResponse(
@@ -152,6 +148,17 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
                 },
             )
 
+    @app.post("/api/projects/{project_id}/runs/{run_id}/model/v1/chat/completions")
+    def model_bridge(
+        project_id: str,
+        run_id: str,
+        payload: dict[str, Any] = Body(...),
+        authorization: str = Header(default=""),
+    ):
+        return _bridge_response(
+            runner.bridge, project_id, run_id, _bearer(authorization), payload
+        )
+
     @app.post("/api/projects/{project_id}/runs/{run_id}/simulator/v1")
     def simulator_bridge(
         project_id: str,
@@ -159,34 +166,9 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
         payload: dict[str, Any] = Body(...),
         authorization: str = Header(default=""),
     ):
-        token = (
-            authorization.removeprefix("Bearer ")
-            if authorization.startswith("Bearer ")
-            else ""
+        return _bridge_response(
+            runner.simulator, project_id, run_id, _bearer(authorization), payload
         )
-        try:
-            return runner.simulator(project_id, run_id, token, payload)
-        except BudgetStop as exc:
-            store.update(project_id, "run", run_id, budget_stop_reason=str(exc))
-            return JSONResponse(
-                status_code=429,
-                content={"error": {"message": str(exc), "type": "budget_stopped"}},
-            )
-        except RunCancelled:
-            return JSONResponse(
-                status_code=409,
-                content={"error": {"message": "运行已取消", "type": "cancelled"}},
-            )
-        except ModelError as exc:
-            return JSONResponse(
-                status_code=502,
-                content={
-                    "error": {
-                        "message": workspace._scrub_saved_secrets(str(exc)),
-                        "type": "model_error",
-                    }
-                },
-            )
 
     @app.get("/api/projects/{project_id}/tasks")
     def tasks(project_id: str) -> dict[str, Any]:

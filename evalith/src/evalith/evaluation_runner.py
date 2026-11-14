@@ -436,13 +436,16 @@ class EvaluationRunner:
                 error,
             )
 
+    def _require_bridge_token(self, run: dict[str, Any], token: str) -> None:
+        expected = self.workspace.cipher.decrypt(run["_bridge_token"]) or ""
+        if not secrets.compare_digest(token, expected):
+            raise WorkspaceError("运行通道未授权", status_code=403)
+
     def bridge(
         self, project_id: str, run_id: str, token: str, payload: dict[str, Any]
     ) -> dict[str, Any]:
         run = self.store.get(project_id, "run", run_id)
-        expected = self.workspace.cipher.decrypt(run["_bridge_token"]) or ""
-        if not secrets.compare_digest(token, expected):
-            raise WorkspaceError("运行通道未授权", status_code=403)
+        self._require_bridge_token(run, token)
         if payload.get("model") != run["models"]["target"]["model"]:
             raise WorkspaceError("被测模型必须与运行快照一致", status_code=422)
         tools = payload.get("tools") or []
@@ -502,9 +505,7 @@ class EvaluationRunner:
         self, project_id: str, run_id: str, token: str, payload: dict[str, Any]
     ) -> dict[str, Any]:
         run = self.store.get(project_id, "run", run_id)
-        expected = self.workspace.cipher.decrypt(run["_bridge_token"]) or ""
-        if not secrets.compare_digest(token, expected):
-            raise WorkspaceError("运行通道未授权", status_code=403)
+        self._require_bridge_token(run, token)
         task_id = payload.get("task_id")
         task = next(
             (item for item in run["tasks"] if item.get("task_id") == task_id), None
