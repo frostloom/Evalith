@@ -11,7 +11,13 @@ from typing import Any
 
 from .config import Settings
 from .db import Database, loads, utc_now
-from .model_gateway import ModelConfig, ModelError, ModelGateway, correction_body
+from .model_gateway import (
+    REMOVED_PROVIDER_MESSAGE,
+    ModelConfig,
+    ModelError,
+    ModelGateway,
+    correction_body,
+)
 from .project_access import (
     AccessError,
     ScanResult,
@@ -173,7 +179,7 @@ class WorkspaceService:
             raise WorkspaceError("模型配置名称不能为空")
         if provider == "codex_local":
             raise WorkspaceError(
-                "本地 ChatGPT 账号通道已移除；请使用 OpenAI 兼容服务配置真实模型",
+                REMOVED_PROVIDER_MESSAGE,
                 status_code=422,
                 code="provider_removed",
             )
@@ -306,6 +312,18 @@ class WorkspaceService:
         gateway.extra_secrets = tuple(self._saved_secret_variants())
         return gateway
 
+    def require_supported_model_config(self, model_config_id: str | None) -> None:
+        """Reject selecting a removed provider when binding a model for use."""
+        if not model_config_id:
+            return
+        row = self.db.get_model_config(model_config_id)
+        if row is None:
+            raise WorkspaceError("选择的模型配置不存在", status_code=422)
+        if row["provider"] == "codex_local":
+            raise WorkspaceError(
+                REMOVED_PROVIDER_MESSAGE, status_code=422, code="provider_removed"
+            )
+
     def _saved_secret_variants(self) -> list[str]:
         variants: set[str] = set()
         for row in self.db.list_model_configs():
@@ -362,8 +380,7 @@ class WorkspaceService:
         except (AccessError, OSError) as exc:
             raise WorkspaceError(str(exc), status_code=422, code=getattr(exc, "code", "root_error")) from exc
         model_config_id = payload.get("model_config_id") or None
-        if model_config_id and self.db.get_model_config(model_config_id) is None:
-            raise WorkspaceError("选择的模型配置不存在", status_code=422)
+        self.require_supported_model_config(model_config_id)
         include_paths = self._string_list(payload.get("include_paths"))
         exclude_patterns = self._string_list(payload.get("exclude_patterns"))
         supplemental = self._supplemental(payload.get("supplemental"))
@@ -1483,11 +1500,8 @@ class WorkspaceService:
         project = self.db.get_project(project_id)
         if project is None:
             raise WorkspaceError("项目不存在", status_code=404, code="project_not_found")
-        if model_config_id:
-            if self.db.get_model_config(model_config_id) is None:
-                raise WorkspaceError("选择的模型配置不存在", status_code=422)
-        else:
-            model_config_id = None
+        self.require_supported_model_config(model_config_id)
+        model_config_id = model_config_id or None
         self.db.update_project_model(project_id, model_config_id)
         project = self.db.get_project(project_id)
         assert project is not None

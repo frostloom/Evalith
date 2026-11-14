@@ -110,7 +110,7 @@ class EnvironmentManager:
                 "Existing isolated loopback HTTP target (owned by user; not started or stopped by Evalith)"
             ],
             "credential_sources": [
-                "Existing ChatGPT login, used only by Evalith model transport; never copied to target"
+                "Model API key from the selected OpenAI-compatible model config; encrypted at rest, used only by the Evalith model bridge, never copied to the target"
             ]
             if adapter == "aigateway_go"
             else [],
@@ -124,7 +124,7 @@ class EnvironmentManager:
             else [definition["base_url"]],
             "executor": definition,
             "estimated_cost_usd": None,
-            "cost_note": "真实模型使用账号额度，金额费用未知；运行前另设调用次数上限。",
+            "cost_note": "真实模型按所选 OpenAI 兼容服务计费；金额费用未知，运行前另设调用次数上限。",
             "cleanup": "Per-case child processes and local services are reaped; evidence files retained in Evalith",
             "limitations": [
                 "Synthetic billing is an isolated substitute, not the production financial service. The imported Agent handler is real."

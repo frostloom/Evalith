@@ -135,7 +135,11 @@ export function ImportSheet({
               {models.map((model) => (
                 <option key={model.id} value={model.id}>
                   {model.name} ·{" "}
-                  {model.provider === "stub" ? "离线演示" : model.model_name}
+                  {model.provider === "stub"
+                    ? "离线演示"
+                    : model.provider === "codex_local"
+                      ? `已移除 · ${model.model_name}`
+                      : model.model_name}
                 </option>
               ))}
             </select>

@@ -970,7 +970,9 @@ function ModelPicker({
                 <small>
                   {model.provider === "stub"
                     ? "离线演示 · 固定响应"
-                    : model.model_name}
+                    : model.provider === "codex_local"
+                      ? `已移除 · ${model.model_name}`
+                      : model.model_name}
                 </small>
               </span>
               {modelId === model.id && <Check aria-hidden="true" />}

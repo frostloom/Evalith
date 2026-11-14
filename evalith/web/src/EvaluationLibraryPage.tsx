@@ -501,7 +501,10 @@ function StandardForm({
                 <MenuItem value="">跟随本次运行的评分模型</MenuItem>
                 {models.map((m) => (
                   <MenuItem key={m.id} value={m.id}>
-                    {m.name} · {m.model_name}
+                    {m.name} ·{" "}
+                    {m.provider === "codex_local"
+                      ? `已移除（${m.model_name}）`
+                      : m.model_name}
                   </MenuItem>
                 ))}
               </TextField>

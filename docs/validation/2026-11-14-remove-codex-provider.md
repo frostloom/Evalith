@@ -25,3 +25,16 @@
 - 改动模块 Ruff 无新增告警（存量 UP032/PIE810/B008 等为基线，未触碰）。
 - 实机服务（`./scripts/start-local.sh`，127.0.0.1:8093）：`/api/health` 正常；真实数据库列表仍显示遗留配置；`GET /api/local-model/status` 返回 404；创建 `codex_local` 返回 422 与移除消息；对遗留配置“测试连接”返回 `ok=false` 与移除消息，未启动 CLI。
 - 浏览器实测（agent-browser）：模型配置页遗留配置标注“已移除”，添加对话框提供方仅剩 离线演示 与 OpenAI 兼容服务。截图：[model-settings-legacy-removed.png](evidence/codex-removal-2026-11-14/model-settings-legacy-removed.png)、[add-model-options.png](evidence/codex-removal-2026-11-14/add-model-options.png)。
+
+## 合并前双轴复评与修复
+
+用户要求审核后合并。按两轴并行复评（Standards：仓库无成文规范，按坏味道基线；Spec：对照本 spec 全树核对）。评审确认：无残留 codex 进程路径或模块引用；遗留行所有请求路径失败关闭；历史数据、付费门控语义未变。
+
+依据评审修复四项：
+
+1. **选择时拒绝**（spec "Creating or **selecting**…" 原实现缺失）：新增 `require_supported_model_config`，在项目创建、项目模型指派与 Grader 保存三条绑定路径上以 422 `provider_removed` 拒绝遗留 `codex_local` 配置；模型选择下拉（导入、Grader 评分模型、会话模型菜单）对遗留项显示“已移除”。回归测试 `test_binding_legacy_codex_model_is_rejected_at_selection_time` 先失败后通过。
+2. **环境方案文案失实**：aigateway 环境计划的 `credential_sources` 由“Existing ChatGPT login…”改为所选 OpenAI 兼容模型配置的 API 密钥说明，`cost_note` 同步改写。
+3. **范围外行为变化**：删除原 codex 专属、上一提交误推广到所有提供方的目标推理 80 秒上限；恢复由 `EVALITH_MODEL_TIMEOUT` 统一约束。
+4. **文案合一**：`service.py` 与 `model_gateway.py` 的移除提示统一为共享常量 `REMOVED_PROVIDER_MESSAGE`。
+
+评审中判定为可接受、未改动：`source_copy.py` 的 `.codex` 目录排除（保护性）、测试夹具中三处模拟遗留行的 SQL 重复（夹具实践）、前端标签三元表达式风格。修复后聚焦回归 22 passed、前端 54 passed + 构建、改动模块 Ruff 无新增告警。

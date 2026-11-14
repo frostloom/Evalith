@@ -276,7 +276,7 @@ def _stub_understanding(
 
 
 REMOVED_PROVIDER_MESSAGE = (
-    "本地 ChatGPT 账号通道已移除，无法发起模型请求；请改用 OpenAI 兼容服务"
+    "本地 ChatGPT 账号通道已移除；请改用 OpenAI 兼容服务配置真实模型"
 )
 
 

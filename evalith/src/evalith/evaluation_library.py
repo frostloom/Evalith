@@ -104,6 +104,7 @@ class EvaluationLibrary:
                     "评价标准格式无效：" + str(exc)[:300], status_code=422
                 ) from exc
             if spec["model_config_id"]:
+                self.workspace.require_supported_model_config(spec["model_config_id"])
                 self.workspace.gateway_for(spec["model_config_id"])
             if any(
                 g["name"].casefold() == spec["name"].casefold()
