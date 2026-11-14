@@ -359,7 +359,7 @@ class EvaluationRunner:
                 raise ModelError("模型配置与本次运行快照不一致")
             gateway.cancel_check = lambda: self.cancelled(project_id, run_id)
             if role == "target":
-                gateway.codex_timeout = min(gateway.codex_timeout, 80)
+                gateway.timeout = min(gateway.timeout, 80)
             result = gateway.complete_json(system, payload)
             return result, gateway.last_usage
         except Exception as exc:

@@ -367,7 +367,7 @@ class EnvironmentManager:
             "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
             "timeout_seconds": 600,
             "handler": "github.com/frostloom/ai-gateway/internal/agent.Handler",
-            "transport": "Codex JSON tool-call adapter",
+            "transport": "OpenAI-compatible tool-call bridge via workspace model gateway",
             "storage": "isolated SQLite + miniredis",
             "fixture": "synthetic billing only",
         }

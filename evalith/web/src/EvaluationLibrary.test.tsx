@@ -20,7 +20,7 @@ const models = [
   {
     id: "m",
     name: "GPT local",
-    provider: "codex_local",
+    provider: "openai_compatible",
     model_name: "gpt-6-luna",
   },
 ] as ModelConfig[];

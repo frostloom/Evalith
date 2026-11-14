@@ -27,7 +27,7 @@ const task = {
   version: 2,
   version_id: "v2",
   task_id: "t1",
-  model: "codex_local:gpt-6-luna",
+  model: "openai_compatible:gpt-6-luna",
   calibration_state: "unverified",
   source_digest: "hash",
   created_at: "2026-11-11T00:00:00Z",

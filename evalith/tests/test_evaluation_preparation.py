@@ -205,7 +205,7 @@ def test_preparation_job_returns_real_asset_links_and_grader_draft_stays_unsaved
 ):
     pid, _model, assets = setup(client, project_root)
     with assets.workspace.db.connection() as c:
-        c.execute("UPDATE model_configs SET provider='codex_local'")
+        c.execute("UPDATE model_configs SET provider='openai_compatible', base_url='http://127.0.0.1:9/v1'")
     monkeypatch.setattr(ModelGateway, "complete_json", lambda *_: bundle())
     response = client.post(
         f"/api/projects/{pid}/preparations",

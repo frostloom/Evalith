@@ -159,7 +159,7 @@ export function ModelSettings({
                 </div>
               </div>
               <span className="service-provider">
-                {model.provider === "stub" ? "离线演示" : model.provider === "codex_local" ? "ChatGPT 账号" : "OpenAI 兼容"}
+                {model.provider === "stub" ? "离线演示" : model.provider === "codex_local" ? "ChatGPT 账号（已移除）" : "OpenAI 兼容"}
               </span>
               <span
                 className={`service-status ${model.last_test_ok ? "is-ok" : model.last_test_at ? "is-error" : ""}`}
@@ -238,11 +238,10 @@ export function ModelSettings({
                   onChange={(event) => {
                     const next = event.target.value as ModelConfig["provider"];
                     setProvider(next);
-                    setModelName(next === "stub" ? "stub-understanding" : next === "codex_local" ? "gpt-6-luna" : "");
+                    setModelName(next === "stub" ? "stub-understanding" : "");
                   }}
                 >
                   <option value="stub">离线演示（离线，不产生费用）</option>
-                  <option value="codex_local">本地 ChatGPT 已登录账号</option>
                   <option value="openai_compatible">OpenAI 兼容服务</option>
                 </select>
               </label>
@@ -283,11 +282,10 @@ export function ModelSettings({
                   演示模型按固定规则返回理解与讨论内容，用于验证链路和边界，不代表真实模型判断。
                 </p>
               )}
-              {provider === "codex_local" && (
-                <>
-                  <label className="field"><span>模型</span><input value={modelName} onChange={(event) => setModelName(event.target.value)} placeholder="gpt-6-luna" /></label>
-                  <p className="inline-note">通过本机 Codex 已登录的 ChatGPT 账号调用。登录凭据由本机保管，不复制到项目或浏览器；使用账号额度，金额费用未知。测试连接会发起一次真实请求。</p>
-                </>
+              {provider === "openai_compatible" && (
+                <p className="inline-note">
+                  通过 OpenAI 兼容接口调用真实模型。付费模型需维护者显式开启 EVALITH_ALLOW_PAID_MODELS 后才能保存；密钥加密保存，不回传前端。
+                </p>
               )}
               {localError && (
                 <p className="form-error" role="alert">

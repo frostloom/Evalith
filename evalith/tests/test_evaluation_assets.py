@@ -71,7 +71,7 @@ def test_generation_job_and_task_revision_apis(client, project_root, monkeypatch
     assets, project_id = setup_assets(client, project_root)
     client.post(f'/api/projects/{project_id}/continue')
     with client.app.state.db.connection() as connection:
-        connection.execute("UPDATE model_configs SET provider='codex_local'")
+        connection.execute("UPDATE model_configs SET provider='openai_compatible', base_url='http://127.0.0.1:9/v1'")
     monkeypatch.setattr(ModelGateway, 'complete_json', lambda *_: {'tasks':[task_spec()]})
     response = client.post(f'/api/projects/{project_id}/generate',json={'count':1})
     assert response.status_code == 202, response.text

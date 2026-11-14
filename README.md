@@ -7,7 +7,7 @@ Evalith 是一个本地 Agent 评测工作台：从项目资料和持续会话�
 # http://127.0.0.1:8093
 ```
 
-支持本地已登录 ChatGPT 账号与 `gpt-6-luna`。见[运行与功能说明](evalith/README.md)和[真实 aigateway 验证](docs/validation/2026-11-12-real-evaluation.md)。
+真实模型经 OpenAI 兼容服务接入（付费模型默认禁用）。见[运行与功能说明](evalith/README.md)和[真实 aigateway 验证](docs/validation/2026-11-12-real-evaluation.md)。
 
 
 ## 阶段 1：项目工作区与开源底座

@@ -13,10 +13,6 @@ export UV_CACHE_DIR="$EVALITH_ROOT/.evalith/cache/uv"
 export npm_config_cache="$EVALITH_ROOT/.evalith/cache/npm"
 export TMPDIR="$EVALITH_ROOT/.evalith/tmp/startup"
 mkdir -p "$TMPDIR" "$EVALITH_DATA_DIR"
-if [[ -z "${EVALITH_CODEX_BIN:-}" ]] && ! command -v codex >/dev/null 2>&1; then
-  EVALITH_APP_CODEX="/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
-  if [[ -x "$EVALITH_APP_CODEX" ]]; then export EVALITH_CODEX_BIN="$EVALITH_APP_CODEX"; fi
-fi
 # Pick a locally installed compatible SDK without changing xcode-select or Go's
 # global configuration. Some hosts have a newer SDK than the system linker.
 if [[ "$(uname -s)" == Darwin && -z "${EVALITH_GO_SDKROOT:-}" ]] && command -v clang >/dev/null; then
