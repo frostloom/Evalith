@@ -9,6 +9,58 @@ from .evaluation_library import EvaluationLibrary
 from .service import WorkspaceError
 
 
+def validate_judge_verdict(
+    judged: Any, check: dict[str, Any], document: str
+) -> dict[str, Any]:
+    """Apply the one runtime judge validation shared by runs and calibration.
+
+    Returns a verdict dict with status in ``pass`` / ``fail`` /
+    ``missing_evidence``; the document must be the exact string the model
+    saw, so evidence quoting is checked against the same serialization.
+    """
+    if (
+        not isinstance(judged, dict)
+        or type(judged.get("passed")) is not bool
+        or type(judged.get("score")) not in (int, float)
+        or not 0 <= judged["score"] <= 1
+    ):
+        return {
+            "status": "missing_evidence",
+            "score": None,
+            "reason": "评分模型缺少有效判断",
+            "evidence": [],
+            "limitations": [],
+        }
+    evidence = judged.get("evidence")
+    if (
+        not isinstance(evidence, list)
+        or not evidence
+        or any(
+            not isinstance(quote, str) or not quote or quote not in document
+            for quote in evidence
+        )
+    ):
+        return {
+            "status": "missing_evidence",
+            "score": None,
+            "reason": "评分没有引用可核对的实际证据",
+            "evidence": [],
+            "limitations": [],
+        }
+    status = (
+        "pass"
+        if judged["passed"] and judged["score"] >= check.get("threshold", 0.8)
+        else "fail"
+    )
+    return {
+        "status": status,
+        "score": judged["score"],
+        "reason": str(judged.get("reason", ""))[:2000],
+        "evidence": evidence,
+        "limitations": judged.get("limitations", []),
+    }
+
+
 def grader_check(grader: dict[str, Any]) -> dict[str, Any]:
     check = {
         **grader["check"],

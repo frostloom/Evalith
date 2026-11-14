@@ -274,3 +274,27 @@ def test_second_calibration_for_same_grader_is_rejected_while_running(
     release.set()
     job = wait_job(client, pid, first.json()["id"])
     assert job["status"] == "completed", job
+
+
+def test_malformed_judge_response_fails_the_job_visibly(
+    client: TestClient, project_root: Path, monkeypatch
+):
+    pid, _stub, model = setup_project(client, project_root)
+    gid = client.post(
+        f"/api/projects/{pid}/graders", json=judge_grader(model["id"])
+    ).json()["id"]
+    monkeypatch.setattr(
+        ModelGateway,
+        "complete_json",
+        lambda self, system, payload: {"checks": "garbage"},
+    )
+    started = start(client, pid, gid, SAMPLES[:1])
+    job = wait_job(client, pid, started.json()["id"])
+    assert job["status"] == "failed", job
+    assert "没有返回检查列表" in (job["error"] or "")
+    grader = client.get(f"/api/projects/{pid}/graders/{gid}").json()
+    assert grader["calibration_state"] == "unverified"
+    assert (
+        client.get(f"/api/projects/{pid}/graders/{gid}/calibrations").json()["items"]
+        == []
+    )

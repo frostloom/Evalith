@@ -23,3 +23,14 @@
 - 前端 **55 passed**（新增校准状态与发起点测例）+ Vite 生产构建通过。
 - 改动模块 Ruff：新模块仅余 BLE001/B008 两处，与现有 generation 任务和路由的既有约定一致（job 线程必须捕获全部异常以落盘失败；`Body(...)` 默认值为 FastAPI 全仓既有写法），作为基线披露；其余清零。
 - 实机验证（`./scripts/start-local.sh`，127.0.0.1:8093，真实数据库）：judge 标准绑定遗留 codex 模型时发起校准返回 422 `provider_removed`（守卫链贯通）；确定性标准返回 422 `calibration_not_judge`；报告列表为空、不存在报告 404。浏览器实测 judge 标准详情确认页出现“评分标准校准”面板（状态徽章、样本编辑器、满足前禁用的开始按钮），截图：[calibration-panel.png](evidence/calibration-2026-11-14/calibration-panel.png)。本迭代未配置 OpenAI 兼容端点，未发起真实校准调用。
+
+## 合并前双轴复评与修复
+
+两轴并行复评（Standards 坏味道基线 / Spec 对照逐条核验）。Spec 确认：每样本单次调用与用量累计、报告只建不改、全一致才 calibrated、编辑重置状态、同步拒绝与并发 409、无目标执行与历史改写。据评审修复四项：
+
+1. **判定校验合一**：`grading_plan.validate_judge_verdict` 成为运行与校准共用的唯一判定校验（含逐字证据、阈值与 missing_evidence 语义）；runner `_judge` 改为调用它，行为等价（含 runner 回归 11 例通过）。校准中文档改为与真实运行相同的 JSON 序列化形式，证据引用口径一致；`limitations` 随样本记录。模型返回非检查列表时校准任务显式失败（新增测例：任务 failed、无报告、状态不变），不得以协议错误凑成“缺证据”匹配。
+2. **完成段竞态关闭**：过期检测、报告落盘与状态写回移入 `_project_lock(pid)`，与 `save_grader` 互斥；并发编辑要么被判为 stale，要么在其后自行重置状态。
+3. **前端轮询终止条件**：任务记录从列表消失时停止轮询并显式报错，不再无限等待。
+4. **结构整理**：`CalibrationPanel` 拆为独立组件文件；`startCalibration` 改用专用 `CalibrationJob` 类型（回退对 `GenerationJob` 的临时拓宽）；样本更新回调合一。
+
+评审判定可接受、未改动：job 线程模式与既有 generation 任务同构（第三份，作为基线披露）、stub 排除规则分层各司其职、状态字符串联合类型暂不收紧、`model_gateway` 提示文案更新为上轮移除的连带修正（已在提交说明披露）。修复后聚焦回归 18 passed、前端 55 passed + 构建、Ruff 仅余披露基线两处；全量回归结果见交付提交。

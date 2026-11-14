@@ -1,5 +1,6 @@
 import { request } from "./api";
 import type {
+  CalibrationJob,
   CalibrationReport,
   RunPreview,
   Analysis,
@@ -66,7 +67,7 @@ export const evaluationApi = {
     samples: { name: string; document: string; expected: string }[],
     model_config_id?: string | null,
   ) =>
-    request<GenerationJob>(
+    request<CalibrationJob>(
       `${base(id)}/graders/${encodeURIComponent(gid)}/calibrations`,
       send({ samples, ...(model_config_id ? { model_config_id } : {}) }),
     ),

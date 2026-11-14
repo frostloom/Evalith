@@ -10,6 +10,7 @@ business truth.
 
 from __future__ import annotations
 
+import json
 import threading
 from typing import Any, Literal
 
@@ -19,7 +20,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from .evaluation_library import EvaluationLibrary
 from .evaluation_runner import JUDGE_SYSTEM_PROMPT
 from .evaluation_store import EvaluationStore
-from .grading_plan import grader_check
+from .grading_plan import grader_check, validate_judge_verdict
+from .model_gateway import ModelError
 from .service import WorkspaceError, WorkspaceService
 
 
@@ -151,7 +153,9 @@ class EvaluationCalibration:
         samples = []
         usage_total = {"input_tokens": 0, "output_tokens": 0}
         for sample in request.samples:
-            document = sample.document
+            # The model sees, and evidence is validated against, the same
+            # JSON serialization a real run uses for its observed document.
+            document = json.dumps(sample.document)[:40000]
             value = gateway.complete_json(
                 JUDGE_SYSTEM_PROMPT,
                 {
@@ -168,92 +172,78 @@ class EvaluationCalibration:
                 if isinstance(number, int) and not isinstance(number, bool):
                     usage_total[key] += number
             provided = value.get("checks")
+            if not isinstance(provided, list):
+                raise ModelError("评分模型没有返回检查列表")
             judged = next(
                 (
                     item
-                    for item in (provided if isinstance(provided, list) else [])
+                    for item in provided
                     if isinstance(item, dict) and item.get("index") == 0
                 ),
                 None,
             )
-            actual, score, reason, evidence = self._verdict(judged, check, document)
+            verdict = validate_judge_verdict(judged, check, document)
             samples.append(
                 {
                     "name": sample.name,
                     "expected": sample.expected,
-                    "actual": actual,
-                    "matched": actual == sample.expected,
-                    "score": score,
-                    "reason": self.workspace._scrub_saved_secrets(reason)[:2000],
-                    "evidence": evidence,
+                    "actual": verdict["status"],
+                    "matched": verdict["status"] == sample.expected,
+                    "score": verdict["score"],
+                    "reason": self.workspace._scrub_saved_secrets(verdict["reason"])[
+                        :2000
+                    ],
+                    "evidence": verdict["evidence"],
+                    "limitations": verdict["limitations"],
                 }
             )
         matched = sum(1 for item in samples if item["matched"])
-        stale = self.store.get(pid, "grader", gid)["version"] != grader["version"]
-        state = (
-            None
-            if stale
-            else ("calibrated" if matched == len(samples) else "disagreement")
-        )
-        report = self.store.create(
-            pid,
-            "calibration",
-            {
-                "grader_id": gid,
-                "grader_version": grader["version"],
-                "grader_name": grader["name"],
-                "model_config_id": model_id,
-                "model": gateway.name,
-                "samples": samples,
-                "summary": {"total": len(samples), "matched": matched},
-                "state": state,
-                "stale": stale,
-                "usage": {
-                    "input_tokens": usage_total["input_tokens"] or None,
-                    "output_tokens": usage_total["output_tokens"] or None,
-                    "cost_usd": None,
-                },
-            },
-        )
-        if not stale:
-            self.store.update(
-                pid,
-                "grader",
-                gid,
-                calibration_state=state,
-                last_calibration_id=report["id"],
+        # Edit detection and the state write share save_grader's project
+        # lock: a concurrent edit is either caught here as stale, or it
+        # completes after this block and resets the state itself.
+        with self.workspace._project_lock(pid):
+            stale = (
+                self.store.get(pid, "grader", gid)["version"] != grader["version"]
             )
+            state = (
+                None
+                if stale
+                else ("calibrated" if matched == len(samples) else "disagreement")
+            )
+            report = self.store.create(
+                pid,
+                "calibration",
+                {
+                    "grader_id": gid,
+                    "grader_version": grader["version"],
+                    "grader_name": grader["name"],
+                    "model_config_id": model_id,
+                    "model": gateway.name,
+                    "samples": samples,
+                    "summary": {"total": len(samples), "matched": matched},
+                    "state": state,
+                    "stale": stale,
+                    "usage": {
+                        "input_tokens": usage_total["input_tokens"] or None,
+                        "output_tokens": usage_total["output_tokens"] or None,
+                        "cost_usd": None,
+                    },
+                },
+            )
+            if not stale:
+                self.store.update(
+                    pid,
+                    "grader",
+                    gid,
+                    calibration_state=state,
+                    last_calibration_id=report["id"],
+                )
         return {
             "calibration_id": report["id"],
             "state": state,
             "stale": stale,
             "usage": report["usage"],
         }
-
-    @staticmethod
-    def _verdict(judged, check, document):
-        """Apply the runtime judge validation to one sample."""
-        if (
-            not isinstance(judged, dict)
-            or type(judged.get("passed")) is not bool
-            or type(judged.get("score")) not in (int, float)
-            or not 0 <= judged["score"] <= 1
-        ):
-            return "missing_evidence", None, "评分模型缺少有效判断", []
-        evidence = judged.get("evidence")
-        if (
-            not isinstance(evidence, list)
-            or not evidence
-            or any(not isinstance(q, str) or not q or q not in document for q in evidence)
-        ):
-            return "missing_evidence", None, "评分没有引用可核对的实际证据", []
-        status = (
-            "pass"
-            if judged["passed"] and judged["score"] >= check.get("threshold", 0.8)
-            else "fail"
-        )
-        reason = judged.get("reason", "")
-        return status, judged["score"], str(reason)[:2000], evidence
 
     # ------------------------------------------------------------------
     # read paths

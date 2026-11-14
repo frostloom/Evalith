@@ -19,6 +19,7 @@ from .db import utc_now
 from .environments import EnvironmentManager
 from .evaluation_store import EvaluationStore, new_id
 from .execution_process import bounded_process
+from .grading_plan import validate_judge_verdict
 from .model_gateway import ModelError
 from .service import WorkspaceError, WorkspaceService
 from .verification import evaluate_checks, evidence_path
@@ -625,38 +626,18 @@ class EvaluationRunner:
                     ),
                     None,
                 )
-                if (
-                    not judged
-                    or type(judged.get("passed")) is not bool
-                    or type(judged.get("score")) not in (int, float)
-                    or not 0 <= judged["score"] <= 1
-                ):
+                verdict = validate_judge_verdict(judged, check, document)
+                if verdict["status"] == "missing_evidence":
                     check.update(
-                        status="missing_evidence", reason="评分模型缺少有效判断"
-                    )
-                    continue
-                evidence = judged.get("evidence", [])
-                if (
-                    not isinstance(evidence, list)
-                    or not evidence
-                    or any(
-                        not isinstance(q, str) or not q or q not in document
-                        for q in evidence
-                    )
-                ):
-                    check.update(
-                        status="missing_evidence", reason="评分没有引用可核对的实际证据"
+                        status="missing_evidence", reason=verdict["reason"]
                     )
                     continue
                 check.update(
-                    status="passed"
-                    if judged["passed"]
-                    and judged["score"] >= check.get("threshold", 0.8)
-                    else "failed",
-                    score=judged["score"],
-                    reason=str(judged.get("reason", ""))[:2000],
-                    evidence=evidence,
-                    limitations=judged.get("limitations", []),
+                    status="passed" if verdict["status"] == "pass" else "failed",
+                    score=verdict["score"],
+                    reason=verdict["reason"],
+                    evidence=verdict["evidence"],
+                    limitations=verdict["limitations"],
                     calibration_state="unverified",
                     judge_model=run["models"][role]["model"],
                 )

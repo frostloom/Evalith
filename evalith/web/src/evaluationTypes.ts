@@ -125,9 +125,17 @@ export type GenerationJob = {
     task_ids: string[];
     grader_ids: string[];
     test_set_id?: string | null;
-    calibration_id?: string;
-    state?: string | null;
-    stale?: boolean;
+  };
+};
+export type CalibrationJob = {
+  id: string;
+  status: string;
+  error: string | null;
+  usage?: Usage | null;
+  result?: {
+    calibration_id: string;
+    state: string | null;
+    stale: boolean;
   };
 };
 export type CalibrationSampleResult = {
