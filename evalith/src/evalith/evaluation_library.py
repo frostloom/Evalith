@@ -115,7 +115,13 @@ class EvaluationLibrary:
             if identifier:
                 old = self.grader(pid, identifier)
                 return self.store.update(
-                    pid, "grader", identifier, **spec, version=old["version"] + 1
+                    pid,
+                    "grader",
+                    identifier,
+                    **spec,
+                    version=old["version"] + 1,
+                    calibration_state="unverified",
+                    last_calibration_id=None,
                 )
             return self.store.create(
                 pid,

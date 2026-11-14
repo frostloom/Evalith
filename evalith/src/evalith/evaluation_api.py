@@ -24,6 +24,8 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
     app.state.evaluation_assets = assets
     from .evaluation_library import install_library_routes
     install_library_routes(app, workspace, store)
+    from .evaluation_calibration import install_calibration_routes
+    install_calibration_routes(app, workspace, store)
     environments = EnvironmentManager(workspace, store)
     runner = EvaluationRunner(workspace, store, environments)
     app.state.environments = environments

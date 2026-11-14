@@ -125,7 +125,33 @@ export type GenerationJob = {
     task_ids: string[];
     grader_ids: string[];
     test_set_id?: string | null;
+    calibration_id?: string;
+    state?: string | null;
+    stale?: boolean;
   };
+};
+export type CalibrationSampleResult = {
+  name: string;
+  expected: string;
+  actual: string;
+  matched: boolean;
+  score: number | null;
+  reason: string;
+  evidence: string[];
+};
+export type CalibrationReport = {
+  id: string;
+  grader_id: string;
+  grader_version: number;
+  grader_name: string;
+  model_config_id: string | null;
+  model: string;
+  samples: CalibrationSampleResult[];
+  summary: { total: number; matched: number };
+  state: string | null;
+  stale: boolean;
+  usage: Usage | null;
+  created_at: string;
 };
 
 export type GraderDefinition = {
@@ -144,6 +170,7 @@ export type Grader = GraderDefinition & {
   id: string;
   version: number;
   calibration_state: string;
+  last_calibration_id?: string | null;
   created_at: string;
   status: string;
 };

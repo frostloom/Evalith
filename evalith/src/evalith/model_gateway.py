@@ -391,7 +391,7 @@ class ModelGateway:
         if self.config is None:
             raise ModelError("尚未配置模型")
         if self.config.provider == "stub":
-            raise ModelError("离线演示模型不生成真实评测资产，请选择已登录账号或模型服务")
+            raise ModelError("离线演示模型不生成真实评测资产，请选择 OpenAI 兼容服务模型")
         return self._request_chat([{"role": "system", "content": system}, {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}])
 
     def analyze(

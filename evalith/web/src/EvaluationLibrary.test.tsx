@@ -9,6 +9,9 @@ const ev = vi.hoisted(() => ({
   saveSet: vi.fn(),
   archiveGrader: vi.fn(),
   synthesizeGrader: vi.fn(),
+  calibrations: vi.fn(),
+  jobs: vi.fn(),
+  startCalibration: vi.fn(),
 }));
 vi.mock("./evaluationApi", () => ({ evaluationApi: ev }));
 import { EvaluationLibraryPage } from "./EvaluationLibraryPage";
@@ -30,6 +33,9 @@ beforeEach(() => {
   ev.tasks.mockResolvedValue({ items: [] });
   ev.sets.mockResolvedValue({ items: [] });
   ev.saveGrader.mockResolvedValue({ id: "g" });
+  ev.calibrations.mockResolvedValue({ items: [] });
+  ev.jobs.mockResolvedValue({ items: [] });
+  ev.startCalibration.mockResolvedValue({ id: "j1", status: "pending" });
 });
 it("fills an editable grader draft from a requirement without saving it automatically", async () => {
   const user = userEvent.setup();
@@ -154,6 +160,66 @@ it("reviews a judge configuration before persisting the criterion and threshold"
         rubric: "回答必须依据实际工具结果",
       }),
       undefined,
+    ),
+  );
+});
+
+it("shows the calibration state on cards and starts a sample calibration", async () => {
+  const user = userEvent.setup();
+  ev.graders.mockResolvedValue({
+    items: [
+      {
+        id: "g1",
+        name: "余额事实一致性",
+        description: "Check balance facts",
+        rubric: "Only pass with observed evidence",
+        steps: ["Locate evidence"],
+        check: { type: "judge", expected: "Use facts" },
+        model_config_id: "m",
+        threshold: 0.8,
+        task_kinds: ["conversation"],
+        version: 2,
+        calibration_state: "calibrated",
+        created_at: "2026-11-14T00:00:00Z",
+        status: "active",
+      },
+    ],
+  });
+  render(
+    <EvaluationLibraryPage
+      detail={detail}
+      section="graders"
+      models={models}
+      onOpenSet={vi.fn()}
+    />,
+  );
+  expect(await screen.findByText("已校准")).toBeInTheDocument();
+
+  await user.click(
+    screen.getByRole("button", { name: /余额事实一致性/ }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "下一步：确认配置" }),
+  );
+  expect(screen.getByText(/校准 · 已校准/)).toBeInTheDocument();
+  await user.type(screen.getByLabelText("样本 1 名称"), "known good");
+  await user.type(
+    screen.getByLabelText(/观察文档/),
+    "balance answered with audit row",
+  );
+  await user.click(screen.getByRole("button", { name: /开始校准/ }));
+  await waitFor(() =>
+    expect(ev.startCalibration).toHaveBeenCalledWith(
+      "p",
+      "g1",
+      [
+        {
+          name: "known good",
+          document: "balance answered with audit row",
+          expected: "pass",
+        },
+      ],
+      "m",
     ),
   );
 });

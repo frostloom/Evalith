@@ -1,5 +1,6 @@
 import { request } from "./api";
 import type {
+  CalibrationReport,
   RunPreview,
   Analysis,
   Environment,
@@ -50,6 +51,24 @@ export const evaluationApi = {
     request<{ draft: GraderDefinition; usage: unknown }>(
       `${base(id)}/graders/synthesize`,
       send({ description }),
+    ),
+  calibrations: (id: string, gid: string) =>
+    request<{ items: CalibrationReport[] }>(
+      `${base(id)}/graders/${encodeURIComponent(gid)}/calibrations`,
+    ),
+  calibration: (id: string, cid: string) =>
+    request<CalibrationReport>(
+      `${base(id)}/calibrations/${encodeURIComponent(cid)}`,
+    ),
+  startCalibration: (
+    id: string,
+    gid: string,
+    samples: { name: string; document: string; expected: string }[],
+    model_config_id?: string | null,
+  ) =>
+    request<GenerationJob>(
+      `${base(id)}/graders/${encodeURIComponent(gid)}/calibrations`,
+      send({ samples, ...(model_config_id ? { model_config_id } : {}) }),
     ),
   preview: (id: string, body: unknown) =>
     request<RunPreview>(`${base(id)}/runs/preview`, send(body)),
