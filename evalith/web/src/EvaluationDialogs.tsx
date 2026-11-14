@@ -1057,14 +1057,12 @@ export function RunDialog({
             <MenuItem value="aigateway_go">AI Gateway · 独立 Go 环境</MenuItem>
           )}
           {configs
-            .filter(
-              (c) =>
-                c.backend !== "harbor" &&
-                tasks.every(
-                  (t) =>
-                    t.definition.kind ===
-                    (c.backend === "local_command" ? "command" : "http"),
-                ),
+            .filter((c) =>
+              tasks.every(
+                (t) =>
+                  t.definition.kind ===
+                  (c.backend === "http_api" ? "http" : "command"),
+              ),
             )
             .map((c) => (
               <MenuItem key={c.id} value={c.id}>

@@ -1,0 +1,42 @@
+{
+  "run_id": "run_5b427d1c00d14aab8760",
+  "status": "completed",
+  "name": "Harbor 真实验证 6",
+  "environment": "env_cb8c83216c424fdfbeef",
+  "results": [
+    {
+      "title": "Harbor 汇总正确",
+      "status": "passed",
+      "score": 1,
+      "checks": [],
+      "observation": {
+        "exit_code": 0,
+        "stdout": "{\"count\": 2, \"total_cent\": 350}\n",
+        "harbor": {
+          "reward": "1",
+          "verifier_mode": "separate",
+          "job_directory": "/Users/a1/项目/Evalith/.evalith/app/runs/run_5b427d1c00d14aab8760/result_11ae000369f9494ba9a6/harbor/jobs/case-task_e81eb34a7ceb4430b60a",
+          "trial": "task__Syqx7Tk",
+          "harbor_version": "0.24.0"
+        }
+      }
+    },
+    {
+      "title": "Harbor 预期不符",
+      "status": "failed",
+      "score": 0,
+      "checks": [],
+      "observation": {
+        "exit_code": 0,
+        "stdout": "{\"count\": 2, \"total_cent\": 350}\n",
+        "harbor": {
+          "reward": "1",
+          "verifier_mode": "separate",
+          "job_directory": "/Users/a1/项目/Evalith/.evalith/app/runs/run_5b427d1c00d14aab8760/result_be535bcaca8b4a9faf1c/harbor/jobs/case-task_6865f99b31a6421aabc2",
+          "trial": "task__HgYX2TN",
+          "harbor_version": "0.24.0"
+        }
+      }
+    }
+  ]
+}

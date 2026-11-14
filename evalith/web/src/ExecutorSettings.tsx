@@ -96,7 +96,8 @@ export function ExecutorSettings() {
         <div>
           <strong>先配置执行后端</strong>
           <p>
-            保存定义后，在项目中查看并确认独立运行环境，再启动评测。Harbor 尚未接入运行协议。
+            保存定义后，在项目中查看并确认独立运行环境，再启动评测。Harbor
+            后端在容器内执行命令题目，评分与证据判定仍在 Evalith 侧进行。
           </p>
         </div>
       </div>

@@ -30,6 +30,60 @@ def fingerprint(value: Any) -> str:
     ).hexdigest()
 
 
+def resolve_harbor_command(workspace: WorkspaceService) -> list[str] | None:
+    binary = Path(workspace.settings.harbor_binary)
+    if binary.is_file():
+        return [str(binary.resolve())]
+    found = shutil.which(str(binary))
+    return [found] if found else None
+
+
+def harbor_cli_version(command: list[str]) -> str | None:
+    try:
+        result = subprocess.run(
+            [*command, "--version"], capture_output=True, text=True, timeout=20
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    return (result.stdout + result.stderr).strip()[:80] or None
+
+
+def docker_daemon_version() -> str | None:
+    try:
+        result = subprocess.run(
+            ["docker", "info", "--format", "{{.ServerVersion}}"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout.strip()[:80] if result.returncode == 0 else None
+
+
+def rewrite_executor_command(executor: dict[str, Any], original: Path) -> list[str]:
+    command = []
+    for index, arg in enumerate(executor["command"]):
+        if Path(arg).is_absolute() and Path(arg).is_relative_to(original):
+            arg = "{source}/" + str(Path(arg).relative_to(original))
+        elif index > 0 and Path(arg).is_absolute():
+            raise WorkspaceError(
+                "命令参数的绝对路径必须在项目内；请使用相对路径或 {workdir}",
+                status_code=422,
+            )
+        command.append(arg)
+    return command
+
+
+def working_relative_for(executor: dict[str, Any], original: Path) -> str:
+    working = executor.get("working_directory")
+    if working and not Path(working).is_relative_to(original):
+        raise WorkspaceError("工作目录必须位于导入项目内", status_code=422)
+    return str(Path(working).relative_to(original)) if working else "."
+
+
 class EnvironmentManager:
     def __init__(self, workspace: WorkspaceService, store: EvaluationStore):
         self.workspace, self.store = workspace, store
@@ -66,13 +120,13 @@ class EnvironmentManager:
             if definition is None:
                 raise WorkspaceError("执行器配置不存在", status_code=404)
             adapter = definition["backend"]
-        if adapter not in {"aigateway_go", "local_command", "http_api"}:
+        if adapter not in {"aigateway_go", "local_command", "http_api", "harbor"}:
             raise WorkspaceError(
-                "请选择可用执行器；Harbor 尚未接入实际运行协议",
+                "请选择可用执行器",
                 status_code=422,
                 code="unsupported_adapter",
             )
-        if adapter in {"local_command", "http_api"} and definition is None:
+        if adapter in {"local_command", "http_api", "harbor"} and definition is None:
             raise WorkspaceError("需要选择执行器配置", status_code=422)
         if adapter in {"aigateway_go", "local_command"} and not sandbox_available():
             raise WorkspaceError(
@@ -99,11 +153,15 @@ class EnvironmentManager:
             "write_directory": str(directory),
             "copy_scope": "Go module and runtime source only; no old campaigns, credentials or existing databases"
             if adapter == "aigateway_go"
+            else "Non-sensitive ordinary source files baked into the task image; no symlinks or dependency/runtime directories"
+            if adapter == "harbor"
             else "Non-sensitive ordinary source files; no symlinks or dependency/runtime directories",
             "services": [
                 "Each case: actual ai-gateway Handler, private SQLite audit/session DB, in-memory Redis, synthetic loopback billing"
             ]
             if adapter == "aigateway_go"
+            else ["Harbor Docker sandbox per case; the configured command runs inside the task container"]
+            if adapter == "harbor"
             else ["Explicitly configured local executable"]
             if adapter == "local_command"
             else [
@@ -119,6 +177,11 @@ class EnvironmentManager:
                 "Execution: loopback-only model bridge and synthetic services",
             ]
             if adapter == "aigateway_go"
+            else [
+                "Task execution: no-network inside the Harbor container (egress-control sidecar)",
+                "Orchestration: the harbor CLI runs unsandboxed and needs the Docker socket; image builds may pull base images",
+            ]
+            if adapter == "harbor"
             else ["No network inside command sandbox"]
             if adapter == "local_command"
             else [definition["base_url"]],
@@ -130,6 +193,12 @@ class EnvironmentManager:
                 "Synthetic billing is an isolated substitute, not the production financial service. The imported Agent handler is real."
             ]
             if adapter == "aigateway_go"
+            else [
+                "容器即隔离边界：harbor CLI 以受监管的非沙箱进程编排 Docker；评分与证据判定在 Evalith 侧进行",
+                "基础镜像固定为 python:3.13-slim；需要其他运行时需另行扩展",
+                "Harbor reward 仅作记录，不是判定来源；任务镜像会保留在本地 Docker 缓存",
+            ]
+            if adapter == "harbor"
             else [],
         }
         digest = fingerprint(
@@ -236,34 +305,56 @@ class EnvironmentManager:
                 )
                 if current["adapter"] == "aigateway_go":
                     runtime = self._build_gateway(project_id, environment_id, directory)
-                else:
-                    command = []
-                    original = Path(project["root_path"])
-                    for index, arg in enumerate(current["plan"]["executor"]["command"]):
-                        if Path(arg).is_absolute() and Path(arg).is_relative_to(
-                            original
-                        ):
-                            arg = "{source}/" + str(Path(arg).relative_to(original))
-                        elif index > 0 and Path(arg).is_absolute():
-                            raise WorkspaceError(
-                                "命令参数的绝对路径必须在项目内；请使用相对路径或 {workdir}",
-                                status_code=422,
-                            )
-                        command.append(arg)
-                    working = current["plan"]["executor"].get("working_directory")
-                    if working and not Path(working).is_relative_to(original):
+                elif current["adapter"] == "harbor":
+                    executor = current["plan"]["executor"]
+                    harbor_command = resolve_harbor_command(self.workspace)
+                    if not harbor_command:
                         raise WorkspaceError(
-                            "工作目录必须位于导入项目内", status_code=422
+                            "未找到 Harbor CLI；可安装 harbor 或用 EVALITH_HARBOR_BIN 指定路径",
+                            status_code=422,
+                            code="harbor_unavailable",
                         )
+                    version = harbor_cli_version(harbor_command)
+                    if not version:
+                        raise WorkspaceError(
+                            "无法运行 Harbor CLI（--version 失败）；请检查执行器命令",
+                            status_code=422,
+                            code="harbor_unavailable",
+                        )
+                    self._event(
+                        project_id, environment_id, f"Harbor CLI 可用：{version}"
+                    )
+                    docker_version = docker_daemon_version()
+                    if not docker_version:
+                        raise WorkspaceError(
+                            "Docker 守护进程不可达，不能准备 Harbor 环境",
+                            status_code=422,
+                            code="docker_unavailable",
+                        )
+                    self._event(
+                        project_id,
+                        environment_id,
+                        f"Docker 守护进程可用：{docker_version}",
+                    )
+                    original = Path(project["root_path"])
                     runtime = {
-                        "command": command,
-                        "timeout_seconds": current["plan"]["executor"][
-                            "timeout_seconds"
-                        ],
+                        "command": rewrite_executor_command(executor, original),
+                        "harbor_command": harbor_command,
+                        "timeout_seconds": executor["timeout_seconds"],
                         "source_copy": str(directory / "source"),
-                        "working_relative": str(Path(working).relative_to(original))
-                        if working
-                        else ".",
+                        "working_relative": working_relative_for(executor, original),
+                        "harbor_version": version,
+                        "docker_version": docker_version,
+                        "base_image": "python:3.13-slim",
+                    }
+                else:
+                    executor = current["plan"]["executor"]
+                    original = Path(project["root_path"])
+                    runtime = {
+                        "command": rewrite_executor_command(executor, original),
+                        "timeout_seconds": executor["timeout_seconds"],
+                        "source_copy": str(directory / "source"),
+                        "working_relative": working_relative_for(executor, original),
                     }
                 runtime["source_manifest_digest"] = manifest["digest"]
             self.store.update(

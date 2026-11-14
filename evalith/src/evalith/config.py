@@ -39,6 +39,9 @@ class Settings:
     max_files: int = 400
     #: Model request timeout in seconds.
     model_timeout_seconds: float = 60.0
+    #: Harbor CLI used by the harbor executor backend (orchestrator only;
+    #: the target command comes from the executor config).
+    harbor_binary: str = "harbor"
     go_proxy: str = "https://proxy.golang.org,direct"
     go_sdkroot: str | None = None
     #: Paid OpenAI-compatible calls stay disabled unless an operator explicitly
@@ -81,6 +84,7 @@ def settings_from_env() -> Settings:
         max_file_bytes=int(os.environ.get("EVALITH_MAX_FILE_BYTES", "512000")),
         max_files=int(os.environ.get("EVALITH_MAX_FILES", "400")),
         model_timeout_seconds=float(os.environ.get("EVALITH_MODEL_TIMEOUT", "60")),
+        harbor_binary=os.environ.get("EVALITH_HARBOR_BIN", "harbor"),
         go_proxy=os.environ.get("EVALITH_GO_PROXY", "https://proxy.golang.org,direct"),
         go_sdkroot=os.environ.get("EVALITH_GO_SDKROOT") or None,
         allow_paid_models=os.environ.get(

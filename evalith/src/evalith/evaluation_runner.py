@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import math
+import re
 import secrets
+import shlex
 import shutil
 import threading
 import time
@@ -121,6 +124,7 @@ class EvaluationRunner:
             "aigateway_go": {"conversation"},
             "local_command": {"command"},
             "http_api": {"http"},
+            "harbor": {"command"},
         }
         if any(
             task["definition"]["kind"] not in compatible.get(env["adapter"], set())
@@ -585,6 +589,8 @@ class EvaluationRunner:
                 "json": document,
                 "cleanup_status": "no_services_owned",
             }
+        if env["adapter"] == "harbor":
+            return self._execute_harbor(run, task, work, cancellation)
         if env["adapter"] == "aigateway_go":
             binary = Path(runtime["binary"])
             if (
@@ -644,6 +650,212 @@ class EvaluationRunner:
         except (ValueError, KeyError):
             observed["json"] = None
         return observed
+
+    def _execute_harbor(
+        self, run: dict[str, Any], task: dict[str, Any], work: Path, cancellation
+    ) -> dict[str, Any]:
+        """Materialize one Harbor task per case and collect its artifacts.
+
+        The container is the isolation boundary here: the target runs in a
+        no-network Harbor container while the CLI orchestrates unsandboxed.
+        Scoring stays with Evalith; Harbor's reward is metadata.
+        """
+        runtime = run["environment_snapshot"]["runtime"]
+        definition = task["definition"]
+        working_rel = runtime.get("working_relative", ".")
+        harbor_root = work / "harbor"
+        task_dir = harbor_root / "task"
+        # Harbor builds the environment image with the environment/ directory
+        # as the build context, so the project copy must live inside it.
+        image_source = task_dir / "environment" / "project"
+        for sub in ("environment", "solution", "tests"):
+            (task_dir / sub).mkdir(parents=True)
+        shutil.copytree(runtime["source_copy"], image_source, symlinks=True)
+        if any(path.is_symlink() for path in image_source.rglob("*")):
+            raise WorkspaceError("运行副本不能包含符号链接", status_code=422)
+
+        files = definition["input"].get("files", {}) or {}
+        for relative in files:
+            evidence_path(work, str(relative))
+        stdin_b64 = base64.b64encode(
+            str(definition["input"].get("stdin", "")).encode()
+        ).decode()
+        script = ["#!/bin/sh", "set +e"]
+        for relative, content in files.items():
+            encoded = base64.b64encode(str(content).encode()).decode()
+            script.append(
+                f"printf '%s' '{encoded}' | base64 -d > '/app/source/{working_rel}/{relative}'"
+            )
+        program = [
+            arg.replace("{workdir}", f"/app/source/{working_rel}").replace(
+                "{source}", "/app/source"
+            )
+            for arg in [
+                runtime["command"][0],
+                *[shlex.quote(arg) for arg in runtime["command"][1:]],
+            ]
+        ]
+        script.append(f"cd '/app/source/{working_rel}'")
+        script.append(
+            f"printf '%s' '{stdin_b64}' | base64 -d | {' '.join(program)} "
+            "> /app/out/stdout.txt 2> /app/out/stderr.txt"
+        )
+        script.append("echo $? > /app/out/exit_code.txt")
+        (task_dir / "solution" / "solve.sh").write_text(
+            "\n".join(script) + "\n", encoding="utf-8"
+        )
+
+        timeout = float(runtime["timeout_seconds"])
+        artifacts = ["/app/out"]
+        if working_rel == ".":
+            artifacts.insert(0, "/app/source")
+        else:
+            artifacts.insert(0, f"/app/source/{working_rel}")
+        (task_dir / "environment" / "Dockerfile").write_text(
+            f"FROM {runtime.get('base_image', 'python:3.13-slim')}\n"
+            "WORKDIR /app\n"
+            "COPY project /app/source\n"
+            "RUN mkdir -p /app/out\n",
+            encoding="utf-8",
+        )
+        (task_dir / "tests" / "Dockerfile").write_text(
+            # Same base as the agent image: one pull, one cache entry.
+            f"FROM {runtime.get('base_image', 'python:3.13-slim')}\n"
+            "RUN mkdir -p /logs/verifier /tests\n"
+            "COPY test.sh /tests/test.sh\n"
+            "RUN chmod +x /tests/test.sh\n",
+            encoding="utf-8",
+        )
+        (task_dir / "tests" / "test.sh").write_text(
+            "#!/bin/sh\nprintf '1' > /logs/verifier/reward.txt\n",
+            encoding="utf-8",
+        )
+        (task_dir / "instruction.md").write_text(
+            definition["objective"]
+            + "\n\n评分说明（仅供背景，实际检查由 Evalith 在回收产物后执行）：\n"
+            + definition["rubric"]
+            + "\n",
+            encoding="utf-8",
+        )
+        (task_dir / "task.toml").write_text(
+            'schema_version = "1.4"\n'
+            f"artifacts = {json.dumps(artifacts)}\n"
+            "\n[task]\n"
+            'name = "evalith/case"\n'
+            'version = "1"\n'
+            f"description = {json.dumps(definition['objective'][:500])}\n"
+            'authors = [{ name = "Evalith", email = "evalith@localhost" }]\n'
+            "\n[verifier]\n"
+            f"timeout_sec = {timeout}\n"
+            'environment_mode = "separate"\n'
+            "\n[agent]\n"
+            f"timeout_sec = {timeout}\n"
+            "\n[environment]\n"
+            'network_mode = "no-network"\n'
+            "build_timeout_sec = 900.0\n",
+            encoding="utf-8",
+        )
+
+        case = "case-" + re.sub(r"[^a-zA-Z0-9_-]", "-", task["task_id"])[:40]
+        cli, *cli_extra = runtime.get("harbor_command") or ["harbor"]
+        arguments = [
+            cli,
+            *cli_extra,
+            "run",
+            "-p",
+            str(task_dir),
+            "-a",
+            "oracle",
+            "--env",
+            "docker",
+            "-o",
+            str(harbor_root / "jobs"),
+            "--job-name",
+            case,
+            "--yes",
+            "--quiet",
+        ]
+        observed = bounded_process(
+            arguments,
+            harbor_root / "run",
+            timeout=300 + 3 * timeout,
+            cancel=cancellation,
+            unsandboxed=True,
+        )
+        if observed["exit_code"] != 0:
+            raise WorkspaceError(
+                "Harbor 运行失败（exit "
+                + str(observed["exit_code"])
+                + "）："
+                + observed["stderr"][-300:].strip(),
+                status_code=422,
+                code="harbor_run_failed",
+            )
+        trials = sorted(
+            (harbor_root / "jobs" / case).glob(task_dir.name + "__*")
+        )
+        if not trials:
+            raise WorkspaceError(
+                "Harbor 未产生本次用例的产物目录",
+                status_code=422,
+                code="harbor_artifacts_missing",
+            )
+        trial = trials[0]
+        app = trial / "artifacts" / "app"
+        out = app / "out"
+        stdout_file = out / "stdout.txt"
+        exit_file = out / "exit_code.txt"
+        if not stdout_file.is_file() or not exit_file.is_file():
+            detail = ""
+            result_file = trial / "result.json"
+            if result_file.is_file():
+                try:
+                    info = json.loads(result_file.read_text()).get(
+                        "exception_info"
+                    )
+                    detail = "；试录异常：" + str((info or {}).get("exception_message", ""))[-400:]
+                except ValueError:
+                    pass
+            raise WorkspaceError(
+                "Harbor 未回收 stdout 或退出码产物" + detail,
+                status_code=422,
+                code="harbor_artifacts_missing",
+            )
+        exit_code: int | None
+        try:
+            exit_code = int(exit_file.read_text().strip())
+        except ValueError:
+            exit_code = None
+        reward_file = trial / "verifier" / "reward.txt"
+        verifier_mode = None
+        result_file = trial / "result.json"
+        if result_file.is_file():
+            try:
+                verifier_mode = json.loads(result_file.read_text()).get(
+                    "verifier_environment_mode"
+                )
+            except ValueError:
+                verifier_mode = None
+        return {
+            "stdout": stdout_file.read_text(errors="replace")[:2_000_000],
+            "stderr": (out / "stderr.txt").read_text(errors="replace")[:200_000]
+            if (out / "stderr.txt").is_file()
+            else observed["stderr"][:200_000],
+            "exit_code": exit_code,
+            "process_error": observed["process_error"],
+            "duration_ms": observed["duration_ms"],
+            "evidence_directory": str(app / "source" / working_rel),
+            "harbor": {
+                "reward": reward_file.read_text().strip()[:16]
+                if reward_file.is_file()
+                else None,
+                "verifier_mode": verifier_mode,
+                "job_directory": str(harbor_root / "jobs" / case),
+                "trial": trial.name,
+                "harbor_version": runtime.get("harbor_version"),
+            },
+            "cleanup_status": "completed",
+        }
 
     def _save_result(self, project_id: str, run_id: str, result: dict[str, Any]):
         def change(item):
