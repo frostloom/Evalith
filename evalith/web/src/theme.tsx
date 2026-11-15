@@ -31,9 +31,9 @@ const palettes = {
   light: {
     bg: "#ffffff",
     directory: "#ffffff",
-    rail: "#eef0f3",
+    rail: "#ffffff",
     surface: "#ffffff",
-    surface2: "#eef0f3",
+    surface2: "#f7f8f9",
     input: "#f9f9fa",
     ink: "#1a1c20",
     body: "#2a2e36",

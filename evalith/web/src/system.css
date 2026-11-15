@@ -313,9 +313,21 @@ button.ant-btn,
   --inset-hi: none;
 }
 
-/* The main panel floats on the gray rail. */
+/* Rhesis shell: flat white content column, no floating panel. */
 .main {
-  box-shadow: var(--elev-2) !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.sidebar {
+  background: var(--surface) !important;
+}
+.app-shell {
+  background: var(--rail) !important;
+}
+[data-theme="dark"] .main {
+  background: transparent !important;
 }
 
 /* Resting cards float one step; hover lifts them. */
@@ -331,21 +343,24 @@ button.ant-btn,
 .environment-plan,
 .eval-cost-note,
 .review-banner {
-  box-shadow: var(--elev-1), var(--inset-hi);
+  box-shadow: var(--elev-1);
 }
 .project-card:hover,
-.standard-card:hover,
+.standard-card:hover {
+  box-shadow: var(--elev-2);
+  transform: translateY(-1px);
+}
 .service-row:hover,
 .eval-task-row:hover,
 .run-directory-row:hover {
-  box-shadow: var(--elev-3), var(--inset-hi);
-  transform: translateY(-2px);
+  box-shadow: var(--elev-1);
 }
 .project-card {
-  box-shadow: var(--elev-1), var(--inset-hi) !important;
+  box-shadow: var(--elev-1) !important;
 }
 .project-card:hover {
-  box-shadow: var(--elev-3), var(--inset-hi) !important;
+  box-shadow: var(--elev-2) !important;
+  transform: translateY(-1px) !important;
 }
 
 /* Rows in tables stay grounded but separate on hover. */
@@ -440,4 +455,79 @@ button.ant-btn,
 }
 .directory-body .page-description {
   font-size: 14px !important;
+}
+
+/* ---------- Rhesis page anatomy (AppShell + PageLayout measured) ----------
+   32px content padding, 56px title rows (28px/700), 16px descriptions at
+   800px max width, 40px below headers, 30px card insets, 32px section gaps,
+   52px toolbars. */
+
+.page-heading {
+  margin-bottom: 40px !important;
+}
+.page-heading-row {
+  min-height: 56px;
+}
+.page-heading h1,
+.page .page-heading h1,
+.asset-page .page-heading h1,
+.eval-page-body > .page-heading h1 {
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.25 !important;
+}
+.page-description {
+  font-size: 16px !important;
+  line-height: 1.5 !important;
+  max-width: 800px !important;
+}
+.page-actions {
+  gap: 12px;
+}
+
+/* Content padding: one uniform Rhesis rhythm. */
+.main {
+  padding: 32px;
+}
+.directory-body {
+  padding: 32px;
+}
+
+/* Cards: 30px inset, 12px radius, elevation-xs at rest (set above). */
+.standard-card,
+.service-row {
+  padding: 24px 30px;
+}
+.standard-grid {
+  gap: 32px;
+}
+.asset-toolbar,
+.directory-toolbar {
+  min-height: 52px;
+}
+.collection-table,
+.run-table-heading {
+  margin-top: 24px;
+}
+
+/* Section rhythm on settings and asset pages. */
+.settings-layout {
+  gap: 24px;
+}
+
+
+/* Project cards adopt the Rhesis card anatomy too. */
+.project-card {
+  padding: 24px 30px;
+  border-radius: 12px;
+}
+.directory-body .page-description,
+.page .page-description,
+.asset-page .page-description,
+.eval-page-body .page-description,
+.settings-page .page-description {
+  font-size: 16px !important;
+  line-height: 1.5 !important;
+  max-width: 800px !important;
 }

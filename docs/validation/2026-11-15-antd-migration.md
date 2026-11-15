@@ -68,3 +68,15 @@
 - 实测命中：body 字体 Be Vietnam Pro、shell #eef0f3、主按钮 #005F82、卡片边框 #cdd2da、墨色 #1a1c20；axe **0 违规 0 待复核**；56 测试全绿。截图：home/workspace-light、standards-light/dark（evidence/antd-2026-11-15/*rhesis*.png，四张唯一哈希）。
 
 **边界**：未移植 Rhesis 的次级橙色 CTA 与图表色板（本产品暂无对应场景）；4.46:1 的主色原值与 AA 的差异用其自带深色变体解决，非原创改色。
+
+
+## Rhesis 版式解剖落地（同日续）
+
+读取 Rhesis `AppShell.tsx`/`PageLayout.tsx`/`sidebar-constants.ts`/布局令牌，把版式结构逐项移植：
+
+- **外壳**：白底平面（浅色）/ #0d1117（深色），取消"灰画布+悬浮主面板"（先前调色板量化把白误判为灰——255//16*16=240，已修正方法学），侧栏 240px 白底描边，内容列 32px 内边距。
+- **页头（PageLayout 模式）**：标题行高 56px、28px/700 标题左置动作右置、描述 16px 最宽 800px、页头下 40px。
+- **卡片解剖**：内距 24×30px、圆角 12px、静止 ELEVATION-xs、悬停上浮 1px 至 ELEVATION-s；行式列表悬停仅换底色。
+- **网格与工具栏**：卡片网格间距 32px、区块间距 24px、工具栏高 52px。
+- 修复一个真实 bug：`box-shadow: var(--elev-1), var(--inset-hi)` 在 `--inset-hi: none` 时整条声明非法被浏览器丢弃（卡片一度无阴影）——移除该组合。
+- 实测命中：shell 白、main 无阴影透明、卡片 24/30 padding + 12px + Rhesis 阴影、desc 16px、按钮 #005F82、Be Vietnam Pro；axe **0 违规 0 待复核**；56 测试全绿。截图四张（home/workspace-light、standards-light/dark，唯一哈希）。
