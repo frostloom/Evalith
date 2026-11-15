@@ -80,3 +80,8 @@
 - **网格与工具栏**：卡片网格间距 32px、区块间距 24px、工具栏高 52px。
 - 修复一个真实 bug：`box-shadow: var(--elev-1), var(--inset-hi)` 在 `--inset-hi: none` 时整条声明非法被浏览器丢弃（卡片一度无阴影）——移除该组合。
 - 实测命中：shell 白、main 无阴影透明、卡片 24/30 padding + 12px + Rhesis 阴影、desc 16px、按钮 #005F82、Be Vietnam Pro；axe **0 违规 0 待复核**；56 测试全绿。截图四张（home/workspace-light、standards-light/dark，唯一哈希）。
+
+
+## 侧栏 1:1 移植（同日续，用户指示"按 Rhesis 的页面一比一抄"）
+
+从 `Sidebar.tsx`/`NavItem.tsx`/`NavSection.tsx`/`sidebar-utils.ts`/`nav-density.css` 读取侧栏解剖并逐项复制：240px 轨道（收起 64）、内容左右 26px/收起 12px、底 30px；品牌行 64px 高同内距；分组间距 28px、条目间距 6px；分组标题 12px/600 大写 0.04em；条目 14px/22px 文字 + 图标 + 10px 间距 + 14px 横距/8px 纵距 + 8px 圆角；**激活态 = 主色深蓝 #005F82 填充 + 白字 600**（Rhesis primary.dark），悬停 = surface1；计数徽标用正文色保 AA（Rhesis 的 subtitle 灰在 12px 不达标，如实披露）。修复一个自造变量 bug（`--accent-text` 不存在导致激活态透明底白字，改为 Rhesis 原值硬编码）。实测命中：240px/26px/30px、条目 8px 14px/8px 圆角/14px 字号、分组标题大写 0.48px、激活 #005f82/白/600；axe **0 违规 0 待复核**；56 测试全绿。截图 home/workspace-light（*1to1*.png）。

@@ -531,3 +531,107 @@ button.ant-btn,
   line-height: 1.5 !important;
   max-width: 800px !important;
 }
+
+/* ---------- Rhesis sidebar, 1:1 from Sidebar.tsx / NavItem.tsx / NavSection.tsx
+   / nav-density.css ----------
+   240/64px rail, 26px side padding, 28px group gap, 6px item gap;
+   items 14px/22px text + 24px icon, px 14 py 8, radius 8; active =
+   primary-dark fill with white 600 text; hover = surface1; section headers
+   12px/600 uppercase tracking .04em in subtitle gray. */
+
+.sidebar {
+  width: 240px;
+}
+.sidebar .sidebar-content {
+  padding: 0 26px 30px;
+}
+.is-collapsed .sidebar .sidebar-content {
+  padding: 0 12px 30px;
+}
+.project-navigation,
+.recent-projects,
+.sidebar-bottom,
+.workspace-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px; /* --nav-item-gap */
+}
+.sidebar .project-nav-groups,
+.sidebar .recent-projects,
+.sidebar .sidebar-bottom {
+  gap: 28px; /* --nav-group-gap */
+}
+.sidebar .nav-group {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #545a65; /* Rhesis greyscale.label: subtitle gray fails AA at 12px */
+  padding: 0 14px;
+  margin: 0 0 2px;
+}
+[data-theme="dark"] .sidebar .nav-group {
+  color: #8b949e;
+}
+.workspace-nav > button,
+.project-nav-group > button,
+.sidebar-settings > button,
+.recent-project {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 400;
+  background: transparent;
+}
+.workspace-nav > button .lucide,
+.project-nav-group > button .lucide,
+.sidebar-settings > button .lucide {
+  width: 20px;
+  height: 20px;
+}
+.workspace-nav > button:hover,
+.project-nav-group > button:hover,
+.sidebar-settings > button:hover,
+.recent-project:hover {
+  background: var(--surface2);
+  color: var(--body);
+  box-shadow: none;
+}
+.workspace-nav > button.is-active,
+.project-nav-group > button.is-active {
+  /* Rhesis NavItem active: primary.dark fill (#005F82) with white text. */
+  background: #005f82;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: none;
+}
+.workspace-nav > button.is-active .lucide,
+.project-nav-group > button.is-active .lucide {
+  color: #ffffff;
+}
+.workspace-nav > button.is-active .nav-count {
+  color: rgba(255, 255, 255, 0.85);
+}
+.nav-count {
+  color: var(--body);
+}
+.project-nav-group > button span:not(.nav-count) {
+  color: inherit;
+}
+.project-identity {
+  background: var(--accent);
+}
+
+/* Brand row: Rhesis places it inside the 26px side padding. */
+.sidebar-brand {
+  min-height: 64px;
+  padding: 0 26px;
+}
+.is-collapsed .sidebar-brand {
+  padding: 0 12px;
+}
