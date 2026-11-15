@@ -99,3 +99,14 @@
 ## 参照实例逐页对照落地（同日，用户进入 3000 后继续优化）
 
 两步登录法进入部署实例后逐页实测（/metrics、/test-runs）：卡片 padding 30px/圆角 12/边框 1px #cdd2da/阴影 `0 2px 4px rgba(84,90,101,.25)`/网格间距 24px；标题 28px/700；工具栏 52px；**56px 圆形绿 FAB（#164B40，右下角悬浮）**是全线主创建动作；空状态 CTA 是 18px 绿字幽灵按钮（12×20 padding、12px 圆角）。据此补齐 8093 缺失的三个辨识元素：全站卡片浅色边框、首页右下角 56px 绿色 FAB（悬浮创建项目，悬停上浮）、空状态幽灵 CTA（含深色绿变体）。FAB aria-label 独立命名避免与页头按钮重名（测试回归验证）。实测命中：FAB 56/56/50%/rgb(22,75,64)/fixed、卡片边框 1px rgb(205,210,218)；axe **0 违规 0 待复核**；56 测试全绿。截图 home/workspace-light-fab.png。
+
+
+## 推倒重建：单一 rhesis.css（用户选定方向 + "原生 rhesis 的样式"）
+
+删除 styles.css（3135 行）、product.css（1304 行）、system.css（约 900 行补丁）全部三个旧样式表，从零写**一个** [rhesis.css](../../evalith/web/src/rhesis.css)（约 900 行），值全部来自 Rhesis 源码常量与部署实例实测，无分层补丁、无 !important 战争：
+
+- 令牌：Rhesis greyscale（#1a1c20/#2a2e36/#545a65/#cdd2da/#f7f8f9/#eef0f3）、品牌绿（#164B40/#10372F，部署实例 BRAND_PRIMARY）、Rhesis 状态软色、ELEVATION 阴影令牌、深色 GitHub 对（#0d1117/#161b22）。
+- 结构：240px 侧栏（64px 收起）、64px 品牌行、28px 分组距、导航条目 6px14px/8px 圆角/激活 #10372F 白字、内容 32px、页头 56px 行/28px700 标题/15px 描述、卡片 24×28 内距/12px 圆角/1px 边框/elev-1/悬停上浮、表格行 12px18px、药丸状态全语义、56px 绿 FAB、对话区 736px 居中、空状态虚线容器。
+- 全部 ~180 个组件类名逐一覆盖（grep 清点），未漏一个表面；响应式三档 + reduced-motion。
+
+验证：构建通过、**56 测试全绿**（一次 FAB aria-label 重名修复后）、axe **0 违规 0 待复核**（37 通过）、计算样式逐项命中（240px 侧栏 #f7f8f9/1px 描边、导航 6px14px/8px/14px、卡片 12px/24×28/1px/elev-1、主按钮 #164b40、深色侧栏 #0d1117）。截图四张：home/workspace/standards-rebuild(.png/-dark.png)，哈希全部唯一。旧三文件已从仓库删除。
