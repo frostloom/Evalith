@@ -16,7 +16,7 @@ import zhCN from "antd/locale/zh_CN";
 export type ColorMode = "light" | "dark";
 export const THEME_KEY = "evalith.theme";
 export const ui = {
-  font: 'Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
+  font: '"Be Vietnam Pro", Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
   drawer: 560,
 };
 
@@ -27,57 +27,58 @@ export const ui = {
  * --surface/--ink/…) stays visually consistent with the components.
  */
 const palettes = {
+  // Rhesis product tokens (apps/frontend/src/styles/theme.ts + theme-constants.ts).
   light: {
     bg: "#ffffff",
     directory: "#ffffff",
-    rail: "#edeef2",
+    rail: "#eef0f3",
     surface: "#ffffff",
-    surface2: "#f6f7f9",
-    input: "#ffffff",
-    ink: "rgba(0, 0, 0, 0.88)",
-    body: "rgba(0, 0, 0, 0.65)",
-    muted: "rgba(0, 0, 0, 0.58)",
-    border: "#d9d9d9",
-    borderStrong: "#d9d9d9",
-    accent: "#0958d9",
-    accentText: "#003eb3",
-    accentSoft: "#e6f4ff",
-    button: "#1677ff",
-    buttonHover: "#4096ff",
+    surface2: "#eef0f3",
+    input: "#f9f9fa",
+    ink: "#1a1c20",
+    body: "#2a2e36",
+    muted: "#545a65",
+    border: "#cdd2da",
+    borderStrong: "#cdd2da",
+    accent: "#0080AF",
+    accentText: "#005F82",
+    accentSoft: "#E4F2FA",
+    button: "#005F82",
+    buttonHover: "#004E6C",
     buttonText: "#ffffff",
-    success: "#389e0d",
-    warning: "#d48806",
-    error: "#cf1322",
-    warningBg: "#fffbe6",
-    errorBg: "#fff2f0",
-    successBg: "#f6ffed",
-    overlay: "rgba(0, 0, 0, 0.45)",
+    success: "#2E7D32",
+    warning: "#F57C00",
+    error: "#C62828",
+    warningBg: "#FFF8E1",
+    errorBg: "#FFEBEE",
+    successBg: "#E8F5E8",
+    overlay: "rgba(26, 28, 32, 0.32)",
   },
   dark: {
-    bg: "#141821",
-    directory: "#141414",
-    rail: "#0c0e13",
-    surface: "#191d26",
-    surface2: "#262a33",
-    input: "#1d222d",
-    ink: "rgba(255, 255, 255, 0.85)",
-    body: "rgba(255, 255, 255, 0.65)",
-    muted: "rgba(255, 255, 255, 0.58)",
-    border: "#2a3140",
-    borderStrong: "#3a4356",
-    accent: "#3c89e8",
-    accentText: "#69b1ff",
-    accentSoft: "#111a2c",
-    button: "#1677ff",
-    buttonHover: "#4096ff",
+    bg: "#161b22",
+    directory: "#161b22",
+    rail: "#0d1117",
+    surface: "#161b22",
+    surface2: "#0d1117",
+    input: "#2a2e36",
+    ink: "#e6edf3",
+    body: "#c9d1d9",
+    muted: "#8b949e",
+    border: "#30363d",
+    borderStrong: "#30363d",
+    accent: "#33A6CB",
+    accentText: "#66C2DC",
+    accentSoft: "#1F2937",
+    button: "#33A6CB",
+    buttonHover: "#66C2DC",
     buttonText: "#ffffff",
-    success: "#49aa19",
-    warning: "#d89614",
-    error: "#dc4446",
-    warningBg: "#2b2111",
-    errorBg: "#2a1215",
-    successBg: "#162312",
-    overlay: "rgba(0, 0, 0, 0.45)",
+    success: "#86EFAC",
+    warning: "#FCD34D",
+    error: "#FCA5A5",
+    warningBg: "#1F2937",
+    errorBg: "#1F2937",
+    successBg: "#1F2937",
+    overlay: "rgba(0, 0, 0, 0.55)",
   },
 };
 
@@ -161,32 +162,17 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
           token: {
             fontFamily: ui.font,
             borderRadius: 8,
-            colorPrimary: c.accent,
+            colorPrimary: c.button,
             colorBgLayout: c.rail,
-            boxShadow:
-              mode === "light"
-                ? "0 1px 2px rgba(16,24,40,.05), 0 2px 6px -2px rgba(16,24,40,.08)"
-                : "0 1px 2px rgba(0,0,0,.5), 0 2px 8px -2px rgba(0,0,0,.5)",
+            // Rhesis ELEVATION tokens (theme-constants.ts), measured from their product.
+            boxShadow: "0px 2px 4px rgba(84, 90, 101, 0.25)",
             boxShadowSecondary:
-              mode === "light"
-                ? "0 4px 8px -2px rgba(16,24,40,.08), 0 12px 28px -6px rgba(16,24,40,.14)"
-                : "0 4px 10px rgba(0,0,0,.5), 0 12px 32px -4px rgba(0,0,0,.6)",
+              "0px 16px 32px -4px rgba(84, 90, 101, 0.10), 0px 4px 4px rgba(84, 90, 101, 0.04)",
             boxShadowTertiary:
-              mode === "light"
-                ? "0 8px 16px -4px rgba(16,24,40,.10), 0 24px 64px -12px rgba(16,24,40,.20)"
-                : "0 8px 20px rgba(0,0,0,.55), 0 24px 64px -8px rgba(0,0,0,.65)",
+              "0px 24px 48px -8px rgba(84, 90, 101, 0.12), 0px 4px 4px rgba(84, 90, 101, 0.04)",
           },
           components: {
-            Button: {
-              primaryShadow:
-                mode === "light"
-                  ? "0 1px 2px rgba(9,88,217,.35), inset 0 1px 0 rgba(255,255,255,.18)"
-                  : "0 1px 3px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12)",
-              defaultShadow:
-                mode === "light"
-                  ? "0 1px 2px rgba(16,24,40,.06)"
-                  : "0 1px 2px rgba(0,0,0,.4)",
-            },
+            Button: { primaryShadow: "none", defaultShadow: "none" },
           },
         }}
         button={{ autoInsertSpace: false }}

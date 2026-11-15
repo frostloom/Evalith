@@ -1,4 +1,39 @@
 @font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/be-vietnam-pro/bvp-400.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/be-vietnam-pro/bvp-500.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/be-vietnam-pro/bvp-600.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/be-vietnam-pro/bvp-700.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("/fonts/be-vietnam-pro/bvp-800.ttf") format("truetype");
+}
+@font-face {
   font-family: Inter;
   src: url("/fonts/inter/InterVariable.woff2") format("woff2");
   font-weight: 100 900;
@@ -30,7 +65,7 @@
   --warning-bg: #faf3e2;
   --error-bg: #fbeef0;
   --success-bg: #eaf5ef;
-  --font: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font: "Be Vietnam Pro", Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
   --mono: "SFMono-Regular", Consolas, Menlo, monospace;
   font-family: var(--font);
   color: var(--ink);

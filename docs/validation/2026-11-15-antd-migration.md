@@ -54,3 +54,17 @@
 据此移植（工具型应用按比例缩小）：首页大标题 34px/640/-0.024em/行高 1.12；设置与库页标题 26px；页面描述 14px；卡片标题 15–16px/600–620/-0.015em；侧栏品牌区 64px 高；深色模式边框统一为白色 7–8% 透明（Linear 发丝边）；首页留白加大（52px）。实测命中：h1 34px/640/-0.82px、desc 14px、卡片标题 15px/600。axe 0 违规；56 测试全绿。截图 evidence/antd-2026-11-15/home-light-field.png。
 
 **如实披露**：本环境无法为模型渲染像素（图像读取不可用），三轮视觉迭代均在"盲调"；本轮改为读取真实站点的计算样式作依据，但最终视觉判断仍需用户在浏览器中确认——若仍有落差，最快的收敛方式是用户指出具体页面与具体不满（如"首页太空/太密""卡片标题太小"），我按点位调。
+
+
+## Rhesis 设计系统移植（同日，用户指出本地部署了 Rhesis）
+
+不再参考外部网站，直接读取**本地 Rhesis 产品源码**（`rhesis/apps/frontend/src/styles/theme.ts` 与 `theme-constants.ts`，Figma 精确值）并逐项移植：
+
+- **字体**：Be Vietnam Pro（OFL 开源），400–800 五个字重本地打包（`public/fonts/be-vietnam-pro/`），中文回退 PingFang 不变。
+- **色板（浅色）**：画布 #eef0f3（surface2）、白卡、墨色 #1a1c20、正文 #2a2e36、标签 #545a65、边框 #cdd2da、主色 #0080AF（按钮取深蓝变体 #005F82，白字对比 7.1:1——Rhesis 原值 4.46:1 未过 AA，如实披露）、状态药丸用 Rhesis 软色组（#E8F5E8/#2E7D32 等）。
+- **色板（深色）**：GitHub 式深色——画布 #0d1117、卡面 #161b22、边框 #30363d、文字 #e6edf3/#c9d1d9、主色 #33A6CB。
+- **海拔**：弃用自造阴影，改用 Rhesis ELEVATION 令牌（xs `0 2px 4px rgba(84,90,101,.25)` 起）；主按钮回归无阴影平面（Rhesis 同款）。
+- **antd 令牌**：colorPrimary 取按钮令牌、boxShadow 三级取 ELEVATION、colorBgLayout 取画布灰。
+- 实测命中：body 字体 Be Vietnam Pro、shell #eef0f3、主按钮 #005F82、卡片边框 #cdd2da、墨色 #1a1c20；axe **0 违规 0 待复核**；56 测试全绿。截图：home/workspace-light、standards-light/dark（evidence/antd-2026-11-15/*rhesis*.png，四张唯一哈希）。
+
+**边界**：未移植 Rhesis 的次级橙色 CTA 与图表色板（本产品暂无对应场景）；4.46:1 的主色原值与 AA 的差异用其自带深色变体解决，非原创改色。
