@@ -635,3 +635,51 @@ button.ant-btn,
 .is-collapsed .sidebar-brand {
   padding: 0 12px;
 }
+
+/* ---------- Reference-instance details (3000 live measurements) ---------- */
+
+/* Cards carry the 1px border in light mode too (measured #cdd2da). */
+.project-card,
+.standard-card,
+.service-row {
+  border: 1px solid var(--border);
+}
+
+/* 56px round green FAB, bottom-right, Rhesis signature action. */
+.home-fab {
+  position: fixed;
+  right: 40px;
+  bottom: 40px;
+  z-index: 200;
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  box-shadow: 0px 2px 4px rgba(84, 90, 101, 0.25), 0px 8px 24px rgba(22, 75, 64, 0.28);
+}
+.home-fab:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0px 4px 8px rgba(84, 90, 101, 0.25), 0px 12px 32px rgba(22, 75, 64, 0.34);
+}
+
+/* Empty-state CTAs: large ghost buttons in the brand green. */
+.library-empty .ant-btn,
+.service-empty button,
+.empty-state button {
+  color: #164b40;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  text-decoration: none;
+}
+.library-empty .ant-btn:hover {
+  background: #e8f0ee;
+}
+[data-theme="dark"] .library-empty .ant-btn,
+[data-theme="dark"] .service-empty button,
+[data-theme="dark"] .empty-state button {
+  color: #5fa38f;
+}
