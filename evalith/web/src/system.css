@@ -27,7 +27,7 @@
 
 /* ---------- motion layer: every control answers the pointer ---------- */
 
-button:not(.MuiButton-root),
+button.ant-btn,
 .link-button,
 .btn,
 .eval-task-row,
@@ -259,7 +259,7 @@ button:not(.MuiButton-root),
      positioning transforms stay untouched. */
   .standard-card:hover,
   .btn:active:not(:disabled),
-  .MuiButton-root:active {
+  button.ant-btn:active {
     transform: none !important;
   }
 }

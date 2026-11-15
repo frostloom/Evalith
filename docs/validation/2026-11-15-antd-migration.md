@@ -21,3 +21,17 @@
 - 旧 CSS（styles.css/product.css/system.css）仍承载页面布局与业务样式；antd 提供控件外观。两层的圆角/间距可能有视觉缝隙，后续按页面微调。
 - 三个低频 aria-label（结果筛选/题目分类/搜索评测资产）经适配器 ariaLabel 恢复；工作区 Tab 的 tabpanel→tab 联动（aria-controls）在 antd items 模式下未重建，测试改按面板 id 查询，读屏用户按 Tabs 结构导航不受阻。
 - antd 默认动效在 jsdom 测试中被禁用（motion 关闭）；真实浏览器动效保留。
+
+
+## 合并前双轴复评与修复
+
+两轴复评（Spec 复跑了 tsc/测试/构建）。修复：
+
+1. **vite 遗留分包规则**：`manualChunks` 仍把 `@mui/@emotion` 路由到 `mui-vendor`（antd 经 `@emotion/hash` 传递依赖产出 1.2 kB 假 chunk）——删除规则，构建产物不再含 mui-vendor（复核确认）。
+2. **MUI 死样式**：styles.css 四组 `.Mui*` 规则、system.css 两处 MUI 选择器清除；`button:not(.MuiButton-root)` 的误伤选择器改为 `button.ant-btn`。
+3. **tabpanel 可访问名**：工作区三个面板原 `aria-labelledby` 指向已不存在的 MUI tab id——改为面板 `aria-label` 直接命名（与去重的既有 label 合并）。
+4. **死令牌**：`directory` 色板字段与 `--directory` 注入删除（零消费者；`rail` 有消费者保留）。
+5. **图标尺寸统一 16**（Plus 14→16、Search 17→16）；FormDrawer 抽屉分支补 `role="dialog"` 与 `aria-label`（与注释声明一致）。
+6. `配置` 按钮保留逐按钮 `autoInsertSpace={false}`：全局 ConfigProvider 配置在真实应用生效，但测试不包裹 Provider，逐按钮属性保证两处一致——作为已知冗余披露。
+
+评审判定接受不改：ExecutorSettings 表单与 ImportSheet 仍为原生控件+旧 CSS（未在本迁移提交触碰范围，作为后续页面级迁移候选）；模型菜单内的自定义按钮保留（跟随弹层内部布局）；App/Navigation 裸用 antd Input（allowClear 需求，适配器可后续扩展）。修复后 tsc 0、56 测试全绿、构建无 mui chunk。

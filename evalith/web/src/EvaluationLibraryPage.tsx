@@ -142,7 +142,7 @@ export function EvaluationLibraryPage({
             placeholder={
               section === "graders" ? "搜索评价标准…" : "搜索测试集…"
             }
-            prefix={<Search size={17} />}
+            prefix={<Search size={16} />}
           />
           <span>{section === "graders" ? graders.length : sets.length} 项</span>
         </div>

@@ -159,7 +159,7 @@ export function CalibrationPanel({
       <div className="calibration-actions">
         <Button
           size="small"
-          icon={<Plus size={14} />}
+          icon={<Plus size={16} />}
           disabled={samples.length >= 20}
           onClick={() =>
             setSamples([

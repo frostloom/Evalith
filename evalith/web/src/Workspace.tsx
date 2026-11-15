@@ -283,7 +283,7 @@ export function Workspace({
           hidden={activeTab !== "overview"}
           role="tabpanel"
           id="panel-overview"
-          aria-labelledby="tab-overview"
+          aria-label="项目理解"
           className="overview-panel"
         >
           <div className="section-toolbar">
@@ -365,9 +365,8 @@ export function Workspace({
           hidden={activeTab !== "conversation"}
           role="tabpanel"
           id="panel-conversation"
-          aria-labelledby="tab-conversation"
-          className="conversation"
           aria-label="项目主会话"
+          className="conversation"
         >
           <div className="conversation-main">
             <div className="chat-workflow-header">
@@ -550,9 +549,8 @@ export function Workspace({
           hidden={activeTab !== "sources"}
           role="tabpanel"
           id="panel-sources"
-          aria-labelledby="tab-sources"
-          className="evidence"
           aria-label="资料来源与发送范围"
+          className="evidence"
         >
           <section>
             <div className="section-heading small">

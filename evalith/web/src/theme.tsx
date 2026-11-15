@@ -117,8 +117,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
   const variables = useMemo(
     () => ({
       "--canvas": c.bg,
-      "--directory": c.directory,
-      "--rail": c.rail,
+        "--rail": c.rail,
       "--surface": c.surface,
       "--surface2": c.surface2,
       "--input": c.input,

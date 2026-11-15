@@ -689,18 +689,7 @@ a {
   width: 15px;
   height: 15px;
 }
-.directory-toolbar .MuiToggleButtonGroup-root {
-  gap: 12px;
-}
-.directory-toolbar .MuiToggleButton-root {
-  border: 0;
-  border-radius: 5px !important;
-  padding: 5px 8px;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--muted);
-}
-.directory-toolbar .Mui-selected {
+.directory-toolbar .directory-toolbar .directory-toolbar .Mui-selected {
   background: var(--surface2) !important;
   color: var(--ink) !important;
 }
@@ -2261,10 +2250,7 @@ a {
   .page-description {
     font-size: 12px !important;
   }
-  .page-actions .MuiButton-startIcon {
-    display: none;
-  }
-  .workspace > .page-heading {
+  .page-actions   .workspace > .page-heading {
     padding: 14px 20px;
   }
   .workspace .page-heading h1 {
@@ -2795,10 +2781,7 @@ a {
   margin-top: 10px;
   color: var(--muted);
 }
-.environment-plan > .MuiLinearProgress-root {
-  margin-top: 14px;
-}
-.task-detail-title {
+.environment-plan > .task-detail-title {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
