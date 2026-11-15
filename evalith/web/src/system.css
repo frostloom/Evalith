@@ -10,7 +10,6 @@
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --t-fast: 120ms;
   --t: 160ms;
-  --t-slow: 240ms;
   --shadow-1: 0 1px 2px rgba(16, 20, 28, 0.05);
   --shadow-2: 0 2px 4px rgba(16, 20, 28, 0.05), 0 8px 24px rgba(16, 20, 28, 0.09);
   --shadow-pop: 0 1px 2px rgba(16, 20, 28, 0.06), 0 12px 40px rgba(16, 20, 28, 0.16);
@@ -36,7 +35,6 @@ button:not(.MuiButton-root),
 .collection-row,
 .service-row,
 .standard-card,
-.source-chip,
 .evidence-tabs button,
 .workspace-nav > button,
 .project-nav-group > button,
@@ -66,12 +64,6 @@ button:not(.MuiButton-root),
 .btn-primary:hover:not(:disabled) {
   background: var(--button-hover);
   box-shadow: var(--shadow-2);
-}
-
-:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-  border-radius: 4px;
 }
 
 /* ---------- cards: lift on hover, never only a colour swap ---------- */
@@ -112,9 +104,14 @@ button:not(.MuiButton-root),
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- status reads as pills ---------- */
+/* ---------- status reads as pills ----------
+   The app's status surfaces are .eval-state (StateBadge, every run
+   view) and .service-status (model configs); they carry the pill
+   language directly so no parallel class family exists. */
 
-.pill {
+.eval-state,
+.service-status,
+.standard-card footer > span:first-child {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -126,52 +123,42 @@ button:not(.MuiButton-root),
   letter-spacing: 0.01em;
   line-height: 1;
   white-space: nowrap;
-}
-.pill-ok,
-.pill-pass,
-.pill-calibrated {
-  background: var(--success-bg);
-  color: var(--success);
-}
-.pill-fail,
-.pill-error,
-.pill-disagreement {
-  background: var(--error-bg);
-  color: var(--error);
-}
-.pill-warn,
-.pill-review,
-.pill-stale {
-  background: var(--warning-bg);
-  color: var(--warning);
-}
-.pill-neutral,
-.pill-unverified,
-.pill-muted {
   background: var(--surface2);
   color: var(--muted);
 }
-.pill i,
-.pill .lucide {
+.eval-state > span,
+.service-status i {
   width: 6px;
   height: 6px;
   border-radius: 999px;
   background: currentColor;
 }
-
-/* Existing status surfaces pick up the pill language. */
-.standard-card footer > span:first-child {
-  display: inline-flex;
-  align-items: center;
-  height: 21px;
-  padding: 0 9px;
-  border-radius: 999px;
-  background: var(--surface2);
-  color: var(--muted);
-  font-weight: 560;
+.eval-state.state-passed,
+.service-status.is-ok {
+  background: var(--success-bg);
+  color: var(--success);
 }
-.status-dot {
-  box-shadow: 0 0 0 3px transparent;
+.eval-state.state-failed,
+.eval-state.state-validation_error,
+.eval-state.state-execution_error,
+.service-status.is-error {
+  background: var(--error-bg);
+  color: var(--error);
+}
+.eval-state.state-review_required,
+.eval-state.state-missing_evidence,
+.eval-state.state-needs_judge {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+.eval-state.state-running,
+.eval-state.state-pending {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.eval-result-row > button > .eval-state {
+  min-width: 104px;
+  justify-content: flex-start;
 }
 
 /* ---------- sidebar: quiet structure, clear active state ---------- */
@@ -204,15 +191,9 @@ button:not(.MuiButton-root),
   box-shadow: inset 2px 0 0 var(--primary);
 }
 
-/* ---------- headings: one display scale ---------- */
+/* ---------- headings: the 24px display scale lives in the legacy
+   layer (unified there); keep only the reading width here ---------- */
 
-.page-heading h1,
-.workspace .page-heading h1 {
-  font-size: 22px;
-  font-weight: 650;
-  letter-spacing: -0.015em;
-  line-height: 1.35;
-}
 .page-description {
   max-width: 72ch;
 }
@@ -273,6 +254,12 @@ button:not(.MuiButton-root),
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+  /* Only the layer's own hover/press transforms rest; Popper and other
+     positioning transforms stay untouched. */
+  .standard-card:hover,
+  .btn:active:not(:disabled),
+  .MuiButton-root:active {
     transform: none !important;
   }
 }

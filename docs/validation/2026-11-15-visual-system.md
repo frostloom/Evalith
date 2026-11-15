@@ -14,7 +14,11 @@
 - 生产构建通过；前端 **56 passed**（无 UI 行为回归）。
 - 计算样式核对（agent-browser，深浅两模式）：页面标题 24px/650/-0.48px ✓、导航分组 11px/0.55px/620 ✓、按钮过渡 140ms ✓（旧值为 none）、输入/图标按钮圆角 8px ✓、新色板变量命中 ✓、侧栏 1px 描边 ✓。
 - axe-core（4.12.1）：首页 **0 违规**（36 通过，1 处搜索占位符对比度标记需人工复核——#676f7e 于 #f7f7f5 上 ≈4.6:1，达标）；工作区视图 **0 违规**（43 通过，1 处 #panel-sources aria-allowed-role 次级提示，既有标记模式）。
-- 截图存档（本环境工具不可渲染像素，供人工复核）：[home-light](evidence/ui-redesign-2026-11-15/home-light.png)、[home-dark](evidence/ui-redesign-2026-11-15/home-dark.png)、[workspace-dark](evidence/ui-redesign-2026-11-15/workspace-dark.png)、[standards-light](evidence/ui-redesign-2026-11-15/standards-light.png)、[standards-dark](evidence/ui-redesign-2026-11-15/standards-dark.png)。
+- 截图存档（重拍版，每张拍摄前以 `data-theme` 与页面状态校验，6 张 6 个唯一哈希；本环境工具不可渲染像素，供人工复核）：[home-light](evidence/ui-redesign-2026-11-15/home-light.png)、[home-dark](evidence/ui-redesign-2026-11-15/home-dark.png)、[workspace-light](evidence/ui-redesign-2026-11-15/workspace-light.png)、[workspace-dark](evidence/ui-redesign-2026-11-15/workspace-dark.png)、[standards-light](evidence/ui-redesign-2026-11-15/standards-light.png)、[standards-dark](evidence/ui-redesign-2026-11-15/standards-dark.png)、[runs-dark](evidence/ui-redesign-2026-11-15/runs-dark.png)。
+
+## 合并前双轴复评与修复
+
+两轴复评发现首批实现的多处问题，全部修复（见修复提交）：状态药丸 `.pill-*` 族是无消费者的死 CSS——删除并行类族，改为把真实状态面（`.eval-state` StateBadge 全部运行视图、`.service-status` 模型配置、标准卡页脚）直接升级为药丸语言并逐项语义映射（通过/失败/待复核/进行中），实测计算样式 999px/21px 命中；system.css 的 22px 标题块与旧层 24px `!important` 竞争——删除竞争块，全站唯一 24px 展示阶；全局 `:focus-visible` 会把焦点元素圆角改为 4px 且与 MUI 焦点环叠加——删除该规则（旧层基础描边 + 主题双环已覆盖）；`prefers-reduced-motion` 的 `transform: none !important` 会破坏 Popper 定位——限定到本层动效选择器；`.btn-primary` 旧 `filter: brightness` 悬停未真正替换——就地替换为 `--button-hover`，深色悬停方向修正为一致变深（#9bb0ff）；`.standard-card` 被新旧两层矛盾修饰（10/12px 圆角、悬停边框与背景冲突、重复过渡）——就地统一为 12px + 上浮阴影、删除重复；旧 `:root` 静态值与新色板漂移造成挂载闪变——对齐为新浅色板；浅色警告文本对比度 4.5 边缘——加深至 #8a5e08；文档措辞修正（动效为 120–240ms 分档而非单值 140ms）；无效截图（深浅字节相同）按验证流程重拍。未改动并披露：两套按钮代码路径（.btn 镜像 MuiButton，历史并存）、约 40 处低频面圆角未入阶（spec 已声明热点边界）、`.nav-group` 三处定义（值已一致）。修复后构建 + 56 测试通过。
 
 ## 边界与未做
 

@@ -155,15 +155,8 @@
   text-align: left;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   min-height: 270px;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
-}
-.standard-card:hover {
-  border-color: var(--primary);
-  background: var(--surface2);
 }
 .standard-card-title {
   display: flex;
