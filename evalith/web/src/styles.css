@@ -188,8 +188,9 @@ a {
   flex: 1;
 }
 .nav-group {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 620;
+  letter-spacing: 0.05em;
   color: var(--muted);
   padding: 20px 10px 8px;
 }
@@ -455,10 +456,10 @@ a {
   padding: 48px 48px;
 }
 .directory-body .page-heading h1 {
-  font-size: 27px;
-  line-height: 1.4;
-  font-weight: 550;
-  letter-spacing: -0.04em;
+  font-size: 24px;
+  line-height: 1.35;
+  font-weight: 650;
+  letter-spacing: -0.02em;
 }
 .directory-body .page-description {
   margin-top: 10px;
@@ -623,9 +624,9 @@ a {
   min-width: 0;
 }
 .page .page-heading h1 {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 650;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.02em;
   line-height: 1.35;
 }
 .page-description {
@@ -676,7 +677,7 @@ a {
 .directory-toolbar .MuiOutlinedInput-root {
   font-size: 13px;
   background: transparent;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 .directory-toolbar .MuiOutlinedInput-notchedOutline {
   border-color: transparent;

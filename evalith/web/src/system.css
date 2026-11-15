@@ -1,0 +1,278 @@
+/*
+ * Precision layer — loaded last. Motion, focus, elevation and the
+ * refinements that make the workspace read as one instrument: interactive
+ * surfaces answer the pointer, cards lift instead of only changing colour,
+ * status reads as pills, numerals align, and everything rests under
+ * reduced motion. Token values come from theme.tsx's :root variables.
+ */
+
+:root {
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --t-fast: 120ms;
+  --t: 160ms;
+  --t-slow: 240ms;
+  --shadow-1: 0 1px 2px rgba(16, 20, 28, 0.05);
+  --shadow-2: 0 2px 4px rgba(16, 20, 28, 0.05), 0 8px 24px rgba(16, 20, 28, 0.09);
+  --shadow-pop: 0 1px 2px rgba(16, 20, 28, 0.06), 0 12px 40px rgba(16, 20, 28, 0.16);
+}
+[data-theme="dark"] {
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-pop: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+::selection {
+  background: var(--primary-soft);
+  color: var(--ink);
+}
+
+/* ---------- motion layer: every control answers the pointer ---------- */
+
+button:not(.MuiButton-root),
+.link-button,
+.btn,
+.eval-task-row,
+.run-directory-row,
+.collection-row,
+.service-row,
+.standard-card,
+.source-chip,
+.evidence-tabs button,
+.workspace-nav > button,
+.project-nav-group > button,
+.sidebar-settings > button {
+  transition:
+    background-color var(--t) var(--ease),
+    border-color var(--t) var(--ease),
+    color var(--t) var(--ease),
+    box-shadow var(--t) var(--ease),
+    transform var(--t-fast) var(--ease);
+}
+
+.link-button:not(:disabled):hover {
+  color: var(--primary);
+}
+
+.btn {
+  border-radius: 8px;
+  font-weight: 560;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.985);
+}
+.btn-primary:not(:disabled) {
+  box-shadow: var(--shadow-1);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--button-hover);
+  box-shadow: var(--shadow-2);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------- cards: lift on hover, never only a colour swap ---------- */
+
+.standard-card {
+  border-radius: 12px;
+  box-shadow: var(--shadow-1);
+}
+.standard-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-2);
+  transform: translateY(-1px);
+}
+.standard-icon {
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--border);
+  border-color: transparent;
+}
+
+/* ---------- rows and tables: hover rhythm, aligned numerals ---------- */
+
+.run-directory-row,
+.collection-row,
+.service-row,
+.eval-task-row {
+  border-radius: 8px;
+}
+.run-directory-row:hover,
+.collection-row:not(.collection-heading):hover,
+.service-row:hover,
+.eval-task-row:not(.is-selected):hover {
+  background: var(--surface2);
+}
+.run-directory-row > div,
+.collection-row > div,
+.run-config-grid dd,
+.service-row p {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- status reads as pills ---------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 21px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 560;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.pill-ok,
+.pill-pass,
+.pill-calibrated {
+  background: var(--success-bg);
+  color: var(--success);
+}
+.pill-fail,
+.pill-error,
+.pill-disagreement {
+  background: var(--error-bg);
+  color: var(--error);
+}
+.pill-warn,
+.pill-review,
+.pill-stale {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+.pill-neutral,
+.pill-unverified,
+.pill-muted {
+  background: var(--surface2);
+  color: var(--muted);
+}
+.pill i,
+.pill .lucide {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* Existing status surfaces pick up the pill language. */
+.standard-card footer > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  height: 21px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--muted);
+  font-weight: 560;
+}
+.status-dot {
+  box-shadow: 0 0 0 3px transparent;
+}
+
+/* ---------- sidebar: quiet structure, clear active state ---------- */
+
+.sidebar {
+  border-right: 1px solid var(--border);
+}
+.nav-group {
+  font-size: 11px;
+  font-weight: 620;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.workspace-nav > button,
+.project-nav-group > button,
+.sidebar-settings > button {
+  border-radius: 8px;
+}
+.workspace-nav > button:hover,
+.project-nav-group > button:hover,
+.sidebar-settings > button:hover {
+  background: var(--surface2);
+  color: var(--ink);
+}
+.project-nav-group > button.is-active,
+.workspace-nav > button.is-active {
+  background: var(--surface2);
+  color: var(--ink);
+  font-weight: 560;
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
+/* ---------- headings: one display scale ---------- */
+
+.page-heading h1,
+.workspace .page-heading h1 {
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+}
+.page-description {
+  max-width: 72ch;
+}
+.drawer-heading h2,
+.drawer-heading .MuiTypography-h5 {
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- empty states: an invitation, not a blank ---------- */
+
+.library-empty,
+.service-empty {
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  background: var(--canvas);
+}
+.library-empty > .lucide,
+.service-empty > .lucide {
+  color: var(--primary);
+}
+
+/* ---------- scrollbars, dialogs ---------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+  background-clip: content-box;
+  border: 3px solid transparent;
+}
+.MuiDialogActions-root {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+.drawer-footer {
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- everything rests under reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transform: none !important;
+  }
+}

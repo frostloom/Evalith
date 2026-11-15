@@ -21,8 +21,8 @@
 }
 .sidebar .nav-group {
   font-size: 11px;
-  letter-spacing: 0.02em;
-  font-weight: 550;
+  letter-spacing: 0.05em;
+  font-weight: 620;
   margin-top: 14px;
 }
 .project-navigation {
@@ -118,8 +118,8 @@
 }
 .page-heading h1 {
   font-size: 24px !important;
-  letter-spacing: -0.035em;
-  font-weight: 600;
+  letter-spacing: -0.02em !important;
+  font-weight: 650 !important;
 }
 .page-description {
   font-size: 13px !important;
