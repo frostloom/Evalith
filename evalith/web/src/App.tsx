@@ -583,16 +583,6 @@ function Home({
           </section>
         )}
       </div>
-      {/* Rhesis-style floating action button for the primary creation action. */}
-      <Tooltip title="从本地目录建立项目">
-        <Button
-          type="primary"
-          aria-label="悬浮建立项目"
-          className="home-fab"
-          icon={<AddRounded size={24} />}
-          onClick={onImport}
-        />
-      </Tooltip>
     </div>
   );
 }
