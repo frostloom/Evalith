@@ -85,3 +85,12 @@
 ## 侧栏 1:1 移植（同日续，用户指示"按 Rhesis 的页面一比一抄"）
 
 从 `Sidebar.tsx`/`NavItem.tsx`/`NavSection.tsx`/`sidebar-utils.ts`/`nav-density.css` 读取侧栏解剖并逐项复制：240px 轨道（收起 64）、内容左右 26px/收起 12px、底 30px；品牌行 64px 高同内距；分组间距 28px、条目间距 6px；分组标题 12px/600 大写 0.04em；条目 14px/22px 文字 + 图标 + 10px 间距 + 14px 横距/8px 纵距 + 8px 圆角；**激活态 = 主色深蓝 #005F82 填充 + 白字 600**（Rhesis primary.dark），悬停 = surface1；计数徽标用正文色保 AA（Rhesis 的 subtitle 灰在 12px 不达标，如实披露）。修复一个自造变量 bug（`--accent-text` 不存在导致激活态透明底白字，改为 Rhesis 原值硬编码）。实测命中：240px/26px/30px、条目 8px 14px/8px 圆角/14px 字号、分组标题大写 0.48px、激活 #005f82/白/600；axe **0 违规 0 待复核**；56 测试全绿。截图 home/workspace-light（*1to1*.png）。
+
+
+## 品色勘误：部署实例是绿金品牌（同日）
+
+用户指出"3000 端口看看"后进入其部署实例实测，发现关键事实：**该实例被品牌覆盖为 `BRAND_PRIMARY_COLOR=#164B40`（深绿）/`BRAND_SECONDARY_COLOR=#8A5A11`（古铜），非 Rhesis 默认蓝**；自动登录已启用，种子账号 admin@local.dev/localdev（`local_init.py` 记录）。实测值：侧栏 #f7f8f9 浅灰（非白）、导航激活填充 #10372F、按钮 #164B40 圆角 8、正文 16px Be Vietnam Pro、页标题 28px/700。
+
+据此勘误我们的色板：浅色 accent/button → #164B40、激活导航 → #10372F、accentSoft 绿调 #E8F0EE；深色绿系（accent #5FA38F、button #3E7A66）；侧栏改 rail 灰 #f7f8f9、正文内容区白；导航字号 15px/纵距 6px 对齐实测。实测命中：侧栏 rgb(247,248,249)、主按钮 rgb(22,75,64)、激活导航 rgb(16,55,47)；axe **0 违规 0 待复核**（深绿底白字对比充足）；56 测试全绿。截图 home/workspace-light-green.png。
+
+**方法学修正记录**：此前"抄 Rhesis 源码默认值"抄错了对象——用户看的是品牌化部署实例，同一产品的品牌覆盖色与默认色完全不同。以实测部署实例为准。

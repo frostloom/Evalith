@@ -321,7 +321,7 @@ button.ant-btn,
   background: transparent !important;
 }
 .sidebar {
-  background: var(--surface) !important;
+  background: var(--rail) !important;
 }
 .app-shell {
   background: var(--rail) !important;
@@ -581,9 +581,9 @@ button.ant-btn,
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 14px;
+  padding: 6px 14px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 22px;
   font-weight: 400;
   background: transparent;
@@ -604,8 +604,8 @@ button.ant-btn,
 }
 .workspace-nav > button.is-active,
 .project-nav-group > button.is-active {
-  /* Rhesis NavItem active: primary.dark fill (#005F82) with white text. */
-  background: #005f82;
+  /* Deployed-instance brand: derived primary #10372F fill with white text. */
+  background: #10372f;
   color: #ffffff;
   font-weight: 600;
   box-shadow: none;
