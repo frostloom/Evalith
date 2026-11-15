@@ -150,6 +150,7 @@ a {
   min-height: 0;
 }
 .sidebar-brand {
+  min-height: 64px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -350,6 +351,7 @@ a {
   display: none;
 }
 .is-collapsed .sidebar-brand {
+  min-height: 64px;
   flex-direction: column;
   padding-inline: 0;
 }
@@ -456,13 +458,13 @@ a {
 .directory-body {
   max-width: 1160px;
   margin: auto;
-  padding: 48px 48px;
+  padding: 52px 52px 40px;
 }
 .directory-body .page-heading h1 {
-  font-size: 24px;
-  line-height: 1.35;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-size: 34px;
+  line-height: 1.12;
+  font-weight: 640;
+  letter-spacing: -0.024em;
 }
 .directory-body .page-description {
   margin-top: 10px;
@@ -627,13 +629,13 @@ a {
   min-width: 0;
 }
 .page .page-heading h1 {
-  font-size: 24px;
-  font-weight: 650;
+  font-size: 26px;
+  font-weight: 640;
   letter-spacing: -0.02em;
-  line-height: 1.35;
+  line-height: 1.2;
 }
 .page-description {
-  font-size: 13px !important;
+  font-size: 14px !important;
   color: var(--muted);
   margin-top: 7px !important;
   line-height: 1.7 !important;
@@ -767,9 +769,9 @@ a {
   gap: 3px;
 }
 .project-card-heading strong {
-  font-size: 14px;
-  font-weight: 550;
-  letter-spacing: -0.02em;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   overflow-wrap: anywhere;
 }
 .project-card-heading > span {
@@ -2215,6 +2217,7 @@ a {
     padding: 12px 18px;
   }
   .sidebar-brand {
+  min-height: 64px;
     padding: 0;
   }
   .sidebar-content {

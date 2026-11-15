@@ -406,3 +406,51 @@ button.ant-btn,
 .evidence-drawer-body {
   box-shadow: var(--elev-1);
 }
+
+
+/* ---------- field-study refinements (Linear/Vercel measured) ----------
+   Display headings with tight tracking and 1.1 line-height, hairline
+   white-alpha borders on dark, roomier cards. */
+
+.sidebar-brand {
+  border-bottom: 1px solid transparent;
+}
+[data-theme="dark"] .sidebar {
+  border-right-color: rgba(255, 255, 255, 0.07);
+}
+[data-theme="dark"] .main {
+  border-color: rgba(255, 255, 255, 0.07);
+}
+[data-theme="dark"] .border,
+[data-theme="dark"] .standard-card,
+[data-theme="dark"] .project-card,
+[data-theme="dark"] .service-row,
+[data-theme="dark"] .eval-task-row {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.standard-card h2 {
+  font-size: 16px;
+  font-weight: 620;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+}
+.workspace .page-heading h1 {
+  font-size: 18px;
+  font-weight: 620;
+  letter-spacing: -0.015em;
+}
+.eval-state {
+  font-weight: 560;
+}
+
+
+/* Field-study overrides (must beat legacy !important rules). */
+.directory-body .page-heading h1 {
+  font-size: 34px !important;
+  line-height: 1.12 !important;
+  font-weight: 640 !important;
+  letter-spacing: -0.024em !important;
+}
+.directory-body .page-description {
+  font-size: 14px !important;
+}
