@@ -298,3 +298,111 @@ button.ant-btn,
   border-radius: 10px;
   font-size: 13px;
 }
+
+/* ---------- elevation system ----------
+   Gray canvas, floating white cards, graded shadows for popovers and
+   dialogs; dark mode gets layered near-black depth instead. */
+
+:root {
+  --elev-1: 0 1px 2px rgba(16, 24, 40, 0.05), 0 2px 6px -2px rgba(16, 24, 40, 0.07);
+  --elev-2: 0 2px 4px -2px rgba(16, 24, 40, 0.07), 0 8px 20px -6px rgba(16, 24, 40, 0.13);
+  --elev-3: 0 4px 8px -2px rgba(16, 24, 40, 0.09), 0 16px 36px -8px rgba(16, 24, 40, 0.18);
+  --elev-4: 0 8px 16px -4px rgba(16, 24, 40, 0.12), 0 28px 72px -12px rgba(16, 24, 40, 0.24);
+  --inset-hi: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+[data-theme="dark"] {
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.45), 0 2px 8px -2px rgba(0, 0, 0, 0.4);
+  --elev-2: 0 2px 6px rgba(0, 0, 0, 0.5), 0 10px 28px -6px rgba(0, 0, 0, 0.55);
+  --elev-3: 0 4px 10px rgba(0, 0, 0, 0.55), 0 16px 44px -8px rgba(0, 0, 0, 0.6);
+  --elev-4: 0 8px 20px rgba(0, 0, 0, 0.6), 0 28px 80px -12px rgba(0, 0, 0, 0.7);
+  --inset-hi: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* The main panel floats on the gray rail. */
+.main {
+  box-shadow: var(--elev-2) !important;
+}
+
+/* Resting cards float one step; hover lifts them. */
+.project-card,
+.standard-card,
+.service-row,
+.eval-task-row,
+.collection-row:not(.collection-heading),
+.run-directory-row,
+.library-empty,
+.service-empty,
+.evidence-panel,
+.environment-plan,
+.eval-cost-note,
+.review-banner {
+  box-shadow: var(--elev-1), var(--inset-hi);
+}
+.project-card:hover,
+.standard-card:hover,
+.service-row:hover,
+.eval-task-row:hover,
+.run-directory-row:hover {
+  box-shadow: var(--elev-3), var(--inset-hi);
+  transform: translateY(-2px);
+}
+.project-card {
+  box-shadow: var(--elev-1), var(--inset-hi) !important;
+}
+.project-card:hover {
+  box-shadow: var(--elev-3), var(--inset-hi) !important;
+}
+
+/* Rows in tables stay grounded but separate on hover. */
+.collection-row:not(.collection-heading):hover {
+  transform: none;
+}
+
+/* Primary buttons get physical depth. */
+.ant-btn-primary {
+  box-shadow: 0 1px 2px rgba(9, 88, 217, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition: box-shadow 140ms cubic-bezier(0.2, 0, 0, 1), background-color 140ms cubic-bezier(0.2, 0, 0, 1), transform 120ms cubic-bezier(0.2, 0, 0, 1);
+}
+.ant-btn-primary:hover:not(:disabled) {
+  box-shadow: 0 2px 6px rgba(9, 88, 217, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.ant-btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(9, 88, 217, 0.3);
+}
+[data-theme="dark"] .ant-btn-primary {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Selects and inputs sit slightly recessed into cards. */
+.afield .ant-input,
+.afield .ant-select-selector,
+.afield .ant-input-affix-wrapper {
+  box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+[data-theme="dark"] .afield .ant-input,
+[data-theme="dark"] .afield .ant-select-selector,
+[data-theme="dark"] .afield .ant-input-affix-wrapper {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+/* Dropdown panels float high. */
+.ant-select-dropdown,
+.ant-dropdown-menu,
+.ant-popover .ant-popover-inner {
+  box-shadow: var(--elev-3) !important;
+}
+.ant-modal .ant-modal-content {
+  box-shadow: var(--elev-4) !important;
+}
+.form-drawer .ant-drawer-content-wrapper .ant-drawer-body > div[role="dialog"] {
+  box-shadow: none;
+}
+
+/* Conversation and evidence surfaces read as raised panels. */
+.conversation,
+.overview-panel,
+.source-drawer-body,
+.evidence-drawer-body {
+  box-shadow: var(--elev-1);
+}

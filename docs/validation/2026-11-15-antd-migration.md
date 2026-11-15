@@ -35,3 +35,14 @@
 6. `配置` 按钮保留逐按钮 `autoInsertSpace={false}`：全局 ConfigProvider 配置在真实应用生效，但测试不包裹 Provider，逐按钮属性保证两处一致——作为已知冗余披露。
 
 评审判定接受不改：ExecutorSettings 表单与 ImportSheet 仍为原生控件+旧 CSS（未在本迁移提交触碰范围，作为后续页面级迁移候选）；模型菜单内的自定义按钮保留（跟随弹层内部布局）；App/Navigation 裸用 antd Input（allowClear 需求，适配器可后续扩展）。修复后 tsc 0、56 测试全绿、构建无 mui chunk。
+
+## 海拔层次追加迭代（同日）
+
+用户反馈迁移后仍"没有层次感觉"，参照知名站点的悬浮层次。追加**海拔系统**：
+
+- 画布分层：浅色画布加深为 #edeef2（主面板白卡浮于其上），深色 rail 压到 #0c0e13、卡片面提亮分层。
+- 四级阴影令牌 `--elev-1..4`（浅色冷调 rgba(16,24,40)、深色近黑叠加），卡片静止 elev-1 + 顶部内高光、悬停上浮 2px 至 elev-3；antd 弹层经 `boxShadow/Secondary/Tertiary` 令牌统一（下拉 elev-3、对话框 elev-4）。
+- 主按钮经 antd Button 组件令牌 `primaryShadow/defaultShadow` 获得物理深度（投影+顶部内高光、按压下沉）；表单控件内凹阴影。
+- 实测计算样式：app-shell #edeef2 / main 白底 elev-2 / 项目卡 elev-1+inset / 主按钮 rgba(9,88,217,.35) 投影全部命中；axe 仍 0 违规 0 待复核；56 测试全绿（纯 CSS/令牌改动）。深浅截图：home/workspace/standards-light、standards-dark（见 evidence/antd-2026-11-15/*depth*.png）。
+
+本追加为纯令牌与 CSS 层改动，验证以计算样式 + axe + 测试三路完成，未另启子代理评审。

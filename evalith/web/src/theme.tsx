@@ -30,9 +30,9 @@ const palettes = {
   light: {
     bg: "#ffffff",
     directory: "#ffffff",
-    rail: "#f5f5f5",
+    rail: "#edeef2",
     surface: "#ffffff",
-    surface2: "#f5f5f5",
+    surface2: "#f6f7f9",
     input: "#ffffff",
     ink: "rgba(0, 0, 0, 0.88)",
     body: "rgba(0, 0, 0, 0.65)",
@@ -54,17 +54,17 @@ const palettes = {
     overlay: "rgba(0, 0, 0, 0.45)",
   },
   dark: {
-    bg: "#141414",
+    bg: "#141821",
     directory: "#141414",
-    rail: "#141414",
-    surface: "#1f1f1f",
-    surface2: "#2a2a2a",
-    input: "#1f1f1f",
+    rail: "#0c0e13",
+    surface: "#191d26",
+    surface2: "#262a33",
+    input: "#1d222d",
     ink: "rgba(255, 255, 255, 0.85)",
     body: "rgba(255, 255, 255, 0.65)",
     muted: "rgba(255, 255, 255, 0.58)",
-    border: "#424242",
-    borderStrong: "#424242",
+    border: "#2a3140",
+    borderStrong: "#3a4356",
     accent: "#3c89e8",
     accentText: "#69b1ff",
     accentSoft: "#111a2c",
@@ -162,6 +162,31 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
             fontFamily: ui.font,
             borderRadius: 8,
             colorPrimary: c.accent,
+            colorBgLayout: c.rail,
+            boxShadow:
+              mode === "light"
+                ? "0 1px 2px rgba(16,24,40,.05), 0 2px 6px -2px rgba(16,24,40,.08)"
+                : "0 1px 2px rgba(0,0,0,.5), 0 2px 8px -2px rgba(0,0,0,.5)",
+            boxShadowSecondary:
+              mode === "light"
+                ? "0 4px 8px -2px rgba(16,24,40,.08), 0 12px 28px -6px rgba(16,24,40,.14)"
+                : "0 4px 10px rgba(0,0,0,.5), 0 12px 32px -4px rgba(0,0,0,.6)",
+            boxShadowTertiary:
+              mode === "light"
+                ? "0 8px 16px -4px rgba(16,24,40,.10), 0 24px 64px -12px rgba(16,24,40,.20)"
+                : "0 8px 20px rgba(0,0,0,.55), 0 24px 64px -8px rgba(0,0,0,.65)",
+          },
+          components: {
+            Button: {
+              primaryShadow:
+                mode === "light"
+                  ? "0 1px 2px rgba(9,88,217,.35), inset 0 1px 0 rgba(255,255,255,.18)"
+                  : "0 1px 3px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12)",
+              defaultShadow:
+                mode === "light"
+                  ? "0 1px 2px rgba(16,24,40,.06)"
+                  : "0 1px 2px rgba(0,0,0,.4)",
+            },
           },
         }}
         button={{ autoInsertSpace: false }}
