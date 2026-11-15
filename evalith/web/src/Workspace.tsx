@@ -10,7 +10,7 @@ import {
   Cpu,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Popover, Tab, Tabs } from "@mui/material";
+import { Button, Popover, Tabs } from "antd";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ProjectWorkflow } from "./ProjectWorkflow";
@@ -245,8 +245,8 @@ export function Workspace({
           <>
             {activeTab !== "conversation" && (
               <Button
-                variant="text"
-                startIcon={<RefreshRounded />}
+                type="text"
+                icon={<RefreshRounded size={16} />}
                 onClick={() =>
                   void run(() => api.rescan(project.id), "资料范围已重新扫描。")
                 }
@@ -256,8 +256,8 @@ export function Workspace({
               </Button>
             )}
             <Button
-              variant="text"
-              startIcon={<FolderOutlined />}
+              type="text"
+              icon={<FolderOutlined size={16} />}
               onClick={() => setEditingSources(true)}
             >
               资料与范围
@@ -267,33 +267,16 @@ export function Workspace({
       />
       {!hideTabs && (
         <Tabs
-          selectionFollowsFocus
-          value={activeTab}
-          onChange={(_, value: WorkspaceTab) => changeTab(value)}
+          activeKey={activeTab}
+          onChange={(key) => changeTab(key as WorkspaceTab)}
           aria-label="项目工作区章节"
           className="detail-tabs"
-          variant="scrollable"
-          scrollButtons="auto"
-        >
-          <Tab
-            value="conversation"
-            label="主会话"
-            id="tab-conversation"
-            aria-controls="panel-conversation"
-          />
-          <Tab
-            value="overview"
-            label="项目理解"
-            id="tab-overview"
-            aria-controls="panel-overview"
-          />
-          <Tab
-            value="sources"
-            label="资料来源"
-            id="tab-sources"
-            aria-controls="panel-sources"
-          />
-        </Tabs>
+          items={[
+            { key: "conversation", label: "主会话" },
+            { key: "overview", label: "项目理解" },
+            { key: "sources", label: "资料来源" },
+          ]}
+        />
       )}
       <div className="workspace-panels">
         <div
@@ -306,7 +289,7 @@ export function Workspace({
           <div className="section-toolbar">
             <h2>项目理解</h2>
             <Button
-              startIcon={<RefreshRounded />}
+              icon={<RefreshRounded size={16} />}
               onClick={() =>
                 void run(
                   () => api.reanalyse(project.id),
@@ -369,7 +352,7 @@ export function Workspace({
                 补充或纠正
               </button>
               <Button
-                variant="contained"
+                type="primary"
                 disabled={!readiness.generation_allowed}
                 onClick={() => changeTab("tasks")}
               >
@@ -908,6 +891,10 @@ function ModelPicker({
 }) {
   const [modelId, setModelId] = useState(project.model_config_id ?? "");
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    return () => anchor.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
@@ -927,21 +914,15 @@ function ModelPicker({
 
   return (
     <Popover
-      open
-      anchorEl={anchor}
-      onClose={busy ? undefined : onClose}
-      anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      transformOrigin={{ vertical: "bottom", horizontal: "right" }}
-      slotProps={{
-        paper: {
-          role: "dialog",
-          "aria-label": "会话模型",
-          "aria-modal": true,
-          className: "model-menu",
-          sx: { width: 340, maxWidth: "calc(100vw - 32px)", mb: 1.5 },
-        },
+      open={Boolean(anchor)}
+      trigger="click"
+      placement="bottomRight"
+      onOpenChange={(open) => {
+        if (!open && !busy) onClose();
       }}
-    >
+      overlayClassName="model-menu-overlay"
+      content={
+        <div className="model-menu" role="dialog" aria-label="会话模型">
       <div className="model-menu-heading">
         <Cpu />
         <h2>会话模型</h2>
@@ -1014,6 +995,19 @@ function ModelPicker({
           {busy ? "保存并分析中…" : "保存模型"}
         </button>
       </div>
+        </div>
+      }
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          position: "fixed",
+          left: anchor.getBoundingClientRect().left,
+          top: anchor.getBoundingClientRect().top,
+          width: anchor.getBoundingClientRect().width,
+          height: anchor.getBoundingClientRect().height,
+        }}
+      />
     </Popover>
   );
 }

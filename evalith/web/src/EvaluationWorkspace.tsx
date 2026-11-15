@@ -1,15 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  Button,
-  Checkbox,
-  IconButton,
-  InputAdornment,
-  LinearProgress,
-  MenuItem,
-  TextField,
-  Tooltip,
-} from "@mui/material";
+import { Alert, Button, Checkbox, Progress, Tooltip } from "antd";
+import { SelectInput, TextInput } from "./ui";
 import {
   ArrowUpRight,
   Clock3,
@@ -17,7 +8,6 @@ import {
   FlaskConical,
   Play,
   Plus,
-  Search,
   ChevronRight,
   WandSparkles,
 } from "lucide-react";
@@ -194,16 +184,15 @@ export function EvaluationWorkspace({
             section === "tasks" ? (
               <>
                 <Button
-                  variant="outlined"
-                  startIcon={<Play />}
+                  icon={<Play size={16} />}
                   disabled={!selected.length}
                   onClick={() => setDialog("run")}
                 >
                   运行选中题目{selected.length ? ` (${selected.length})` : ""}
                 </Button>
                 <Button
-                  variant={collection ? "outlined" : "contained"}
-                  startIcon={collection ? undefined : <Plus />}
+                  type={collection ? "default" : "primary"}
+                  icon={collection ? undefined : <Plus size={16} />}
                   disabled={
                     !collection &&
                     (!detail.readiness.generation_allowed ||
@@ -218,16 +207,16 @@ export function EvaluationWorkspace({
               </>
             ) : section === "runs" ? (
               <Button
-                variant="contained"
-                startIcon={<Plus />}
+                type="primary"
+                icon={<Plus size={16} />}
                 onClick={() => onSection("tasks")}
               >
                 选择题目运行
               </Button>
             ) : run ? (
               <Button
-                variant="contained"
-                startIcon={<WandSparkles />}
+                type="primary"
+                icon={<WandSparkles size={16} />}
                 disabled={active(run.status)}
                 onClick={() => setDialog("analysis")}
               >
@@ -238,24 +227,23 @@ export function EvaluationWorkspace({
         />
         {(error || loadError) && (
           <Alert
-            severity="error"
+            type="error"
+            closable
             onClose={() => {
               setError("");
               setLoadError("");
             }}
-          >
-            {error || loadError}
-          </Alert>
+            message={error || loadError}
+          />
         )}
         {section === "tasks" && !detail.readiness.generation_allowed && (
           <Alert
-            severity="info"
+            type="info"
             action={
               <Button onClick={() => onSection("overview")}>查看理解</Button>
             }
-          >
-            {detail.readiness.reason}
-          </Alert>
+            message={detail.readiness.reason}
+          />
         )}
         {section === "tasks" && generation && (
           <div className="eval-progress-note">
@@ -263,28 +251,40 @@ export function EvaluationWorkspace({
             <div>
               <strong>正在生成 {generation.count} 道题目</strong>
               <p>模型正在生成题目、Rubric 与 Grader，完成后自动组成测试集。</p>
-              <LinearProgress />
+              <Progress percent={100} showInfo={false} size="small" status="active" />
             </div>
           </div>
         )}
         {section === "tasks" && !generation && jobs[0]?.status === "failed" && (
-          <Alert severity="error">题目生成失败：{jobs[0].error}</Alert>
+          <Alert
+            type="error"
+            message={`题目生成失败：${jobs[0].error}`}
+          />
         )}
         {section === "tasks" &&
           !generation &&
           jobs[0]?.status === "completed" &&
           jobs[0].operation === "preparation" && (
-            <Alert severity="success">
-              已准备 {jobs[0].result?.task_ids.length ?? 0} 道题目、
-              {jobs[0].result?.grader_ids.length ?? 0} 项 Grader
-              和测试集。评分标准未校准，执行环境仍需确认。
-              <Button size="small" onClick={() => onSection("sets")}>
-                查看测试集
-              </Button>
-              <Button size="small" onClick={() => onSection("graders")}>
-                查看 Grader
-              </Button>
-            </Alert>
+            <Alert
+              type="success"
+              action={
+                <>
+                  <Button size="small" onClick={() => onSection("sets")}>
+                    查看测试集
+                  </Button>
+                  <Button size="small" onClick={() => onSection("graders")}>
+                    查看 Grader
+                  </Button>
+                </>
+              }
+              message={
+                <>
+                  已准备 {jobs[0].result?.task_ids.length ?? 0} 道题目、
+                  {jobs[0].result?.grader_ids.length ?? 0} 项 Grader
+                  和测试集。评分标准未校准，执行环境仍需确认。
+                </>
+              }
+            />
           )}
         {!loaded ? (
           <div className="eval-empty">
@@ -294,45 +294,28 @@ export function EvaluationWorkspace({
         ) : section === "tasks" ? (
           <>
             <div className="eval-toolbar">
-              <TextField
-                placeholder="搜索题目…"
-                size="small"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                slotProps={{
-                  htmlInput: { "aria-label": "搜索题目" },
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Search size={16} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
-              <TextField
-                select
-                size="small"
+<TextInput
+  placeholder="搜索题目…"
+  value={query}
+  onChange={(value) => setQuery(value)}
+/>
+              <SelectInput
+                ariaLabel="题目分类"
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                slotProps={{ htmlInput: { "aria-label": "题目分类" } }}
-              >
-                <MenuItem value="all">全部分类</MenuItem>
-                {Array.from(
-                  new Set(scopedTasks.map((t) => t.definition.category)),
-                ).map((c) => (
-                  <MenuItem key={c} value={c}>
-                    {c}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={(value) => setCategory(value)}
+                options={[
+                  { value: "all", label: "全部分类" },
+                  ...Array.from(
+                    new Set(scopedTasks.map((t) => t.definition.category)),
+                  ).map((c) => ({ value: c, label: c })),
+                ]}
+              />
               <span>{shown.length} 道题目</span>
             </div>
             {tasks.length ? (
               <div className="eval-table" role="region" aria-label="项目题目集">
                 <div className="eval-task-row eval-table-heading">
                   <Checkbox
-                    size="small"
                     checked={
                       shown.length > 0 &&
                       shown.every((t) => selected.includes(t.id))
@@ -352,7 +335,7 @@ export function EvaluationWorkspace({
                             ),
                       )
                     }
-                    inputProps={{ "aria-label": "选择全部可见题目" }}
+                    aria-label="选择全部可见题目"
                   />
                   <span>题目</span>
                   <span>分类</span>
@@ -366,11 +349,8 @@ export function EvaluationWorkspace({
                     className={`eval-task-row ${selected.includes(t.id) ? "is-selected" : ""}`}
                   >
                     <Checkbox
-                      size="small"
                       checked={selected.includes(t.id)}
-                      inputProps={{
-                        "aria-label": `选择题目 ${t.definition.title}`,
-                      }}
+                      aria-label={`选择题目 ${t.definition.title}`}
                       onChange={(e) =>
                         setSelected(
                           e.target.checked
@@ -404,13 +384,13 @@ export function EvaluationWorkspace({
                     </span>
                     <span className="muted">v{t.version}</span>
                     <Tooltip title="查看题目详情">
-                      <IconButton
+                      <Button
+                        type="text"
                         size="small"
                         aria-label={`打开 ${t.definition.title}`}
                         onClick={() => setTask(t)}
-                      >
-                        <ArrowUpRight size={15} />
-                      </IconButton>
+                        icon={<ArrowUpRight size={15} />}
+                      />
                     </Tooltip>
                   </div>
                 ))}
@@ -422,7 +402,6 @@ export function EvaluationWorkspace({
                 description="先明确评测方向，模型会从当前项目资料中设计题目和检查规则。"
                 action={
                   <Button
-                    variant="outlined"
                     disabled={!detail.readiness.generation_allowed}
                     onClick={() => setDialog("generation")}
                   >
@@ -474,7 +453,7 @@ export function EvaluationWorkspace({
             title="还没有评测运行"
             description="到题目集选择要验证的题目，然后准备独立环境并启动运行。"
             action={
-              <Button variant="outlined" onClick={() => onSection("tasks")}>
+              <Button onClick={() => onSection("tasks")}>
                 选择题目
               </Button>
             }
@@ -589,7 +568,9 @@ function AnalysisReports({
               </div>
               <StateBadge status={report.status} />
             </header>
-            {report.error && <Alert severity="warning">{report.error}</Alert>}
+            {report.error && (
+              <Alert type="warning" message={report.error} />
+            )}
             {report.report ? (
               <>
                 <p className="report-summary">{report.report.summary}</p>
@@ -631,7 +612,7 @@ function AnalysisReports({
                 </section>
               </>
             ) : active(report.status) ? (
-              <LinearProgress />
+              <Progress percent={100} showInfo={false} size="small" status="active" />
             ) : null}
             <UsageLine value={report.usage} />
           </article>
@@ -642,7 +623,7 @@ function AnalysisReports({
           title="从运行证据中寻找原因"
           description="选择全部、未通过、低分或指定结果。分析使用独立调用预算，保留每项引用。"
           action={
-            <Button variant="outlined" disabled={disabled} onClick={onAnalyze}>
+            <Button disabled={disabled} onClick={onAnalyze}>
               生成结果分析
             </Button>
           }
@@ -685,7 +666,7 @@ function TaskEvidenceDrawer({
         <h3>{r.task.definition.title}</h3>
         <p>{r.task.definition.objective}</p>
       </div>
-      {r.error && <Alert severity="warning">{r.error}</Alert>}
+      {r.error && <Alert type="warning" message={r.error} />}
       <div className="evidence-tabs">
         {[
           ["response", "对话"],
@@ -715,7 +696,10 @@ function TaskEvidenceDrawer({
               )}
               <p>{c.reason}</p>
               {!!c.uncertainties?.length && (
-                <Alert severity="warning">{c.uncertainties.join("；")}</Alert>
+                <Alert
+                  type="warning"
+                  message={c.uncertainties.join("；")}
+                />
               )}
               <dl>
                 <dt>期望</dt>

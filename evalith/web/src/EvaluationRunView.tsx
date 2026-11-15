@@ -1,14 +1,5 @@
 import { useState, type ReactNode } from "react";
-import {
-  Alert,
-  Button,
-  Checkbox,
-  MenuItem,
-  Tab,
-  Tabs,
-  TextField,
-  Tooltip,
-} from "@mui/material";
+import { Alert, Button, Checkbox, Tabs, Tooltip } from "antd";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -21,6 +12,7 @@ import type { EvalRun, EvalResult, Check } from "./evaluationTypes";
 import type { WorkspaceTab } from "./types";
 import { StateBadge, UsageLine, active, statusNames } from "./evaluationUi";
 import { checkLabels } from "./EvaluationLibraryPage";
+import { SelectInput } from "./ui";
 const date = (s: string) =>
   new Date(s).toLocaleString("zh-CN", {
     month: "numeric",
@@ -166,8 +158,8 @@ export function EvaluationRunView({
         <div className="run-heading-actions">
           {active(run.status) ? (
             <Button
-              variant="outlined"
-              startIcon={<Square />}
+              type="default"
+              icon={<Square size={16} />}
               disabled={busy || run.status === "cancelling"}
               onClick={onCancel}
             >
@@ -175,8 +167,8 @@ export function EvaluationRunView({
             </Button>
           ) : (
             <Button
-              variant="contained"
-              startIcon={<WandSparkles />}
+              type="primary"
+              icon={<WandSparkles size={16} />}
               onClick={onAnalyze}
             >
               分析结果
@@ -186,36 +178,36 @@ export function EvaluationRunView({
       </div>
       {section === "analyses" ? (
         <div className="run-analysis-picker">
-          <TextField
-            select
+          <SelectInput
             label="选择运行"
             value={run.id}
-            onChange={(e) => onSelect(e.target.value)}
-          >
-            {runs.map((r, i) => (
-              <MenuItem key={r.id} value={r.id}>
-                评测运行 {runs.length - i} · {date(r.created_at)} ·{" "}
-                {statusNames[r.status]}
-              </MenuItem>
-            ))}
-          </TextField>
+            onChange={onSelect}
+            options={runs.map((r, i) => ({
+              value: r.id,
+              label: `评测运行 ${runs.length - i} · ${date(r.created_at)} · ${
+                statusNames[r.status]
+              }`,
+            }))}
+          />
         </div>
       ) : (
         <Tabs
-          value={tab}
-          onChange={(_, value: string) => setTab(value)}
+          activeKey={tab}
+          onChange={(k) => setTab(k)}
           className="run-detail-tabs"
           aria-label="运行详情章节"
-        >
-          <Tab label="概览" value="summary" />
-          <Tab label="测试结果" value="tests" />
-          <Tab label="运行配置" value="configuration" />
-        </Tabs>
+          items={[
+            { key: "summary", label: "概览" },
+            { key: "tests", label: "测试结果" },
+            { key: "configuration", label: "运行配置" },
+          ]}
+        />
       )}
       {run.error && (
-        <Alert severity={run.status === "failed" ? "error" : "warning"}>
-          {run.error}
-        </Alert>
+        <Alert
+          type={run.status === "failed" ? "error" : "warning"}
+          message={run.error}
+        />
       )}
       {section === "analyses" ? (
         children
@@ -360,21 +352,17 @@ export function EvaluationRunView({
               <h2>测试结果</h2>
               <p>{shown.length} 项结果，点击行查看对话和评分。</p>
             </div>
-            <TextField
-              select
+            <SelectInput
+              ariaLabel="结果筛选"
               value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              slotProps={{ htmlInput: { "aria-label": "结果筛选" } }}
-            >
-              <MenuItem value="all">全部状态</MenuItem>
-              {Array.from(new Set(run.results.map((r) => r.status))).map(
-                (s) => (
-                  <MenuItem key={s} value={s}>
-                    {statusNames[s]}
-                  </MenuItem>
+              onChange={setFilter}
+              options={[
+                { value: "all", label: "全部状态" },
+                ...Array.from(new Set(run.results.map((r) => r.status))).map(
+                  (s) => ({ value: s, label: statusNames[s] }),
                 ),
-              )}
-            </TextField>
+              ]}
+            />
           </div>
           <div className="result-table-header">
             <span>测试目标</span>
@@ -386,9 +374,7 @@ export function EvaluationRunView({
             <div className="eval-result-row" key={r.id}>
               <Checkbox
                 checked={selectedResultIds.includes(r.id)}
-                inputProps={{
-                  "aria-label": `选择结果 ${r.task.definition.title}`,
-                }}
+                aria-label={`选择结果 ${r.task.definition.title}`}
                 onChange={(e) =>
                   onSelection(
                     e.target.checked
@@ -418,7 +404,7 @@ export function EvaluationRunView({
           {selectedResultIds.length > 0 && (
             <Button
               disabled={active(run.status)}
-              startIcon={<WandSparkles />}
+              icon={<WandSparkles size={16} />}
               onClick={onAnalyze}
             >
               分析选中 {selectedResultIds.length} 项

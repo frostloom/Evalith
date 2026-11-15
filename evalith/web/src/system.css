@@ -263,3 +263,38 @@ button:not(.MuiButton-root),
     transform: none !important;
   }
 }
+
+/* ---------- Ant Design integration ----------
+   antd owns its components; the legacy layer only keeps page structure.
+   .afield mirrors the old .field label rhythm for adapter controls. */
+
+.afield {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 18px;
+  font-size: 13px;
+}
+.afield > span {
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--ink);
+}
+.afield .ant-select,
+.afield .ant-input-number,
+.afield .ant-input-affix-wrapper {
+  width: 100%;
+}
+.drawer-heading .ant-btn,
+.page-actions .ant-btn {
+  border-radius: 8px;
+}
+.drawer-content .ant-alert,
+.eval-page-body .ant-alert,
+.asset-page .ant-alert,
+.settings-page .ant-alert,
+.calibration-panel .ant-alert {
+  border-radius: 10px;
+  font-size: 13px;
+}

@@ -10,9 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@emotion/react": "11.14.0",
-    "@emotion/styled": "11.14.1",
-    "@mui/material": "7.3.5",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "antd": "^6.7.0",
     "lucide-react": "1.72.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

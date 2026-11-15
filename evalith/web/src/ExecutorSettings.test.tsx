@@ -79,12 +79,13 @@ it("confirms deletion and leaves a failed deletion visible in its dialog", async
   render(<ExecutorSettings />);
   await user.click(await screen.findByRole("button", { name: "删除" }));
   const dialog = screen.getByRole("dialog", { name: "删除执行器配置？" });
-  await user.click(within(dialog).getByRole("button", { name: "取消" }));
+  await user.click(within(dialog).getByRole("button", { name: /取\s*消|Cancel/ }));
   expect(apiMock.deleteExecutorConfig).not.toHaveBeenCalled();
   await user.click(await screen.findByRole("button", { name: "删除" }));
   await user.click(screen.getByRole("button", { name: "确认删除" }));
   await waitFor(() =>
     expect(screen.getByRole("alert")).toHaveTextContent("删除失败"),
   );
-  expect(screen.getByRole("dialog")).toBeVisible();
+  // jsdom never advances antd enter-motion; presence is the check.
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
 });

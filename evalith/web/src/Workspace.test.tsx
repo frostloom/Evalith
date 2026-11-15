@@ -195,9 +195,9 @@ describe("workspace failure reconciliation", () => {
         onNotice: vi.fn(),
       };
       const view = render(<Workspace detail={makeDetail(false)} {...props} />);
-      const messages = screen
-        .getByRole("tabpanel", { name: "主会话" })
-        .querySelector(".messages")!;
+      const messages = document.querySelector(
+        "#panel-conversation .messages",
+      ) as HTMLElement;
       Object.defineProperties(messages, {
         scrollHeight: { value: 2000 },
         clientHeight: { value: 400 },

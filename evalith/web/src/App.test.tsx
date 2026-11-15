@@ -122,10 +122,14 @@ async function selectProject(
 }
 async function importProject(user: ReturnType<typeof userEvent.setup>) {
   const switcher = screen.queryByRole("button", { name: "切换项目" });
-  if (switcher) await user.click(switcher);
-  await user.click(
-    (await screen.findAllByRole("button", { name: "建立项目" }))[0],
-  );
+  if (switcher) {
+    await user.click(switcher);
+    await user.click(
+      await screen.findByRole("button", { name: "从切换器建立新项目" }),
+    );
+  } else {
+    await user.click(await screen.findByRole("button", { name: "建立项目" }));
+  }
 }
 
 it("keeps workspace updates under StrictMode", async () => {

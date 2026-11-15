@@ -37,8 +37,10 @@ it("keeps legacy account configs visible as removed and offers no ChatGPT login 
   );
   expect(screen.getByText("ChatGPT 账号（已移除）")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "添加模型服务" }));
+  // antd Select renders its options in a portal once opened.
+  await user.click(screen.getByRole("combobox", { name: "提供方" }));
   expect(
-    screen.getByRole("option", { name: /离线演示/ }),
+    await screen.findByRole("option", { name: /离线演示/ }),
   ).toBeInTheDocument();
   expect(
     screen.getByRole("option", { name: /OpenAI 兼容服务/ }),

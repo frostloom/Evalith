@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Button, MenuItem, TextField } from "@mui/material";
+import { Alert, Button } from "antd";
 import { Plus, ShieldCheck } from "lucide-react";
 import { evaluationApi as api } from "./evaluationApi";
+import { SelectInput, TextArea, TextInput } from "./ui";
 import type { CalibrationJob, CalibrationReport, Grader } from "./evaluationTypes";
 import type { ModelConfig } from "./types";
 
@@ -122,27 +123,26 @@ export function CalibrationPanel({
       </div>
       {samples.map((sample, index) => (
         <div className="calibration-sample" key={index}>
-          <TextField
+          <TextInput
             label={`样本 ${index + 1} 名称`}
             value={sample.name}
-            onChange={(e) => patch(index, { name: e.target.value })}
+            onChange={(value) => patch(index, { name: value })}
           />
-          <TextField
-            select
+          <SelectInput
             label="预期结果"
             value={sample.expected}
-            onChange={(e) => patch(index, { expected: e.target.value })}
-          >
-            <MenuItem value="pass">应通过</MenuItem>
-            <MenuItem value="fail">应失败</MenuItem>
-            <MenuItem value="missing_evidence">应缺证据</MenuItem>
-          </TextField>
-          <TextField
+            onChange={(value) => patch(index, { expected: value })}
+            options={[
+              { value: "pass", label: "应通过" },
+              { value: "fail", label: "应失败" },
+              { value: "missing_evidence", label: "应缺证据" },
+            ]}
+          />
+          <TextArea
             label="观察文档（评分模型可见的全部证据）"
-            multiline
-            minRows={2}
+            rows={2}
             value={sample.document}
-            onChange={(e) => patch(index, { document: e.target.value })}
+            onChange={(value) => patch(index, { document: value })}
           />
           {samples.length > 1 && (
             <Button
@@ -159,7 +159,7 @@ export function CalibrationPanel({
       <div className="calibration-actions">
         <Button
           size="small"
-          startIcon={<Plus />}
+          icon={<Plus size={14} />}
           disabled={samples.length >= 20}
           onClick={() =>
             setSamples([
@@ -170,24 +170,20 @@ export function CalibrationPanel({
         >
           添加样本
         </Button>
-        <TextField
-          select
+        <SelectInput
           label="评分模型"
           value={modelId}
-          onChange={(e) => setModelId(e.target.value)}
+          onChange={setModelId}
           className="calibration-model"
-        >
-          <MenuItem value="">跟随标准绑定模型</MenuItem>
-          {models
-            .filter((m) => m.provider === "openai_compatible")
-            .map((m) => (
-              <MenuItem key={m.id} value={m.id}>
-                {m.name} · {m.model_name}
-              </MenuItem>
-            ))}
-        </TextField>
+          options={[
+            { value: "", label: "跟随标准绑定模型" },
+            ...models
+              .filter((m) => m.provider === "openai_compatible")
+              .map((m) => ({ value: m.id, label: `${m.name} · ${m.model_name}` })),
+          ]}
+        />
         <Button
-          variant="contained"
+          type="primary"
           disabled={!valid || busy || !!jobId}
           onClick={() => void start()}
         >
@@ -196,7 +192,7 @@ export function CalibrationPanel({
             : `开始校准（${samples.length} 个样本，每样本一次模型调用）`}
         </Button>
       </div>
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && <Alert type="error" message={error} />}
       {report && (
         <div className="calibration-report">
           <h4>

@@ -1,16 +1,6 @@
 import { useState } from "react";
-import {
-  ButtonBase,
-  Divider,
-  IconButton,
-  InputAdornment,
-  List,
-  ListItemButton,
-  ListItemText,
-  Popover,
-  TextField,
-  Tooltip,
-} from "@mui/material";
+import { Button, Divider, Input, Popover, Tooltip } from "antd";
+
 import {
   FolderClosed,
   TerminalSquare,
@@ -78,31 +68,33 @@ export function Navigation({
       aria-label="工作区侧栏"
     >
       <div className="sidebar-brand">
-        <ButtonBase
+        <button
           className="brand"
           onClick={onHome}
           aria-label="Evalith，回到项目目录"
         >
           <EvalithMark />
           <strong>Evalith</strong>
-        </ButtonBase>
+        </button>
         <Tooltip title={collapsed ? "展开侧栏" : "收起侧栏"}>
-          <IconButton
+          <Button
+            type="text"
+            size="small"
             className="desktop-collapse"
             onClick={onCollapse}
             aria-label={collapsed ? "展开侧栏" : "收起侧栏"}
-          >
-            <PanelLeftClose />
-          </IconButton>
+            icon={<PanelLeftClose size={16} />}
+          />
         </Tooltip>
-        <IconButton
+        <Button
+          type="text"
+          size="small"
           className="mobile-toggle"
           onClick={onMobileToggle}
           aria-expanded={mobileOpen}
           aria-label={mobileOpen ? "收起导航" : "展开导航"}
-        >
-          <Menu />
-        </IconButton>
+          icon={<Menu size={16} />}
+        />
       </div>
       <div className="sidebar-content" id="sidebar-content">
         <nav aria-label="工作区导航" className="workspace-nav">
@@ -148,83 +140,85 @@ export function Navigation({
         {activeProject && (
           <div className="project-navigation">
             <p className="nav-group">当前项目</p>
-            <ButtonBase
-              className="project-switcher"
-              aria-label="切换项目"
-              aria-haspopup="dialog"
-              aria-expanded={Boolean(anchor)}
-              onClick={(event) => setAnchor(event.currentTarget)}
-            >
-              <span className="project-identity" aria-hidden="true">
-                {activeProject.name.slice(0, 1)}
-              </span>
-              <span>{activeProject.name}</span>
-              <ChevronDown />
-            </ButtonBase>
             <Popover
               open={Boolean(anchor)}
-              anchorEl={anchor}
-              onClose={close}
-              anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-              slotProps={{
-                paper: {
-                  role: "dialog",
-                  "aria-label": "项目切换器",
-                  sx: { width: 300, p: 1.5 },
-                },
+              trigger="click"
+              placement="bottomLeft"
+              destroyOnHidden
+              motion={{ motionName: "" }}
+              onOpenChange={(open) => {
+                if (!open) close();
               }}
+              content={
+                <div
+                  role="dialog"
+                  aria-label="项目切换器"
+                  className="switcher-panel"
+                >
+                  <Input
+                    autoFocus
+                    placeholder="搜索项目…"
+                    aria-label="搜索可切换的项目"
+                    prefix={<Search size={16} />}
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    allowClear
+                  />
+                  <div className="switcher-list">
+                    {projects
+                      .filter((project) =>
+                        project.name
+                          .toLowerCase()
+                          .includes(search.toLowerCase()),
+                      )
+                      .map((project) => (
+                        <button
+                          key={project.id}
+                          className={`switcher-item ${activeProject.id === project.id ? "is-active" : ""}`}
+                          onClick={() => {
+                            close();
+                            onOpen(project);
+                          }}
+                        >
+                          <span>{project.name}</span>
+                          <small>{project.file_count} 个文件</small>
+                        </button>
+                      ))}
+                    {!projects.some((project) =>
+                      project.name
+                        .toLowerCase()
+                        .includes(search.toLowerCase()),
+                    ) && <p className="empty-menu">没有匹配的项目</p>}
+                  </div>
+                  <Divider style={{ margin: "6px 0" }} />
+                  <button
+                    className="switcher-item"
+                    aria-label="从切换器建立新项目"
+                    onClick={() => {
+                      close();
+                      onImport();
+                    }}
+                  >
+                    <span>
+                      <Plus size={16} /> 建立项目
+                    </span>
+                  </button>
+                </div>
+              }
             >
-              <TextField
-                autoFocus
-                fullWidth
-                placeholder="搜索项目…"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                slotProps={{
-                  htmlInput: { "aria-label": "搜索可切换的项目" },
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Search size={16} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
-              <List className="switcher-list" disablePadding>
-                {projects
-                  .filter((project) =>
-                    project.name.toLowerCase().includes(search.toLowerCase()),
-                  )
-                  .map((project) => (
-                    <ListItemButton
-                      key={project.id}
-                      selected={activeProject.id === project.id}
-                      onClick={() => {
-                        close();
-                        onOpen(project);
-                      }}
-                    >
-                      <ListItemText
-                        primary={project.name}
-                        secondary={`${project.file_count} 个文件`}
-                      />
-                    </ListItemButton>
-                  ))}
-                {!projects.some((project) =>
-                  project.name.toLowerCase().includes(search.toLowerCase()),
-                ) && <p className="empty-menu">没有匹配的项目</p>}
-              </List>
-              <Divider />
-              <ListItemButton
-                onClick={() => {
-                  close();
-                  onImport();
-                }}
+              <button
+                className="project-switcher"
+                aria-label="切换项目"
+                aria-haspopup="dialog"
+                aria-expanded={Boolean(anchor)}
+                onClick={(event) => setAnchor(event.currentTarget)}
               >
-                <Plus size={16} />
-                <ListItemText primary="建立项目" sx={{ ml: 1 }} />
-              </ListItemButton>
+                <span className="project-identity" aria-hidden="true">
+                  {activeProject.name.slice(0, 1)}
+                </span>
+                <span>{activeProject.name}</span>
+                <ChevronDown size={16} />
+              </button>
             </Popover>
             <div
               className="project-nav-groups"

@@ -4,14 +4,7 @@ import {
   Globe2 as LanguageRounded,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-} from "@mui/material";
+import { Alert, Button, Modal } from "antd";
 import { api } from "./api";
 import { FormDrawer, PageHeader } from "./ui";
 import type { ExecutorConfig, ExecutorDefinition } from "./types";
@@ -74,8 +67,8 @@ export function ExecutorSettings() {
         description="定义评测如何运行，与项目资料、模型服务分别管理。"
         actions={
           <Button
-            variant="contained"
-            startIcon={<AddRounded />}
+            type="primary"
+            icon={<AddRounded size={16} />}
             onClick={() => setEditing("new")}
           >
             添加执行器
@@ -84,12 +77,12 @@ export function ExecutorSettings() {
       />
       {notice && (
         <Alert
-          severity="success"
+          type="success"
+          closable
           onClose={() => setNotice(null)}
           className="settings-feedback"
-        >
-          {notice}
-        </Alert>
+          message={notice}
+        />
       )}
       <div className="settings-info">
         <TerminalRounded />
@@ -103,15 +96,14 @@ export function ExecutorSettings() {
       </div>
       {error && (
         <Alert
-          severity="error"
+          type="error"
+          message={error}
           action={
-            <Button onClick={() => setReload((value) => value + 1)}>
+            <Button size="small" onClick={() => setReload((value) => value + 1)}>
               重试
             </Button>
           }
-        >
-          {error}
-        </Alert>
+        />
       )}
       {loading ? (
         <p role="status" className="settings-loading">
@@ -192,29 +184,22 @@ export function ExecutorSettings() {
           }}
         />
       )}
-      <Dialog
+      <Modal
         open={Boolean(deleting)}
-        onClose={busy ? undefined : () => setDeleting(null)}
-        aria-labelledby="delete-executor-title"
+        title="删除执行器配置？"
+        okText="确认删除"
+        okButtonProps={{ danger: true, loading: busy }}
+        cancelText="取消"
+        onCancel={busy ? undefined : () => setDeleting(null)}
+        onOk={() => void remove()}
       >
-        <DialogTitle id="delete-executor-title">删除执行器配置？</DialogTitle>
-        <DialogContent>
-          确认删除“{deleting?.name}”？
-          {deleteError && (
-            <p className="form-error" role="alert">
-              {deleteError}
-            </p>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleting(null)} disabled={busy}>
-            取消
-          </Button>
-          <Button color="error" onClick={() => void remove()} disabled={busy}>
-            确认删除
-          </Button>
-        </DialogActions>
-      </Dialog>
+        确认删除“{deleting?.name}”？
+        {deleteError && (
+          <p className="form-error" role="alert">
+            {deleteError}
+          </p>
+        )}
+      </Modal>
     </div>
   );
 }
@@ -289,9 +274,9 @@ function ExecutorEditor({
             取消
           </Button>
           <Button
-            type="submit"
+            type="primary"
+            htmlType="submit"
             form="executor-form"
-            variant="contained"
             disabled={busy}
           >
             {busy ? "正在保存…" : "保存配置"}

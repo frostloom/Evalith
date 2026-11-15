@@ -1,15 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  Alert,
-  Button,
-  Checkbox,
-  InputAdornment,
-  MenuItem,
-  Stepper,
-  Step,
-  StepLabel,
-  TextField,
-} from "@mui/material";
+import { Alert, Button, Checkbox, Steps } from "antd";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -29,7 +19,13 @@ import type {
   TestSet,
 } from "./evaluationTypes";
 import type { ModelConfig, ProjectDetail } from "./types";
-import { FormDrawer, PageHeader } from "./ui";
+import {
+  FormDrawer,
+  PageHeader,
+  SelectInput,
+  TextArea,
+  TextInput,
+} from "./ui";
 const failure = (e: unknown) => (e instanceof Error ? e.message : "操作失败");
 export const checkLabels: Record<string, string> = {
   judge: "模型判分",
@@ -118,8 +114,8 @@ export function EvaluationLibraryPage({
           }
           actions={
             <Button
-              variant="contained"
-              startIcon={<Plus />}
+              type="primary"
+              icon={<Plus size={16} />}
               onClick={() =>
                 section === "graders" ? setEdit(null) : setEditSet(null)
               }
@@ -129,27 +125,24 @@ export function EvaluationLibraryPage({
           }
         />
         {error && (
-          <Alert severity="error" onClose={() => setError("")}>
-            {error}
-          </Alert>
+          <Alert
+            type="error"
+            message={error}
+            closable
+            onClose={() => setError("")}
+          />
         )}
         <div className="asset-toolbar">
-          <TextField
+          <TextInput
+            ariaLabel={
+              section === "graders" ? "搜索评价标准" : "搜索测试集"
+            }
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(value) => setQuery(value)}
             placeholder={
               section === "graders" ? "搜索评价标准…" : "搜索测试集…"
             }
-            slotProps={{
-              htmlInput: { "aria-label": "搜索评测资产" },
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search size={17} />
-                  </InputAdornment>
-                ),
-              },
-            }}
+            prefix={<Search size={17} />}
           />
           <span>{section === "graders" ? graders.length : sets.length} 项</span>
         </div>
@@ -201,9 +194,7 @@ export function EvaluationLibraryPage({
               <ShieldCheck />
               <h2>建立可复用的评价标准</h2>
               <p>从现有题目的 Rubric 开始，或定义新的检查方式。</p>
-              <Button variant="outlined" onClick={() => setEdit(null)}>
-                创建第一项标准
-              </Button>
+              <Button onClick={() => setEdit(null)}>创建第一项标准</Button>
             </div>
           )
         ) : sets.length ? (
@@ -240,7 +231,11 @@ export function EvaluationLibraryPage({
                       day: "numeric",
                     })}
                   </span>
-                  <Button size="small" onClick={() => setEditSet(s)}>
+                  <Button
+                    size="small"
+                    autoInsertSpace={false}
+                    onClick={() => setEditSet(s)}
+                  >
                     配置
                   </Button>
                 </div>
@@ -392,13 +387,13 @@ function StandardForm({
           <Button
             onClick={step === 1 ? () => setStep(0) : onClose}
             disabled={busy}
-            startIcon={step === 1 ? <ArrowLeft /> : undefined}
+            icon={step === 1 ? <ArrowLeft size={16} /> : undefined}
           >
             {step === 1 ? "返回配置" : "取消"}
           </Button>
           {step === 0 ? (
             <Button
-              variant="contained"
+              type="primary"
               disabled={!valid}
               onClick={() => setStep(1)}
             >
@@ -406,7 +401,7 @@ function StandardForm({
             </Button>
           ) : (
             <Button
-              variant="contained"
+              type="primary"
               disabled={busy}
               onClick={() => void save()}
             >
@@ -416,27 +411,22 @@ function StandardForm({
         </>
       }
     >
-      <Stepper activeStep={step} className="standard-stepper">
-        <Step>
-          <StepLabel>配置标准</StepLabel>
-        </Step>
-        <Step>
-          <StepLabel>确认配置</StepLabel>
-        </Step>
-      </Stepper>
-      {error && <Alert severity="error">{error}</Alert>}
+      <Steps
+        size="small"
+        current={step}
+        className="standard-stepper"
+        items={[{ title: "配置标准" }, { title: "确认配置" }]}
+      />
+      {error && <Alert type="error" message={error} />}
       {step === 0 ? (
         <div className="standard-form">
           <section>
             <h3>让模型编写 Grader</h3>
-            <TextField
+            <TextArea
               label="评分要求"
-              multiline
-              minRows={2}
+              rows={2}
               value={requirement}
-              onChange={(e) => setRequirement(e.target.value)}
-              inputProps={{ maxLength: 4000 }}
-              helperText="结合当前项目来源生成 Rubric、检查步骤、适用范围与阈值；生成后可修改并确认保存。"
+              onChange={(value) => setRequirement(value)}
             />
             <Button
               disabled={busy || !requirement.trim()}
@@ -448,112 +438,102 @@ function StandardForm({
           <section>
             <h3>基本信息</h3>
             {!value && tasks.length > 0 && (
-              <TextField
-                select
+              <SelectInput
                 label="从现有 Rubric 建立（可选）"
                 value={source}
-                onChange={(e) => importRubric(e.target.value)}
-              >
-                <MenuItem value="">手动填写</MenuItem>
-                {tasks.map((t) => (
-                  <MenuItem key={t.id} value={t.id}>
-                    {t.definition.title}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={importRubric}
+                options={[
+                  { value: "", label: "手动填写" },
+                  ...tasks.map((t) => ({
+                    value: t.id,
+                    label: t.definition.title,
+                  })),
+                ]}
+              />
             )}
-            <TextField
+            <TextInput
               label="标准名称"
               value={draft.name}
-              onChange={(e) => change({ name: e.target.value })}
-              required
+              onChange={(value) => change({ name: value })}
             />
-            <TextField
+            <TextArea
               label="用途说明"
-              multiline
-              minRows={2}
+              rows={2}
               value={draft.description}
-              onChange={(e) => change({ description: e.target.value })}
+              onChange={(value) => change({ description: value })}
             />
           </section>
           <section>
             <h3>评估过程</h3>
-            <TextField
-              select
+            <SelectInput
               label="评分方式"
               value={draft.check.type}
-              onChange={(e) =>
-                change({ check: { ...draft.check, type: e.target.value } })
+              onChange={(value) =>
+                change({ check: { ...draft.check, type: value } })
               }
-            >
-              {Object.entries(checkLabels).map(([id, label]) => (
-                <MenuItem key={id} value={id}>
-                  {label}
-                </MenuItem>
-              ))}
-            </TextField>
+              options={Object.entries(checkLabels).map(([value, label]) => ({
+                value,
+                label,
+              }))}
+            />
             {draft.check.type === "judge" && (
-              <TextField
-                select
+              <SelectInput
                 label="评分模型"
                 value={draft.model_config_id ?? ""}
-                onChange={(e) =>
-                  change({ model_config_id: e.target.value || null })
+                onChange={(value) =>
+                  change({ model_config_id: value || null })
                 }
-              >
-                <MenuItem value="">跟随本次运行的评分模型</MenuItem>
-                {models.map((m) => (
-                  <MenuItem key={m.id} value={m.id}>
-                    {m.name} ·{" "}
-                    {m.provider === "codex_local"
-                      ? `已移除（${m.model_name}）`
-                      : m.model_name}
-                  </MenuItem>
-                ))}
-              </TextField>
+                options={[
+                  { value: "", label: "跟随本次运行的评分模型" },
+                  ...models.map((m) => ({
+                    value: m.id,
+                    label: `${m.name} · ${
+                      m.provider === "codex_local"
+                        ? `已移除（${m.model_name}）`
+                        : m.model_name
+                    }`,
+                  })),
+                ]}
+              />
             )}
-            <TextField
+            <TextArea
               label="评分 Rubric"
-              multiline
-              minRows={5}
+              rows={5}
               value={draft.rubric}
-              onChange={(e) => change({ rubric: e.target.value })}
-              helperText="写清通过与失败的条件，以及判断需要的实际证据。"
-              required
+              onChange={(value) => change({ rubric: value })}
             />
             {draft.check.type === "judge" ? (
               <>
-                <TextField
+                <TextArea
                   label="检查步骤（每行一步）"
-                  multiline
-                  minRows={3}
+                  rows={3}
                   value={draft.steps.join("\n")}
-                  onChange={(e) =>
-                    change({ steps: e.target.value.split("\n") })
-                  }
+                  onChange={(value) => change({ steps: value.split("\n") })}
                 />
-                <TextField
+                <TextInput
                   label="通过阈值"
                   type="number"
-                  inputProps={{ min: 0, max: 1, step: 0.05 }}
-                  value={draft.threshold}
-                  onChange={(e) =>
-                    change({ threshold: Number(e.target.value) })
-                  }
-                  helperText="评分范围 0–1，达到阈值且判断通过时才通过。"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={String(draft.threshold)}
+                  onChange={(value) => change({ threshold: Number(value) })}
                 />
+                <p className="field-note">
+                  评分范围 0–1，达到阈值且判断通过时才通过。
+                </p>
               </>
             ) : (
               <>
-                <TextField
+                <TextInput
                   label="期望值"
                   value={
                     typeof draft.check.expected === "string"
                       ? draft.check.expected
-                      : JSON.stringify(draft.check.expected)
+                      : (JSON.stringify(draft.check.expected) ?? "")
                   }
-                  onChange={(e) => {
-                    let expected: unknown = e.target.value;
+                  onChange={(value) => {
+                    let expected: unknown = value;
                     if (
                       [
                         "json_equals",
@@ -563,7 +543,7 @@ function StandardForm({
                       ].includes(draft.check.type)
                     ) {
                       try {
-                        expected = JSON.parse(e.target.value);
+                        expected = JSON.parse(value);
                       } catch {
                         /* incomplete input */
                       }
@@ -571,41 +551,49 @@ function StandardForm({
                     change({ check: { ...draft.check, expected } });
                   }}
                 />
-                <TextField
+                <TextInput
                   label="输出 / 文件路径"
                   value={draft.check.path ?? ""}
-                  onChange={(e) =>
-                    change({ check: { ...draft.check, path: e.target.value } })
+                  onChange={(value) =>
+                    change({ check: { ...draft.check, path: value } })
                   }
-                  helperText="JSON 使用点分路径；文件路径须位于单题目录内。"
                 />
+                <p className="field-note">
+                  JSON 使用点分路径；文件路径须位于单题目录内。
+                </p>
               </>
             )}
           </section>
-          <TextField
-            select
+          <SelectInput
             label="适用任务类型"
             value={draft.task_kinds?.join(",") ?? "conversation,command,http"}
-            onChange={(e) => change({ task_kinds: e.target.value.split(",") })}
-          >
-            <MenuItem value="conversation,command,http">全部类型</MenuItem>
-            <MenuItem value="conversation">对话</MenuItem>
-            <MenuItem value="command">命令 / 文件</MenuItem>
-            <MenuItem value="http">HTTP API</MenuItem>
-            {draft.task_kinds &&
+            onChange={(value) => change({ task_kinds: value.split(",") })}
+            options={[
+              { value: "conversation,command,http", label: "全部类型" },
+              { value: "conversation", label: "对话" },
+              { value: "command", label: "命令 / 文件" },
+              { value: "http", label: "HTTP API" },
+              ...(draft.task_kinds &&
               ![
                 "conversation,command,http",
                 "conversation",
                 "command",
                 "http",
-              ].includes(draft.task_kinds.join(",")) && (
-                <MenuItem value={draft.task_kinds.join(",")}>
-                  {draft.task_kinds.join(" / ")}
-                </MenuItem>
-              )}
-          </TextField>
+              ].includes(draft.task_kinds.join(","))
+                ? [
+                    {
+                      value: draft.task_kinds.join(","),
+                      label: draft.task_kinds.join(" / "),
+                    },
+                  ]
+                : []),
+            ]}
+          />
           {!!draft.uncertainties?.length && (
-            <Alert severity="warning">{draft.uncertainties.join("；")}</Alert>
+            <Alert
+              type="warning"
+              message={draft.uncertainties.join("；")}
+            />
           )}
         </div>
       ) : (
@@ -642,9 +630,10 @@ function StandardForm({
                 {s}
               </div>
             ))}
-          <Alert severity="info">
-            标准修改将保存新版本；已完成运行中的标准与结果保持原样。修改后校准状态回到未校准。
-          </Alert>
+          <Alert
+            type="info"
+            message="标准修改将保存新版本；已完成运行中的标准与结果保持原样。修改后校准状态回到未校准。"
+          />
           {value && value.check.type === "judge" && (
             <CalibrationPanel
               projectId={projectId}
@@ -706,7 +695,7 @@ function SetForm({
             取消
           </Button>
           <Button
-            variant="contained"
+            type="primary"
             disabled={busy || !name.trim() || !ids.length}
             onClick={() => void save()}
           >
@@ -716,18 +705,17 @@ function SetForm({
       }
     >
       <div className="standard-form">
-        {error && <Alert severity="error">{error}</Alert>}
-        <TextField
+        {error && <Alert type="error" message={error} />}
+        <TextInput
           label="测试集名称"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(value) => setName(value)}
         />
-        <TextField
+        <TextArea
           label="说明"
-          multiline
-          minRows={2}
+          rows={2}
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(value) => setDescription(value)}
         />
         <section>
           <h3>
@@ -736,7 +724,6 @@ function SetForm({
           {tasks.map((t) => (
             <label className="asset-selection" key={t.id}>
               <Checkbox
-                size="small"
                 checked={ids.includes(t.id)}
                 onChange={(e) =>
                   setIds(
@@ -766,7 +753,6 @@ function SetForm({
           {graders.map((g) => (
             <label className="asset-selection" key={g.id}>
               <Checkbox
-                size="small"
                 checked={gids.includes(g.id)}
                 onChange={(e) =>
                   setGids(
@@ -789,7 +775,6 @@ function SetForm({
             .map((id) => (
               <label className="asset-selection" key={id}>
                 <Checkbox
-                  size="small"
                   checked
                   onChange={() => setGids(gids.filter((g) => g !== id))}
                 />

@@ -1,14 +1,7 @@
 import { Plus as AddRounded, Bot as SmartToyOutlined } from "lucide-react";
 import { useState } from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Tooltip,
-} from "@mui/material";
-import { FormDrawer, PageHeader } from "./ui";
+import { Button, Modal, Tooltip, App as AntApp } from "antd";
+import { FormDrawer, PageHeader, SelectInput, TextInput } from "./ui";
 import { api } from "./api";
 import type { ModelConfig } from "./types";
 
@@ -17,7 +10,6 @@ export function ModelSettings({
   onRefresh,
   onBack,
   onError,
-  onNotice,
 }: {
   models: ModelConfig[];
   onRefresh: () => Promise<void>;
@@ -25,14 +17,13 @@ export function ModelSettings({
   onError: (message: string) => void;
   onNotice: (message: string) => void;
 }) {
+  const { message } = AntApp.useApp();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ModelConfig | null>(null);
   const [name, setName] = useState("");
-  const [provider, setProvider] = useState<ModelConfig["provider"]>(
-    "stub",
-  );
+  const [provider, setProvider] = useState<ModelConfig["provider"]>("stub");
   const [baseUrl, setBaseUrl] = useState("");
   const [modelName, setModelName] = useState("stub-understanding");
   const [apiKey, setApiKey] = useState("");
@@ -59,12 +50,12 @@ export function ModelSettings({
       setName("");
       setApiKey("");
       await onRefresh();
-      onNotice("模型配置已保存。");
+      message.success("模型配置已保存。");
       setAdding(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "保存失败";
-      setLocalError(message);
-      onError(message);
+      const text = err instanceof Error ? err.message : "保存失败";
+      setLocalError(text);
+      onError(text);
     } finally {
       setBusy(false);
     }
@@ -75,7 +66,8 @@ export function ModelSettings({
     try {
       const result = await api.testModel(model.id);
       await onRefresh();
-      onNotice(result.message);
+      if (result.ok) message.success(result.message);
+      else message.error(result.message);
     } catch (err) {
       onError(err instanceof Error ? err.message : "连接测试失败");
     } finally {
@@ -90,7 +82,7 @@ export function ModelSettings({
     try {
       await api.deleteModel(model.id);
       await onRefresh();
-      onNotice("模型配置已删除。");
+      message.success("模型配置已删除。");
       setDeleteTarget(null);
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : "删除失败");
@@ -111,9 +103,9 @@ export function ModelSettings({
             </button>
             <Tooltip title="添加模型服务">
               <Button
-                variant="contained"
+                type="primary"
                 aria-label="添加模型服务"
-                startIcon={<AddRounded />}
+                icon={<AddRounded size={16} />}
                 onClick={() => setAdding(true)}
               >
                 添加模型
@@ -200,21 +192,20 @@ export function ModelSettings({
             onClose={() => setAdding(false)}
             footer={
               <>
-                <button
-                  className="btn btn-quiet"
+                <Button
                   disabled={busy}
                   onClick={() => setAdding(false)}
                 >
                   取消
-                </button>
-                <button
-                  className="btn btn-primary"
-                  type="submit"
+                </Button>
+                <Button
+                  type="primary"
+                  htmlType="submit"
                   form="model-config-form"
-                  disabled={busy}
+                  loading={busy}
                 >
-                  {busy ? "保存中…" : "保存配置"}
-                </button>
+                  保存配置
+                </Button>
               </>
             }
           >
@@ -223,58 +214,51 @@ export function ModelSettings({
               className="form-sheet compact-sheet"
               onSubmit={submit}
             >
-              <label className="field">
-                <span>配置名称</span>
-                <input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="例如：本地离线演示"
-                />
-              </label>
-              <label className="field">
-                <span>提供方</span>
-                <select
-                  value={provider}
-                  onChange={(event) => {
-                    const next = event.target.value as ModelConfig["provider"];
-                    setProvider(next);
-                    setModelName(next === "stub" ? "stub-understanding" : "");
-                  }}
-                >
-                  <option value="stub">离线演示（离线，不产生费用）</option>
-                  <option value="openai_compatible">OpenAI 兼容服务</option>
-                </select>
-              </label>
+              <TextInput
+                label="配置名称"
+                value={name}
+                onChange={setName}
+                placeholder="例如：本地离线演示"
+              />
+              <SelectInput
+                label="提供方"
+                value={provider}
+                onChange={(next) => {
+                  const value = next as ModelConfig["provider"];
+                  setProvider(value);
+                  setModelName(
+                    value === "stub"
+                      ? "stub-understanding"
+                      : "",
+                  );
+                }}
+                options={[
+                  { value: "stub", label: "离线演示（离线，不产生费用）" },
+                  { value: "openai_compatible", label: "OpenAI 兼容服务" },
+                ]}
+              />
               {provider === "openai_compatible" && (
                 <>
-                  <label className="field">
-                    <span>服务地址</span>
-                    <input
-                      value={baseUrl}
-                      onChange={(event) => setBaseUrl(event.target.value)}
-                      placeholder="https://api.example.com/v1"
-                      className="mono"
-                    />
-                  </label>
-                  <label className="field">
-                    <span>模型名</span>
-                    <input
-                      value={modelName}
-                      onChange={(event) => setModelName(event.target.value)}
-                      placeholder="model-name"
-                      className="mono"
-                    />
-                  </label>
-                  <label className="field">
-                    <span>API 密钥（可选）</span>
-                    <input
-                      type="password"
-                      value={apiKey}
-                      onChange={(event) => setApiKey(event.target.value)}
-                      placeholder="只加密保存，不回传"
-                      autoComplete="off"
-                    />
-                  </label>
+                  <TextInput
+                    label="服务地址"
+                    value={baseUrl}
+                    onChange={setBaseUrl}
+                    placeholder="https://api.example.com/v1"
+                    className="mono"
+                  />
+                  <TextInput
+                    label="模型名"
+                    value={modelName}
+                    onChange={setModelName}
+                    placeholder="model-name"
+                    className="mono"
+                  />
+                  <TextInput
+                    label="API 密钥（可选）"
+                    value={apiKey}
+                    onChange={setApiKey}
+                    placeholder="只加密保存，不回传"
+                  />
                 </>
               )}
               {provider === "stub" && (
@@ -296,33 +280,22 @@ export function ModelSettings({
           </FormDrawer>
         )}
       </div>
-      <Dialog
+      <Modal
         open={Boolean(deleteTarget)}
-        onClose={deleting ? undefined : () => setDeleteTarget(null)}
-        aria-labelledby="delete-model-title"
+        title="删除模型配置？"
+        okText="确认删除"
+        okButtonProps={{ danger: true, loading: deleting }}
+        cancelText="取消"
+        onCancel={deleting ? undefined : () => setDeleteTarget(null)}
+        onOk={() => deleteTarget && void remove(deleteTarget)}
       >
-        <DialogTitle id="delete-model-title">删除模型配置？</DialogTitle>
-        <DialogContent>
-          确认删除“{deleteTarget?.name}”？项目会话与已有记录会保留。
-          {deleteError && (
-            <p role="alert" className="form-error">
-              {deleteError}
-            </p>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button disabled={deleting} onClick={() => setDeleteTarget(null)}>
-            取消
-          </Button>
-          <Button
-            color="error"
-            disabled={deleting}
-            onClick={() => deleteTarget && void remove(deleteTarget)}
-          >
-            确认删除
-          </Button>
-        </DialogActions>
-      </Dialog>
+        确认删除“{deleteTarget?.name}”？项目会话与已有记录会保留。
+        {deleteError && (
+          <p role="alert" className="form-error">
+            {deleteError}
+          </p>
+        )}
+      </Modal>
     </div>
   );
 }

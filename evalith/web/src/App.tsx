@@ -27,13 +27,11 @@ import { AppThemeProvider } from "./theme";
 import {
   Alert,
   Button,
-  InputAdornment,
-  Snackbar,
-  TextField,
+  Input,
+  Segmented,
   Tooltip,
-  ToggleButton,
-  ToggleButtonGroup,
-} from "@mui/material";
+} from "antd";
+
 
 type View = "home" | "project" | "import" | "models" | "executors";
 
@@ -333,12 +331,12 @@ function AppContent() {
       <main id="main-content" className="main" tabIndex={-1} aria-busy={busy}>
         {error && (
           <Alert
-            severity="error"
+            type="error"
+            closable
             onClose={() => setError(null)}
             className="global-error"
-          >
-            {error}
-          </Alert>
+            message={error}
+          />
         )}
         {effectiveView === "home" && (
           <Home
@@ -412,20 +410,17 @@ function AppContent() {
           onError={setError}
         />
       )}
-      <Snackbar
-        open={Boolean(notice)}
-        autoHideDuration={4200}
-        onClose={() => setNotice(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      >
-        <Alert
-          severity="success"
-          variant="filled"
-          onClose={() => setNotice(null)}
-        >
-          {notice}
-        </Alert>
-      </Snackbar>
+      {notice && (
+        <div className="global-notice" role="status">
+          <Alert
+            type="success"
+            showIcon
+            closable
+            message={notice}
+            onClose={() => setNotice(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -471,9 +466,9 @@ function Home({
             projects.length ? (
               <Tooltip title="从本地目录建立项目">
                 <Button
-                  variant="contained"
+                  type="primary"
                   aria-label="建立项目"
-                  startIcon={<AddRounded />}
+                  icon={<AddRounded size={16} />}
                   onClick={onImport}
                 >
                   建立项目
@@ -484,34 +479,24 @@ function Home({
         />
         {!!projects.length && (
           <div className="directory-toolbar">
-            <TextField
+            <Input
               placeholder="搜索项目…"
+              aria-label="搜索项目"
+              prefix={<SearchRounded size={16} />}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              slotProps={{
-                htmlInput: { "aria-label": "搜索项目" },
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchRounded fontSize="small" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
+              allowClear
             />
-            <ToggleButtonGroup
-              exclusive
-              size="small"
+            <Segmented
               value={filter}
-              onChange={(_, value: string | null) => {
-                if (value) setFilter(value);
-              }}
+              onChange={(value) => setFilter(value as string)}
               aria-label="项目筛选"
-            >
-              <ToggleButton value="all">全部</ToggleButton>
-              <ToggleButton value="configured">已配置模型</ToggleButton>
-              <ToggleButton value="unconfigured">待配置模型</ToggleButton>
-            </ToggleButtonGroup>
+              options={[
+                { value: "all", label: "全部" },
+                { value: "configured", label: "已配置模型" },
+                { value: "unconfigured", label: "待配置模型" },
+              ]}
+            />
             <span className="directory-count">{filtered.length} 个项目</span>
           </div>
         )}
@@ -583,7 +568,7 @@ function Home({
                 : "连接本地项目与资料，和模型一起明确评测方向。"}
             </p>
             <Button
-              variant="contained"
+              type="primary"
               onClick={
                 projects.length
                   ? () => {

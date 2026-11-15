@@ -1,17 +1,7 @@
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Checkbox,
-  Button,
-  FormControlLabel,
-  LinearProgress,
-  MenuItem,
-  TextField,
-  Tab,
-  Tabs,
-} from "@mui/material";
+import { Alert, Button, Checkbox, Progress, Tabs } from "antd";
+import { FormDrawer, SelectInput, TextArea, TextInput } from "./ui";
 import { Check, ChevronRight, Play, Plus, Trash2 } from "lucide-react";
-import { FormDrawer } from "./ui";
 import { api } from "./api";
 import { evaluationApi as ev } from "./evaluationApi";
 import type {
@@ -26,7 +16,7 @@ import type { ModelConfig, ExecutorConfig } from "./types";
 const errorText = (e: unknown) =>
   e instanceof Error ? e.message : "操作失败，请重试。";
 function ErrorNotice({ value }: { value: string }) {
-  return value ? <Alert severity="error">{value}</Alert> : null;
+  return value ? <Alert type="error" message={value} /> : null;
 }
 export function GenerationDialog({
   projectId,
@@ -64,7 +54,7 @@ export function GenerationDialog({
             取消
           </Button>
           <Button
-            variant="contained"
+            type="primary"
             onClick={() => void submit()}
             disabled={
               busy || !Number.isInteger(count) || count < 1 || count > 12
@@ -81,23 +71,19 @@ export function GenerationDialog({
           与测试集，并自动关联。生成后仍需确认执行环境，评分标准保持未校准。
         </p>
         <ErrorNotice value={error} />
-        <TextField
-          label="评测方向"
-          multiline
-          minRows={4}
-          placeholder="例如：查询时以工具数据为准，执行写操作前先确认。"
-          value={direction}
-          onChange={(e) => setDirection(e.target.value)}
-          inputProps={{ maxLength: 4000 }}
-        />
-        <TextField
-          label="生成数量"
-          type="number"
-          value={count}
-          onChange={(e) => setCount(Number(e.target.value))}
-          inputProps={{ min: 1, max: 12 }}
-          helperText="每次 1–12 道，建议先用少量题目验证。"
-        />
+<TextArea
+  label="评测方向"
+  rows={4}
+  placeholder="例如：查询时以工具数据为准，执行写操作前先确认。"
+  value={direction}
+  onChange={(value) => setDirection(value)}
+/>
+<TextInput
+  label="生成数量"
+  type="number"
+  value={String(count)}
+  onChange={(value) => setCount(Number(value))}
+/>
         <div className="eval-cost-note">
           <strong>本次调用模型 1 次</strong>
           <p>
@@ -190,7 +176,7 @@ export function TaskDialog({
               取消编辑
             </Button>
             <Button
-              variant="contained"
+              type="primary"
               onClick={() => void save()}
               disabled={busy}
             >
@@ -201,7 +187,6 @@ export function TaskDialog({
           <>
             <span className="muted">原有运行保留历史版本</span>
             <Button
-              variant="outlined"
               onClick={() => {
                 setDraft(structuredClone(task.definition));
                 setInputText(JSON.stringify(task.definition.input, null, 2));
@@ -223,35 +208,34 @@ export function TaskDialog({
         {editing ? (
           <>
             {!!task.default_grader_ids?.length && (
-              <Alert severity="info">
-                修改 Rubric 或检查后，新版本会改用内置规则；历史版本和共享
-                Grader 不变。运行前仍需核对测试集或本次覆盖。
-              </Alert>
+              <Alert
+                type="info"
+                message="修改 Rubric 或检查后，新版本会改用内置规则；历史版本和共享 Grader 不变。运行前仍需核对测试集或本次覆盖。"
+              />
             )}
-            <TextField
-              label="题目名称"
-              value={draft.title}
-              onChange={(e) => change({ title: e.target.value })}
-            />
-            <TextField
-              label="分类"
-              value={draft.category}
-              onChange={(e) => change({ category: e.target.value })}
-            />
-            <TextField
-              label="评测目标"
-              multiline
-              minRows={2}
-              value={draft.objective}
-              onChange={(e) => change({ objective: e.target.value })}
-            />
+<TextInput
+  label="题目名称"
+  value={draft.title}
+  onChange={(value) => change({ title: value })}
+/>
+<TextInput
+  label="分类"
+  value={draft.category}
+  onChange={(value) => change({ category: value })}
+/>
+<TextArea
+  label="评测目标"
+  rows={2}
+  value={draft.objective}
+  onChange={(value) => change({ objective: value })}
+/>
             {draft.kind === "conversation" ? (
               <section className="turn-editor">
                 <div className="eval-field-heading">
                   <h3>对话输入</h3>
                   <Button
                     size="small"
-                    startIcon={<Plus />}
+                    icon={<Plus size={16} />}
                     disabled={!!JSON.parse(inputText).adaptive}
                     onClick={() => {
                       const input = JSON.parse(inputText);
@@ -270,14 +254,13 @@ export function TaskDialog({
                 {((JSON.parse(inputText).turns ?? []) as string[]).map(
                   (turn, index) => (
                     <div className="turn-editor-row" key={index}>
-                      <TextField
+                      <TextArea
                         label={`用户消息 ${index + 1}`}
+                        rows={2}
                         value={turn}
-                        multiline
-                        minRows={2}
-                        onChange={(e) => {
+                        onChange={(value) => {
                           const input = JSON.parse(inputText);
-                          input.turns[index] = e.target.value;
+                          input.turns[index] = value;
                           setInputText(JSON.stringify(input, null, 2));
                         }}
                       />
@@ -317,83 +300,79 @@ export function TaskDialog({
                     };
                     return (
                       <>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={!!adaptive}
-                              onChange={(e) =>
-                                update(
-                                  e.target.checked
-                                    ? {
-                                        turns: [(input.turns ?? [])[0] ?? ""],
-                                        adaptive: {
-                                          max_turns: 3,
-                                          instruction: "",
-                                          simulator_model_config_id: null,
-                                        },
-                                      }
-                                    : { adaptive: undefined },
-                                )
-                              }
-                            />
-                          }
-                          label="自适应后续轮次（根据对话进展生成）"
-                        />
+                        <label className="check-line">
+                          <Checkbox
+                            checked={!!adaptive}
+                            onChange={(e) =>
+                              update(
+                                e.target.checked
+                                  ? {
+                                      turns: [(input.turns ?? [])[0] ?? ""],
+                                      adaptive: {
+                                        max_turns: 3,
+                                        instruction: "",
+                                        simulator_model_config_id: null,
+                                      },
+                                    }
+                                  : { adaptive: undefined },
+                              )
+                            }
+                          />
+                          <span>自适应后续轮次（根据对话进展生成）</span>
+                        </label>
                         {adaptive && (
                           <>
-                            <TextField
+                            <TextInput
                               label="最多轮次（2–12）"
                               type="number"
-                              value={adaptive.max_turns ?? 3}
-                              slotProps={{
-                                htmlInput: { min: 2, max: 12 },
-                              }}
-                              onChange={(e) =>
+                              min={2}
+                              max={12}
+                              value={String(adaptive.max_turns ?? 3)}
+                              onChange={(value) =>
                                 update({
                                   adaptive: {
                                     ...adaptive,
-                                    max_turns: Number(e.target.value),
+                                    max_turns: Number(value),
                                   },
                                 })
                               }
                             />
-                            <TextField
+                            <TextArea
                               label="场景指令（模拟器如何扮演用户）"
-                              multiline
-                              minRows={2}
+                              rows={2}
                               value={adaptive.instruction ?? ""}
-                              onChange={(e) =>
+                              onChange={(value) =>
                                 update({
                                   adaptive: {
                                     ...adaptive,
-                                    instruction: e.target.value,
+                                    instruction: value,
                                   },
                                 })
                               }
                             />
-                            <TextField
-                              select
+                            <SelectInput
                               label="模拟器模型"
                               value={adaptive.simulator_model_config_id ?? ""}
-                              onChange={(e) =>
+                              onChange={(value) =>
                                 update({
                                   adaptive: {
                                     ...adaptive,
-                                    simulator_model_config_id:
-                                      e.target.value || null,
+                                    simulator_model_config_id: value || null,
                                   },
                                 })
                               }
-                            >
-                              <MenuItem value="">跟随运行评分模型</MenuItem>
-                              {models
-                                .filter((m) => m.provider === "openai_compatible")
-                                .map((m) => (
-                                  <MenuItem key={m.id} value={m.id}>
-                                    {m.name} · {m.model_name}
-                                  </MenuItem>
-                                ))}
-                            </TextField>
+                              options={[
+                                { value: "", label: "跟随运行评分模型" },
+                                ...models
+                                  .filter(
+                                    (m) => m.provider === "openai_compatible",
+                                  )
+                                  .map((m) => ({
+                                    value: m.id,
+                                    label: `${m.name} · ${m.model_name}`,
+                                  })),
+                              ]}
+                            />
                             <p className="inline-note">
                               开场消息为第 1 轮；后续用户消息由模拟器模型按场景指令与已发生对话生成，每次调用计入运行预算。模拟器消息是模型生成的用户行为，不代表真实用户。
                             </p>
@@ -405,38 +384,34 @@ export function TaskDialog({
                 </div>
                 <details>
                   <summary>合成数据与高级输入</summary>
-                  <TextField
-                    label="合成数据（JSON）"
-                    multiline
-                    minRows={4}
-                    value={fixtureText}
-                    onChange={(e) => setFixtureText(e.target.value)}
-                  />
+<TextArea
+  label="合成数据（JSON）"
+  rows={4}
+  value={fixtureText}
+  onChange={(value) => setFixtureText(value)}
+/>
                 </details>
               </section>
             ) : (
-              <TextField
-                label="输入数据（JSON）"
-                className="json-field"
-                multiline
-                minRows={5}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                helperText="只包含输入，执行程序由运行环境提供。"
-              />
+<TextArea
+  label="输入数据（JSON）"
+  className="json-field"
+  rows={5}
+  value={inputText}
+  onChange={(value) => setInputText(value)}
+/>
             )}
-            <TextField
-              label="评分说明"
-              multiline
-              minRows={2}
-              value={draft.rubric}
-              onChange={(e) => change({ rubric: e.target.value })}
-            />
+<TextArea
+  label="评分说明"
+  rows={2}
+  value={draft.rubric}
+  onChange={(value) => change({ rubric: value })}
+/>
             <div className="eval-field-heading">
               <h3>检查规则</h3>
               <Button
                 size="small"
-                startIcon={<Plus />}
+                icon={<Plus size={16} />}
                 onClick={() =>
                   change({
                     checks: [
@@ -457,19 +432,17 @@ export function TaskDialog({
             {draft.checks.map((check, index) => (
               <div className="check-editor" key={index}>
                 <div>
-                  <TextField
+                  <SelectInput
                     label="检查类型"
-                    select
                     value={check.type}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       change({
                         checks: draft.checks.map((c, i) =>
-                          i === index ? { ...c, type: e.target.value } : c,
+                          i === index ? { ...c, type: value } : c,
                         ),
                       })
                     }
-                  >
-                    {[
+                    options={[
                       "contains",
                       "not_contains",
                       "json_equals",
@@ -478,12 +451,8 @@ export function TaskDialog({
                       "file_exists",
                       "file_contains",
                       "judge",
-                    ].map((type) => (
-                      <MenuItem key={type} value={type}>
-                        {type}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                    ].map((type) => ({ value: type, label: type }))}
+                  />
                   <Button
                     aria-label={`删除规则 ${index + 1}`}
                     disabled={draft.checks.length === 1}
@@ -496,20 +465,15 @@ export function TaskDialog({
                     <Trash2 size={15} />
                   </Button>
                 </div>
-                <TextField
+                <TextInput
                   label="期望值"
                   value={
                     typeof check.expected === "string"
                       ? check.expected
                       : JSON.stringify(check.expected)
                   }
-                  helperText={
-                    check.type === "json_equals"
-                      ? "填写 JSON 值，保留数组、数字等类型。"
-                      : "文本检查按文字保存；状态码和退出码填写整数。"
-                  }
-                  onChange={(e) => {
-                    let expected: unknown = e.target.value;
+                  onChange={(value) => {
+                    let expected: unknown = value;
                     try {
                       if (
                         [
@@ -519,7 +483,7 @@ export function TaskDialog({
                           "file_exists",
                         ].includes(check.type)
                       )
-                        expected = JSON.parse(e.target.value);
+                        expected = JSON.parse(value);
                     } catch {
                       /* plain text */
                     }
@@ -530,27 +494,31 @@ export function TaskDialog({
                     });
                   }}
                 />
-                <TextField
+                <p className="field-note">
+                  {check.type === "json_equals"
+                    ? "填写 JSON 值，保留数组、数字等类型。"
+                    : "文本检查按文字保存；状态码和退出码填写整数。"}
+                </p>
+                <TextInput
                   label="证据路径（可选）"
                   placeholder="例如 writes 或 turns.0.reply"
                   value={check.path ?? ""}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     change({
                       checks: draft.checks.map((c, i) =>
-                        i === index ? { ...c, path: e.target.value } : c,
+                        i === index ? { ...c, path: value } : c,
                       ),
                     })
                   }
                 />
               </div>
             ))}
-            <TextField
-              label="资料来源（每行一项）"
-              multiline
-              minRows={2}
-              value={refs}
-              onChange={(e) => setRefs(e.target.value)}
-            />
+<TextArea
+  label="资料来源（每行一项）"
+  rows={2}
+  value={refs}
+  onChange={(value) => setRefs(value)}
+/>
           </>
         ) : (
           <>
@@ -560,30 +528,32 @@ export function TaskDialog({
               <h3>{shown.definition.title}</h3>
               <p>{shown.definition.objective}</p>
             </div>
-            <TextField
+            <SelectInput
               label="题目版本"
-              select
-              value={version}
-              onChange={(e) => setVersion(Number(e.target.value))}
-            >
-              {[task, ...versions.filter((v) => v.version !== task.version)]
+              value={String(version)}
+              onChange={(value) => setVersion(Number(value))}
+              options={[
+                task,
+                ...versions.filter((v) => v.version !== task.version),
+              ]
                 .sort((a, b) => b.version - a.version)
-                .map((v) => (
-                  <MenuItem key={v.version} value={v.version}>
-                    v{v.version}
-                    {v.version === task.version ? " · 当前版本" : ""}
-                  </MenuItem>
-                ))}
-            </TextField>
+                .map((v) => ({
+                  value: String(v.version),
+                  label: `v${v.version}${
+                    v.version === task.version ? " · 当前版本" : ""
+                  }`,
+                }))}
+            />
             <Tabs
-              value={detailTab}
-              onChange={(_, v: string) => setDetailTab(v)}
+              activeKey={detailTab}
+              onChange={(key) => setDetailTab(key)}
               aria-label="题目详情章节"
-            >
-              <Tab value="input" label="测试输入" />
-              <Tab value="rubric" label="Rubric 与检查" />
-              <Tab value="history" label="版本历史" />
-            </Tabs>
+              items={[
+                { key: "input", label: "测试输入" },
+                { key: "rubric", label: "Rubric 与检查" },
+                { key: "history", label: "版本历史" },
+              ]}
+            />
             <section
               className="task-detail-section"
               hidden={detailTab !== "input"}
@@ -608,10 +578,10 @@ export function TaskDialog({
             >
               <h4>题目内置评分规则</h4>
               {!!shown.default_grader_ids?.length && (
-                <Alert severity="info">
-                  当前默认使用绑定的
-                  Grader，下方为内置备选规则。实际评分方案可在运行前预检查看。
-                </Alert>
+                <Alert
+                  type="info"
+                  message="当前默认使用绑定的 Grader，下方为内置备选规则。实际评分方案可在运行前预检查看。"
+                />
               )}
               <p>{shown.definition.rubric}</p>
               {shown.definition.checks.map((check, index) => (
@@ -856,14 +826,14 @@ export function RunDialog({
             关闭
           </Button>
           <Button
-            variant="contained"
-            startIcon={
+            type="primary"
+            icon={
               env?.status === "ready" ? (
-                <Play />
+                <Play size={16} />
               ) : env?.status === "planned" ? (
-                <Check />
+                <Check size={16} />
               ) : (
-                <ChevronRight />
+                <ChevronRight size={16} />
               )
             }
             disabled={
@@ -895,57 +865,42 @@ export function RunDialog({
           已选 {tasks.length} 道题目。运行将固定当前版本，每题的证据会立即保存。
         </p>
         <ErrorNotice value={error} />
-        <TextField
-          label="运行名称"
-          value={runName}
-          onChange={(e) => setRunName(e.target.value)}
-          inputProps={{ maxLength: 120 }}
-        />
+<TextInput
+  label="运行名称"
+  value={runName}
+  onChange={(value) => setRunName(value)}
+/>
         {models.length > 0 && (
           <section className="run-model-section">
             <h3>模型与评分</h3>
             <div className="eval-budget-fields">
-              <TextField
-                select
+              <SelectInput
                 label="被测 Agent 模型"
                 value={targetModel}
-                onChange={(e) => setTargetModel(e.target.value)}
-              >
-                {models.map((m) => (
-                  <MenuItem key={m.id} value={m.id}>
-                    {m.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                select
+                onChange={(value) => setTargetModel(value)}
+                options={models.map((m) => ({ value: m.id, label: m.name }))}
+              />
+              <SelectInput
                 label="默认评分模型"
                 value={judgeModel}
-                onChange={(e) => setJudgeModel(e.target.value)}
-              >
-                {models.map((m) => (
-                  <MenuItem key={m.id} value={m.id}>
-                    {m.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={(value) => setJudgeModel(value)}
+                options={models.map((m) => ({ value: m.id, label: m.name }))}
+              />
             </div>
           </section>
         )}
         <section className="run-standard-section">
           <h3>评价标准</h3>
-          <TextField
-            select
-            label="评分规则来源"
-            value={gradingMode}
-            onChange={(e) => setGradingMode(e.target.value)}
-          >
-            <MenuItem value="inherit">
-              自动继承测试集 / 各题目的 Grader
-            </MenuItem>
-            <MenuItem value="selected">使用下方选定标准覆盖</MenuItem>
-            <MenuItem value="embedded">仅使用题目内置检查</MenuItem>
-          </TextField>
+<SelectInput
+  label="评分规则来源"
+  value={gradingMode}
+  onChange={(value) => setGradingMode(value)}
+  options={[
+    { value: "inherit", label: "自动继承测试集 / 各题目的 Grader" },
+    { value: "selected", label: "使用下方选定标准覆盖" },
+    { value: "embedded", label: "仅使用题目内置检查" },
+  ]}
+/>
           <p className="field-note">
             {gradingMode === "inherit"
               ? "优先使用测试集指定标准，否则使用各题目生成时绑定的 Grader；没有绑定时使用内置检查。预检将列出每题实际使用的规则。"
@@ -956,7 +911,6 @@ export function RunDialog({
           {graders.map((g) => (
             <label className="asset-selection" key={g.id}>
               <Checkbox
-                size="small"
                 checked={graderIds.includes(g.id)}
                 onChange={(e) => {
                   setGradingMode("selected");
@@ -983,7 +937,6 @@ export function RunDialog({
             .map((id) => (
               <label className="asset-selection" key={id}>
                 <Checkbox
-                  size="small"
                   checked
                   onChange={() =>
                     setGraderIds(graderIds.filter((g) => g !== id))
@@ -1035,65 +988,54 @@ export function RunDialog({
             ))}
           </section>
         )}
-        <TextField
+        <SelectInput
           label="运行环境"
-          select
           value={choice}
+          placeholder="选择执行器或已准备环境"
           disabled={busy || env?.status === "preparing"}
-          onChange={(e) => {
-            setChoice(e.target.value);
-            setEnv(ready.find((env) => env.id === e.target.value) ?? null);
+          onChange={(value) => {
+            setChoice(value);
+            setEnv(ready.find((env) => env.id === value) ?? null);
           }}
-        >
-          <MenuItem value="" disabled>
-            选择执行器或已准备环境
-          </MenuItem>
-          {ready.map((e, i) => (
-            <MenuItem key={e.id} value={e.id}>
-              已就绪环境 {ready.length - i} · {e.adapter}
-            </MenuItem>
-          ))}
-          {tasks.every((t) => t.definition.kind === "conversation") && (
-            <MenuItem value="aigateway_go">AI Gateway · 独立 Go 环境</MenuItem>
-          )}
-          {configs
-            .filter((c) =>
-              tasks.every(
-                (t) =>
-                  t.definition.kind ===
-                  (c.backend === "http_api" ? "http" : "command"),
-              ),
-            )
-            .map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.name}
-              </MenuItem>
-            ))}
-        </TextField>
+          options={[
+            ...ready.map((e, i) => ({
+              value: e.id,
+              label: `已就绪环境 ${ready.length - i} · ${e.adapter}`,
+            })),
+            ...(tasks.every((t) => t.definition.kind === "conversation")
+              ? [{ value: "aigateway_go", label: "AI Gateway · 独立 Go 环境" }]
+              : []),
+            ...configs
+              .filter((c) =>
+                tasks.every(
+                  (t) =>
+                    t.definition.kind ===
+                    (c.backend === "http_api" ? "http" : "command"),
+                ),
+              )
+              .map((c) => ({ value: c.id, label: c.name })),
+          ]}
+        />
         {configs.some((c) => c.id === choice && c.backend === "http_api") && (
-          <Alert severity="warning">
-            确认方案表示：目标是专用本机测试服务，使用独立数据；Evalith
-            不启动或清理该外部服务。
-          </Alert>
+          <Alert
+            type="warning"
+            message="确认方案表示：目标是专用本机测试服务，使用独立数据；Evalith 不启动或清理该外部服务。"
+          />
         )}
         <div className="eval-budget-fields">
-          <TextField
-            label="模型调用上限"
-            type="number"
-            value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}
-            inputProps={{ min: 0, max: 64 }}
-            helperText="含被测 Agent 的每次请求和评分调用。"
-          />
-          <TextField
-            label="金额上限（可选）"
-            type="number"
-            value={money}
-            onChange={(e) => setMoney(e.target.value)}
-            inputProps={{ min: 0 }}
-            placeholder="未知"
-            helperText="费用未知时，填写金额会阻止模型调用。"
-          />
+<TextInput
+  label="模型调用上限"
+  type="number"
+  value={String(limit)}
+  onChange={(value) => setLimit(Number(value))}
+/>
+<TextInput
+  label="金额上限（可选）"
+  type="number"
+  value={money}
+  onChange={(value) => setMoney(value)}
+  placeholder="未知"
+/>
         </div>
         {env && (
           <section className="environment-plan">
@@ -1137,8 +1079,15 @@ export function RunDialog({
                 {e.message}
               </p>
             ))}
-            {env.status === "preparing" && <LinearProgress />}
-            {env.error && <Alert severity="error">{env.error}</Alert>}
+            {env.status === "preparing" && (
+              <Progress
+                percent={100}
+                showInfo={false}
+                size="small"
+                status="active"
+              />
+            )}
+            {env.error && <Alert type="error" message={env.error} />}
           </section>
         )}
         <div className="eval-cost-note">
@@ -1197,7 +1146,7 @@ export function AnalysisDialog({
             取消
           </Button>
           <Button
-            variant="contained"
+            type="primary"
             disabled={
               busy || !Number.isInteger(limit) || limit < 0 || limit > 8
             }
@@ -1213,27 +1162,29 @@ export function AnalysisDialog({
           使用项目当前模型独立分析已保存的结果，区分事实、可能原因和分析限制。
         </p>
         <ErrorNotice value={error} />
-        <TextField
+        <SelectInput
           label="分析范围"
-          select
           value={selection}
-          onChange={(e) => setSelection(e.target.value)}
-        >
-          <MenuItem value="all">全部结果</MenuItem>
-          <MenuItem value="failed">未通过的结果</MenuItem>
-          <MenuItem value="low">低于 80% 的已评分结果</MenuItem>
-          <MenuItem value="selected" disabled={!selectedIds.length}>
-            已选 {selectedIds.length} 项结果
-          </MenuItem>
-        </TextField>
-        <TextField
-          label="独立调用上限"
-          type="number"
-          value={limit}
-          onChange={(e) => setLimit(Number(e.target.value))}
-          inputProps={{ min: 0, max: 8 }}
-          helperText="当前分析调用 1 次，设为 0 则不会调用模型。"
+          onChange={(value) => setSelection(value)}
+          options={
+            [
+              { value: "all", label: "全部结果" },
+              { value: "failed", label: "未通过的结果" },
+              { value: "low", label: "低于 80% 的已评分结果" },
+              {
+                value: "selected",
+                label: `已选 ${selectedIds.length} 项结果`,
+                disabled: !selectedIds.length,
+              },
+            ] as { value: string; label: string; disabled?: boolean }[]
+          }
         />
+<TextInput
+  label="独立调用上限"
+  type="number"
+  value={String(limit)}
+  onChange={(value) => setLimit(Number(value))}
+/>
         <div className="eval-cost-note">
           <strong>分析费用未知</strong>
           <p>

@@ -10,8 +10,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { CssBaseline, GlobalStyles, IconButton, Tooltip } from "@mui/material";
+import { App as AntApp, Button, ConfigProvider, theme as antdTheme } from "antd";
+import zhCN from "antd/locale/zh_CN";
 
 export type ColorMode = "light" | "dark";
 export const THEME_KEY = "evalith.theme";
@@ -21,67 +21,65 @@ export const ui = {
 };
 
 /**
- * One design system, "precision instrument": a barely-warm neutral canvas,
- * ink-first hierarchy, a single restrained blue accent reserved for actions,
- * active states and links, semantic states as tinted pills, depth from
- * 1px borders plus two subtle shadow steps, and a 120–240ms motion layer
- * (see system.css) with visible focus rings.
+ * Ant Design carries the component system; this provider only supplies the
+ * light/dark algorithm, the Chinese locale and Inter. The CSS variables below
+ * mirror Ant Design's default palette so the legacy page CSS (which consumes
+ * --surface/--ink/…) stays visually consistent with the components.
  */
 const palettes = {
   light: {
     bg: "#ffffff",
-    directory: "#fcfcfb",
-    rail: "#f7f7f5",
+    directory: "#ffffff",
+    rail: "#f5f5f5",
     surface: "#ffffff",
-    surface2: "#f3f3f1",
+    surface2: "#f5f5f5",
     input: "#ffffff",
-    ink: "#191c22",
-    body: "#474e5c",
-    muted: "#676f7e",
-    border: "#e7e7e5",
-    borderStrong: "#d4d5d4",
-    accent: "#3b5bdb",
-    accentText: "#2f4cc0",
-    accentSoft: "#eef1fb",
-    button: "#2f4cc0",
-    buttonHover: "#2843ab",
+    ink: "rgba(0, 0, 0, 0.88)",
+    body: "rgba(0, 0, 0, 0.65)",
+    muted: "rgba(0, 0, 0, 0.58)",
+    border: "#d9d9d9",
+    borderStrong: "#d9d9d9",
+    accent: "#0958d9",
+    accentText: "#003eb3",
+    accentSoft: "#e6f4ff",
+    button: "#1677ff",
+    buttonHover: "#4096ff",
     buttonText: "#ffffff",
-    success: "#157347",
-    warning: "#8a5e08",
-    error: "#b8394c",
-    warningBg: "#faf3e2",
-    errorBg: "#fbeef0",
-    successBg: "#eaf5ef",
-    overlay: "rgba(23,25,31,0.32)",
+    success: "#389e0d",
+    warning: "#d48806",
+    error: "#cf1322",
+    warningBg: "#fffbe6",
+    errorBg: "#fff2f0",
+    successBg: "#f6ffed",
+    overlay: "rgba(0, 0, 0, 0.45)",
   },
   dark: {
-    bg: "#0f1115",
-    directory: "#12141a",
-    rail: "#0f1115",
-    surface: "#161920",
-    surface2: "#20242d",
-    input: "#171b22",
-    ink: "#eceef4",
-    body: "#b9c0cd",
-    muted: "#8b93a5",
-    border: "#262b35",
-    borderStrong: "#3a4150",
-    accent: "#8fa7ff",
-    accentText: "#b3c4ff",
-    accentSoft: "#1e2740",
-    button: "#a7b9ff",
-    buttonHover: "#9bb0ff",
-    buttonText: "#10131a",
-    success: "#6ec298",
-    warning: "#d3b571",
-    error: "#ef97a1",
-    warningBg: "#2a2318",
-    errorBg: "#2e1d22",
-    successBg: "#15271e",
-    overlay: "rgba(0,0,0,0.55)",
+    bg: "#141414",
+    directory: "#141414",
+    rail: "#141414",
+    surface: "#1f1f1f",
+    surface2: "#2a2a2a",
+    input: "#1f1f1f",
+    ink: "rgba(255, 255, 255, 0.85)",
+    body: "rgba(255, 255, 255, 0.65)",
+    muted: "rgba(255, 255, 255, 0.58)",
+    border: "#424242",
+    borderStrong: "#424242",
+    accent: "#3c89e8",
+    accentText: "#69b1ff",
+    accentSoft: "#111a2c",
+    button: "#1677ff",
+    buttonHover: "#4096ff",
+    buttonText: "#ffffff",
+    success: "#49aa19",
+    warning: "#d89614",
+    error: "#dc4446",
+    warningBg: "#2b2111",
+    errorBg: "#2a1215",
+    successBg: "#162312",
+    overlay: "rgba(0, 0, 0, 0.45)",
   },
 };
-export type Palette = (typeof palettes)["light"];
 
 function initialMode(): ColorMode {
   try {
@@ -106,251 +104,6 @@ export function useColorMode() {
 export function AppThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<ColorMode>(initialMode);
   const c = palettes[mode];
-  const theme = useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode,
-          primary: {
-            main: c.button,
-            dark: c.buttonHover,
-            contrastText: c.buttonText,
-          },
-          background: { default: c.bg, paper: c.surface },
-          text: { primary: c.ink, secondary: c.muted },
-          divider: c.border,
-          success: { main: c.success },
-          warning: { main: c.warning },
-          error: { main: c.error },
-        },
-        typography: {
-          fontFamily: ui.font,
-          h4: {
-            fontSize: "1.375rem",
-            lineHeight: 1.35,
-            fontWeight: 650,
-            letterSpacing: "-0.018em",
-          },
-          h5: {
-            fontSize: "1.0625rem",
-            lineHeight: 1.4,
-            fontWeight: 650,
-            letterSpacing: "-0.012em",
-          },
-          h6: { fontSize: "0.9375rem", fontWeight: 650 },
-          body1: { fontSize: "0.875rem", lineHeight: 1.7 },
-          body2: { fontSize: "0.8125rem", lineHeight: 1.65 },
-          button: {
-            fontSize: "0.8125rem",
-            textTransform: "none",
-            fontWeight: 560,
-          },
-        },
-        shape: { borderRadius: 8 },
-        components: {
-          MuiButtonBase: {
-            defaultProps: { disableRipple: true },
-          },
-          MuiButton: {
-            defaultProps: { disableElevation: true, size: "small" },
-            styleOverrides: {
-              root: {
-                minHeight: 32,
-                padding: "6px 14px",
-                borderRadius: 8,
-                transition:
-                  "background-color 140ms cubic-bezier(0.2,0,0,1), border-color 140ms cubic-bezier(0.2,0,0,1), color 140ms cubic-bezier(0.2,0,0,1), box-shadow 140ms cubic-bezier(0.2,0,0,1)",
-                "&:active": { transform: "scale(0.985)" },
-                "&.Mui-focusVisible": {
-                  boxShadow: `0 0 0 2px ${c.surface}, 0 0 0 4px ${c.accent}`,
-                },
-              },
-              containedPrimary: {
-                backgroundColor: c.button,
-                color: c.buttonText,
-                "&:hover": { backgroundColor: c.buttonHover },
-              },
-              outlinedPrimary: {
-                color: c.body,
-                borderColor: c.borderStrong,
-                "&:hover": {
-                  borderColor: c.muted,
-                  backgroundColor: c.surface2,
-                },
-              },
-              textPrimary: {
-                color: c.muted,
-                "&:hover": { backgroundColor: c.surface2, color: c.ink },
-              },
-            },
-          },
-          MuiIconButton: {
-            defaultProps: { size: "small" },
-            styleOverrides: {
-              root: {
-                color: c.muted,
-                borderRadius: 8,
-                transition:
-                  "background-color 140ms cubic-bezier(0.2,0,0,1), color 140ms cubic-bezier(0.2,0,0,1)",
-                "&:hover": { backgroundColor: c.surface2, color: c.ink },
-                "&.Mui-focusVisible": {
-                  boxShadow: `0 0 0 2px ${c.surface}, 0 0 0 4px ${c.accent}`,
-                },
-              },
-            },
-          },
-          MuiTextField: {
-            defaultProps: { size: "small", variant: "outlined" },
-          },
-          MuiOutlinedInput: {
-            styleOverrides: {
-              root: {
-                backgroundColor: c.input,
-                fontSize: 13,
-                borderRadius: 8,
-                transition:
-                  "border-color 140ms cubic-bezier(0.2,0,0,1), box-shadow 140ms cubic-bezier(0.2,0,0,1)",
-                "&:hover fieldset": { borderColor: c.muted },
-                "& fieldset": { borderColor: c.borderStrong },
-                "&.Mui-focused fieldset": {
-                  borderColor: c.accent,
-                  boxShadow: `0 0 0 3px ${c.accentSoft}`,
-                },
-                "&.Mui-focused": { backgroundColor: c.input },
-              },
-              input: {
-                padding: "8px 12px",
-                "&::placeholder": { color: c.muted, opacity: 1 },
-              },
-            },
-          },
-          MuiPaper: {
-            styleOverrides: {
-              root: { backgroundImage: "none" },
-            },
-          },
-          MuiDialog: {
-            styleOverrides: {
-              paper: {
-                borderRadius: 12,
-                border: `1px solid ${c.border}`,
-                boxShadow:
-                  mode === "light"
-                    ? "0 1px 2px rgba(16,20,28,0.06), 0 12px 40px rgba(16,20,28,0.16)"
-                    : "0 1px 2px rgba(0,0,0,0.4), 0 12px 40px rgba(0,0,0,0.55)",
-              },
-            },
-          },
-          MuiDrawer: {
-            styleOverrides: {
-              paper: {
-                borderRadius: 0,
-                backgroundColor: c.bg,
-                borderLeft: `1px solid ${c.border}`,
-                boxShadow:
-                  mode === "light"
-                    ? "-12px 0 40px rgba(16,20,28,0.08)"
-                    : "-12px 0 40px rgba(0,0,0,0.45)",
-              },
-            },
-          },
-          MuiMenu: {
-            styleOverrides: {
-              paper: {
-                borderRadius: 10,
-                border: `1px solid ${c.border}`,
-                boxShadow:
-                  mode === "light"
-                    ? "0 1px 2px rgba(16,20,28,0.06), 0 8px 28px rgba(16,20,28,0.14)"
-                    : "0 1px 2px rgba(0,0,0,0.4), 0 8px 28px rgba(0,0,0,0.5)",
-              },
-            },
-          },
-          MuiMenuItem: {
-            styleOverrides: {
-              root: {
-                fontSize: 13,
-                transition:
-                  "background-color 120ms cubic-bezier(0.2,0,0,1)",
-                "&:hover": { backgroundColor: c.surface2 },
-                "&.Mui-selected": { backgroundColor: c.accentSoft },
-              },
-            },
-          },
-          MuiTab: {
-            styleOverrides: {
-              root: {
-                textTransform: "none",
-                fontSize: 13,
-                fontWeight: 550,
-                padding: "10px 0",
-                marginRight: 26,
-                minWidth: 0,
-                minHeight: 40,
-                color: c.muted,
-                transition: "color 140ms cubic-bezier(0.2,0,0,1)",
-                "&:hover": { color: c.body },
-                "&.Mui-selected": { color: c.ink },
-              },
-            },
-          },
-          MuiTabs: {
-            styleOverrides: {
-              root: { minHeight: 40 },
-              indicator: { height: 2, backgroundColor: c.accent },
-            },
-          },
-          MuiChip: {
-            styleOverrides: {
-              root: {
-                fontSize: 11,
-                fontWeight: 550,
-                letterSpacing: "0.01em",
-                borderRadius: 999,
-                height: 22,
-                backgroundColor: c.surface2,
-                color: c.muted,
-              },
-            },
-          },
-          MuiAlert: {
-            styleOverrides: {
-              root: { borderRadius: 10, fontSize: 13, alignItems: "center" },
-            },
-          },
-          MuiTooltip: {
-            defaultProps: { arrow: false },
-            styleOverrides: {
-              tooltip: {
-                backgroundColor:
-                  mode === "light" ? "#1f232b" : "#e8ebf1",
-                color: mode === "light" ? "#f2f4f8" : "#14171d",
-                fontSize: 12,
-                fontWeight: 500,
-                borderRadius: 6,
-                padding: "5px 9px",
-              },
-            },
-          },
-          MuiListItemButton: {
-            styleOverrides: {
-              root: {
-                borderRadius: 8,
-                "&.Mui-selected": {
-                  backgroundColor: c.accentSoft,
-                  "&:hover": { backgroundColor: c.accentSoft },
-                },
-              },
-            },
-          },
-        },
-      }),
-    [c, mode],
-  );
-  useLayoutEffect(() => {
-    document.documentElement.dataset.theme = mode;
-    document.documentElement.style.colorScheme = mode;
-  }, [mode]);
   const toggle = () =>
     setMode((current) => {
       const next = current === "light" ? "dark" : "light";
@@ -361,39 +114,61 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
       }
       return next;
     });
-  const variables = {
-    "--canvas": c.bg,
-    "--directory": c.directory,
-    "--rail": c.rail,
-    "--surface": c.surface,
-    "--surface2": c.surface2,
-    "--input": c.input,
-    "--ink": c.ink,
-    "--body": c.body,
-    "--muted": c.muted,
-    "--border": c.border,
-    "--border-strong": c.borderStrong,
-    "--primary": c.accent,
-    "--primary-dark": c.accentText,
-    "--primary-soft": c.accentSoft,
-    "--button-bg": c.button,
-    "--button-hover": c.buttonHover,
-    "--button-text": c.buttonText,
-    "--success": c.success,
-    "--warning": c.warning,
-    "--error": c.error,
-    "--warning-bg": c.warningBg,
-    "--error-bg": c.errorBg,
-    "--success-bg": c.successBg,
-    "--overlay": c.overlay,
-  };
+  const variables = useMemo(
+    () => ({
+      "--canvas": c.bg,
+      "--directory": c.directory,
+      "--rail": c.rail,
+      "--surface": c.surface,
+      "--surface2": c.surface2,
+      "--input": c.input,
+      "--ink": c.ink,
+      "--body": c.body,
+      "--muted": c.muted,
+      "--border": c.border,
+      "--border-strong": c.borderStrong,
+      "--primary": c.accent,
+      "--primary-dark": c.accentText,
+      "--primary-soft": c.accentSoft,
+      "--button-bg": c.button,
+      "--button-hover": c.buttonHover,
+      "--button-text": c.buttonText,
+      "--success": c.success,
+      "--warning": c.warning,
+      "--error": c.error,
+      "--warning-bg": c.warningBg,
+      "--error-bg": c.errorBg,
+      "--success-bg": c.successBg,
+      "--overlay": c.overlay,
+    }),
+    [c],
+  );
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = mode;
+    document.documentElement.style.colorScheme = mode;
+    for (const [key, value] of Object.entries(variables)) {
+      document.documentElement.style.setProperty(key, value);
+    }
+  }, [mode, variables]);
   return (
     <ThemeContext.Provider value={{ mode, toggle }}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <GlobalStyles styles={{ ":root": variables }} />
-        {children}
-      </ThemeProvider>
+      <ConfigProvider
+        locale={zhCN}
+        theme={{
+          algorithm:
+            mode === "dark"
+              ? antdTheme.darkAlgorithm
+              : antdTheme.defaultAlgorithm,
+          token: {
+            fontFamily: ui.font,
+            borderRadius: 8,
+            colorPrimary: c.accent,
+          },
+        }}
+        button={{ autoInsertSpace: false }}
+      >
+        <AntApp>{children}</AntApp>
+      </ConfigProvider>
     </ThemeContext.Provider>
   );
 }
@@ -402,14 +177,19 @@ export function ThemeToggle() {
   const { mode, toggle } = useColorMode();
   const label = mode === "light" ? "切换到深色模式" : "切换到浅色模式";
   return (
-    <Tooltip title={label}>
-      <IconButton onClick={toggle} aria-label={label} className="theme-toggle">
-        {mode === "light" ? (
-          <DarkModeOutlined fontSize="small" />
+    <Button
+      type="text"
+      size="small"
+      onClick={toggle}
+      aria-label={label}
+      className="theme-toggle"
+      icon={
+        mode === "light" ? (
+          <DarkModeOutlined size={16} />
         ) : (
-          <LightModeOutlined fontSize="small" />
-        )}
-      </IconButton>
-    </Tooltip>
+          <LightModeOutlined size={16} />
+        )
+      }
+    />
   );
 }
