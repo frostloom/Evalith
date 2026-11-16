@@ -452,12 +452,6 @@ function Home({
   );
   return (
     <div className="project-directory">
-      <div className="directory-topbar">
-        <FolderOutlined />
-        <span>工作区</span>
-        <span className="toolbar-slash">/</span>
-        <strong>项目目录</strong>
-      </div>
       <div className="directory-body">
         <PageHeader
           title="项目"

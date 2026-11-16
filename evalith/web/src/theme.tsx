@@ -16,7 +16,7 @@ import zhCN from "antd/locale/zh_CN";
 export type ColorMode = "light" | "dark";
 export const THEME_KEY = "evalith.theme";
 export const ui = {
-  font: 'Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
+  font: '"Be Vietnam Pro", Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
   drawer: 560,
 };
 
