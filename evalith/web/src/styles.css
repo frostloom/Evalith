@@ -164,6 +164,10 @@ a {
   color: var(--ink) !important;
   justify-content: flex-start !important;
   flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 .evalith-mark {
   width: 23px;
@@ -191,11 +195,11 @@ a {
   flex: 1;
 }
 .nav-group {
-  font-size: 11px;
-  font-weight: 620;
+  font-size: 12px;
+  font-weight: 600;
   letter-spacing: 0.05em;
   color: var(--muted);
-  padding: 20px 10px 8px;
+  padding: 24px 12px 8px;
 }
 .workspace-nav {
   display: grid;
@@ -205,14 +209,14 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 10px;
-  min-height: 34px;
+  padding: 7px 12px;
+  min-height: 38px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   background: none;
   text-align: left;
   color: var(--body);
-  font-size: 13px;
+  font-size: 14px;
   transition:
     background-color 120ms ease,
     color 120ms ease;
@@ -222,9 +226,15 @@ a {
   color: var(--ink);
 }
 .nav-item.is-active {
-  background: color-mix(in srgb, var(--ink) 7%, transparent);
-  color: var(--ink);
+  background: var(--primary);
+  color: #ffffff;
   font-weight: 550;
+}
+.nav-item.is-active .lucide {
+  color: #ffffff;
+}
+.nav-item.is-active .nav-count {
+  color: rgba(255, 255, 255, 0.85);
 }
 .nav-count {
   margin-left: auto;
@@ -399,12 +409,12 @@ a {
 }
 
 .brand > .evalith-mark {
-  padding: 3px;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: var(--ink);
-  color: var(--canvas);
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #ffffff;
 }
 .nav-item > .lucide {
   width: 16px;
@@ -459,13 +469,15 @@ a {
   padding: 48px 48px;
 }
 .directory-body .page-heading h1 {
-  font-size: 24px;
-  line-height: 1.35;
-  font-weight: 650;
+  font-size: 34px;
+  line-height: 1.2;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 .directory-body .page-description {
   margin-top: 10px;
+  font-size: 15px !important;
+  max-width: 720px;
 }
 .project-card-icon .lucide {
   width: 17px;
@@ -697,6 +709,27 @@ a {
   font-size: 12px;
   color: var(--muted);
   order: 3;
+  white-space: nowrap;
+}
+
+/* Ant Design toolbar in the pill language of the reference product. */
+.directory-toolbar .ant-input-affix-wrapper {
+  border-radius: 999px;
+  height: 40px;
+  padding: 0 16px;
+}
+.directory-toolbar .ant-segmented {
+  border-radius: 999px;
+  padding: 3px;
+}
+.directory-toolbar .ant-segmented .ant-segmented-item-selected {
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+}
+.directory-toolbar .ant-segmented .ant-segmented-thumb {
+  border-radius: 999px;
+  background: var(--primary);
 }
 .project-grid {
   display: grid;
@@ -707,11 +740,11 @@ a {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 206px;
+  min-height: 224px;
   text-align: left;
-  padding: 20px;
+  padding: 24px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 12px;
   background: var(--surface);
   transition:
     transform 160ms ease,
@@ -767,9 +800,10 @@ a {
   gap: 3px;
 }
 .project-card-heading strong {
-  font-size: 14px;
-  font-weight: 550;
+  font-size: 17px;
+  font-weight: 600;
   letter-spacing: -0.02em;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 .project-card-heading > span {
@@ -813,6 +847,11 @@ a {
   align-items: center;
   gap: 5px;
   min-width: 0;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--surface2);
+  white-space: nowrap;
 }
 .project-card-details .lucide {
   width: 13px;

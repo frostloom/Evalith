@@ -185,10 +185,14 @@ button.ant-btn,
 }
 .project-nav-group > button.is-active,
 .workspace-nav > button.is-active {
-  background: var(--surface2);
-  color: var(--ink);
-  font-weight: 560;
-  box-shadow: inset 2px 0 0 var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 550;
+  box-shadow: none;
+}
+.project-nav-group > button.is-active .lucide,
+.workspace-nav > button.is-active .lucide {
+  color: #ffffff;
 }
 
 /* ---------- headings: the 24px display scale lives in the legacy
