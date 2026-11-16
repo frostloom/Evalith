@@ -507,45 +507,39 @@ function Home({
                 onClick={() => onOpen(project)}
               >
                 <div className="project-card-top">
-                  <span className="project-card-icon" aria-hidden="true">
-                    <FolderOutlined />
-                  </span>
                   <div className="project-card-heading">
                     <strong>{project.name}</strong>
-                    <span>持续会话</span>
                   </div>
                   <ArrowOutwardRounded className="card-enter-arrow" />
                 </div>
                 <p className="project-card-path" title={project.root_path}>
                   {compactPath(project.root_path)}
                 </p>
-                <div className="project-card-details">
-                  <span>
-                    <FolderOutlined />
-                    {project.file_count} 个文件
-                  </span>
-                  <span className="project-card-model">
-                    <span className="model-presence" />
-                    {models.find(
-                      (model) => model.id === project.model_config_id,
-                    )?.name ?? "尚未关联模型"}
-                  </span>
-                </div>
                 {project.analysis_error && (
                   <span className="project-card-error">初步分析需要检查</span>
                 )}
-                <div className="project-card-footer">
-                  <span>
-                    <ScheduleRounded />
-                    {new Date(project.updated_at).toLocaleDateString("zh-CN", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                    更新
-                  </span>
-                  <span className="card-open-label">
-                    打开会话 <ArrowOutwardRounded />
-                  </span>
+                <div className="project-card-details-block">
+                  <span className="card-details-label">详情</span>
+                  <div className="project-card-details">
+                    <span>
+                      <FolderOutlined />
+                      {project.file_count} 个文件
+                    </span>
+                    <span className="project-card-model">
+                      <span className="model-presence" />
+                      {models.find(
+                        (model) => model.id === project.model_config_id,
+                      )?.name ?? "尚未关联模型"}
+                    </span>
+                    <span>
+                      <ScheduleRounded />
+                      {new Date(project.updated_at).toLocaleDateString(
+                        "zh-CN",
+                        { month: "short", day: "numeric" },
+                      )}{" "}
+                      更新
+                    </span>
+                  </div>
                 </div>
               </button>
             ))}

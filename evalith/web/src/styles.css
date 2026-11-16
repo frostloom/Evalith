@@ -499,10 +499,10 @@ a {
   padding: 48px 48px;
 }
 .directory-body .page-heading h1 {
-  font-size: 34px;
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 38px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.025em;
 }
 .directory-body .page-description {
   margin-top: 10px;
@@ -738,6 +738,7 @@ a {
   color: var(--muted);
   order: 3;
   white-space: nowrap;
+  margin-left: auto;
 }
 
 /* Ant Design toolbar in the pill language of the reference product. */
@@ -747,10 +748,14 @@ a {
   padding: 0 16px;
   background: var(--surface);
   border-color: var(--border);
+  flex: 0 0 320px;
+  width: 320px;
 }
 .directory-toolbar .ant-segmented {
   border-radius: 999px;
   padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 .directory-toolbar .ant-segmented .ant-segmented-item-selected {
   border-radius: 999px;
@@ -770,11 +775,11 @@ a {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 224px;
+  min-height: 252px;
   text-align: left;
-  padding: 26px;
+  padding: 28px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--surface);
   transition:
     transform 160ms ease,
@@ -784,13 +789,13 @@ a {
 .project-card:hover {
   transform: translateY(-2px);
   border-color: var(--border-strong);
-  box-shadow: 0 5px 14px #00000008;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 .project-card-top {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 .project-card-icon {
   display: grid;
@@ -829,11 +834,17 @@ a {
   min-width: 0;
   gap: 3px;
 }
+.project-card-heading {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
 .project-card-heading strong {
-  font-size: 17px;
-  font-weight: 600;
+  display: block;
+  font-size: 21px;
+  font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.4;
+  line-height: 1.3;
   overflow-wrap: anywhere;
 }
 .project-card-heading > span {
@@ -852,23 +863,40 @@ a {
   opacity: 1;
 }
 .project-card-path {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
+  line-height: 1.6;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   margin-bottom: 18px;
+  overflow-wrap: anywhere;
 }
 .project-card-path .lucide {
   width: 13px;
   height: 13px;
 }
+.project-card-details-block {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.card-details-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
 .project-card-details {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  margin-bottom: 20px;
   color: var(--muted);
   font-size: 12px;
 }
@@ -892,7 +920,7 @@ a {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  max-width: 62%;
+  max-width: 100%;
   min-width: 0;
 }
 .model-presence {
