@@ -1,0 +1,68 @@
+{
+  "analyses-final": {
+    "violations": 0,
+    "incomplete": 0,
+    "violation_ids": [],
+    "incomplete_ids": []
+  },
+  "analyses": {
+    "violations": 0,
+    "incomplete": 0,
+    "violation_ids": [],
+    "incomplete_ids": []
+  },
+  "home-final": {
+    "violations": 0,
+    "incomplete": 0,
+    "violation_ids": [],
+    "incomplete_ids": []
+  },
+  "models-final": {
+    "violations": 0,
+    "incomplete": 0,
+    "violation_ids": [],
+    "incomplete_ids": []
+  },
+  "run-config": {
+    "violations": 0,
+    "incomplete": 0,
+    "violation_ids": [],
+    "incomplete_ids": []
+  },
+  "run-detail": {
+    "violations": 0,
+    "incomplete": 0,
+    "violation_ids": [],
+    "incomplete_ids": []
+  },
+  "runs-final": {
+    "violations": 0,
+    "incomplete": 0,
+    "violation_ids": [],
+    "incomplete_ids": []
+  },
+  "runs": {
+    "violations": 0,
+    "incomplete": 0,
+    "violation_ids": [],
+    "incomplete_ids": []
+  },
+  "tasks-desktop-after": {
+    "violations": 0,
+    "incomplete": 0,
+    "violation_ids": [],
+    "incomplete_ids": []
+  },
+  "tasks-mobile-after": {
+    "violations": 0,
+    "incomplete": 0,
+    "violation_ids": [],
+    "incomplete_ids": []
+  },
+  "tasks": {
+    "violations": 0,
+    "incomplete": 0,
+    "violation_ids": [],
+    "incomplete_ids": []
+  }
+}

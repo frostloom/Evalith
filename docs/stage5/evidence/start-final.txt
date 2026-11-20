@@ -1,0 +1,23 @@
+Checked 28 packages in 4ms
+
+> evalith-web@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 3869 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                         1.24 kB │ gzip:   0.67 kB
+dist/assets/index-BySSgqih.css         72.65 kB │ gzip:  13.69 kB
+dist/assets/react-vendor-CBC2YTCu.js  222.26 kB │ gzip:  69.19 kB
+dist/assets/index-b7C61peL.js         887.14 kB │ gzip: 283.63 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.02s
+Evalith: http://127.0.0.1:8095
+INFO:     Started server process [33860]
+INFO:     Uvicorn running on http://127.0.0.1:8095 (Press CTRL+C to quit)

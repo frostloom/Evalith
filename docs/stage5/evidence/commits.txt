@@ -1,0 +1,6 @@
+567fc87 test: await restored run panels before asserting
+7734c3a fix: stack evaluation headers on narrow screens
+2819006 chore: close frontend attribution and document data retention
+f1bd0bb fix: interrupt in-flight cases on restart and localize cleanup state
+4aa725e feat: rebuild the project card to the reference's editorial anatomy
+d1a5177 feat: close the visible gap to the reference in the second sighted pass

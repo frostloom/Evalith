@@ -1250,6 +1250,36 @@ def phase_boundaries(
     server.shutdown()
 
 
+def phase_review(api: Api, results: Results, state: State) -> None:
+    """A judge outage after a successful target keeps the evidence and is
+    reported as review_required instead of a business failure or a pass."""
+    pid = state.get("file_pid")
+    run = start_run(
+        api,
+        results,
+        pid,
+        {
+            "environment_id": state.get("local_env"),
+            "version_ids": [state.get("tasks")["judged"]],
+            "max_model_calls": 1,
+            "name": "评分模型拒绝后的待复核",
+        },
+        label="评分模型拒绝",
+        expect_ok=False,
+    )
+    state.set("run_review", run["id"])
+    result = run["results"][0]
+    results.expect(
+        "评分失败保留目标证据并标记待复核",
+        run["status"] == "completed"
+        and result["status"] == "review_required"
+        and result["score"] is None
+        and "评分调用失败" in (result.get("error") or "")
+        and result["observation"].get("stdout"),
+        result["status"],
+    )
+
+
 def phase_harbor(api: Api, results: Results, state: State) -> None:
     """Real Harbor container execution of the same command fixture."""
     pid = state.get("file_pid")
@@ -1527,6 +1557,7 @@ def main() -> int:
             "all",
             "setup",
             "core",
+            "review",
             "harbor",
             "cancel",
             "boundaries",
@@ -1544,6 +1575,7 @@ def main() -> int:
     phases = {
         "setup": lambda: phase_setup(api, results, state, Path(args.repo), out),
         "core": lambda: phase_core(api, results, state),
+        "review": lambda: phase_review(api, results, state),
         "harbor": lambda: phase_harbor(api, results, state),
         "cancel": lambda: phase_cancel(api, results, state),
         "boundaries": lambda: phase_boundaries(api, results, state, out),
@@ -1552,7 +1584,7 @@ def main() -> int:
         "restart-verify": lambda: phase_restart_verify(api, results, state),
     }
     requested = (
-        ["setup", "core", "harbor", "cancel", "boundaries", "analysis"]
+        ["setup", "core", "review", "harbor", "cancel", "boundaries", "analysis"]
         if args.phase == "all"
         else [args.phase]
     )

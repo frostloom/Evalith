@@ -1,0 +1,126 @@
+Using CPython 3.12.15
+Creating virtual environment at: evalith/.venv
+   Building evalith @ file://~/.evalith/stage5/fresh-evalith/evalith
+Downloading cryptography (3.7MiB)
+Downloading pydantic-core (2.0MiB)
+Downloading pygments (1.2MiB)
+ Downloaded pygments
+ Downloaded pydantic-core
+ Downloaded cryptography
+WARN Retry attempt #0. Sleeping 1.282411574s before the next attempt
+      Built evalith @ file://~/.evalith/stage5/fresh-evalith/evalith
+Prepared 28 packages in 8.85s
+Installed 28 packages in 23ms
+ + annotated-doc==0.0.5
+ + annotated-types==0.8.0
+ + anyio==4.16.0
+ + certifi==2026.10.23
+ + cffi==2.1.1
+ + click==8.5.0
+ + coverage==7.17.2
+ + cryptography==50.0.2
+ + evalith==0.1.0 (from file://~/.evalith/stage5/fresh-evalith/evalith)
+ + fastapi==0.162.0
+ + h11==0.16.0
+ + httpcore==1.0.9
+ + httpx==0.28.1
+ + idna==3.20
+ + iniconfig==2.3.1
+ + opentelemetry-api==1.45.2
+ + packaging==26.3
+ + pluggy==1.7.0
+ + pycparser==3.12
+ + pydantic==2.14.3
+ + pydantic-core==2.50.4
+ + pygments==2.21.0
+ + pytest==9.2.0
+ + pytest-cov==7.1.0
+ + starlette==1.10.0
+ + typing-extensions==4.16.0
+ + typing-inspection==0.4.5
+ + uvicorn==0.54.0
+
+added 295 packages, and audited 296 packages in 7s
+
+105 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+npm warn install-scripts 2 packages have install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+npm warn install-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+npm notice
+npm notice New major version of npm available! 11.19.1 -> 12.2.3
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.3
+npm notice To update run: npm install -g npm@12.2.3
+npm notice
+
+> evalith-web@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 3869 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                         1.24 kB │ gzip:   0.67 kB
+dist/assets/index-BkJnTrHU.css         72.42 kB │ gzip:  13.64 kB
+dist/assets/react-vendor-CBC2YTCu.js  222.26 kB │ gzip:  69.19 kB
+dist/assets/index-BmxK_ztW.js         886.91 kB │ gzip: 283.51 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.05s
+Evalith: http://127.0.0.1:8094
+INFO:     Started server process [29191]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8094 (Press CTRL+C to quit)
+INFO:     127.0.0.1:49458 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49482 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49483 - "GET /assets/react-vendor-CBC2YTCu.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49482 - "GET /assets/index-BmxK_ztW.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49485 - "GET /assets/index-BkJnTrHU.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49482 - "GET /api/model-configs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49483 - "GET /api/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49482 - "GET /fonts/be-vietnam-pro/bvp-600.ttf HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49483 - "GET /fonts/be-vietnam-pro/bvp-400.ttf HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49485 - "GET /fonts/be-vietnam-pro/bvp-700.ttf HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49485 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49485 - "GET /fonts/inter/InterVariable.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49485 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49547 - "POST /api/model-configs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:49547 - "GET /api/model-configs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49548 - "GET /api/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49548 - "GET /api/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49547 - "GET /api/model-configs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49560 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49573 - "POST /api/projects HTTP/1.1" 201 Created
+INFO:     127.0.0.1:49574 - "GET /api/model-configs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49573 - "GET /api/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49573 - "POST /api/projects/prj_a16be8b0daed40e5/enter HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49583 - "GET /api/projects/prj_a16be8b0daed40e5/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49573 - "GET /api/projects/prj_a16be8b0daed40e5/graders HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49574 - "GET /api/projects/prj_a16be8b0daed40e5/test-sets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49584 - "GET /api/projects/prj_a16be8b0daed40e5/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49586 - "GET /fonts/be-vietnam-pro/bvp-500.ttf HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49586 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49599 - "POST /api/projects/prj_a16be8b0daed40e5/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49612 - "GET /api/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49613 - "GET /api/projects/prj_a16be8b0daed40e5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49639 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49639 - "POST /api/projects/prj_a16be8b0daed40e5/continue HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49646 - "GET /api/projects/prj_a16be8b0daed40e5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49657 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49654 - "GET /api/projects/prj_a16be8b0daed40e5/test-sets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49655 - "GET /api/projects/prj_a16be8b0daed40e5/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49639 - "GET /api/projects/prj_a16be8b0daed40e5/graders HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49656 - "GET /api/projects/prj_a16be8b0daed40e5/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49687 - "POST /api/projects/prj_a16be8b0daed40e5/preparations HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:49740 - "GET /api/model-configs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49741 - "POST /api/projects HTTP/1.1" 201 Created
+INFO:     Shutting down

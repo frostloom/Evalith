@@ -1,0 +1,26 @@
+{
+  "collected_at": "2026-11-20T11:33:54+0800",
+  "commit": "28190065e286eb455fab663fd9ef1ceec273334a",
+  "commit_subject": "chore: close frontend attribution and document data retention",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "machine": "arm64",
+  "macos": "26.6.2",
+  "python": "Python 3.12.15",
+  "uv": "uv 0.13.1 (62faed335 2026-10-13 aarch64-apple-darwin)",
+  "node": "v24.22.0",
+  "npm": "11.19.1",
+  "harbor": "0.24.0",
+  "docker": "29.8.2",
+  "api_url": "http://127.0.0.1:8095",
+  "data_dir": "~/.evalith/stage5/final-evalith/.evalith/app",
+  "paid_models": "disabled (EVALITH_ALLOW_PAID_MODELS unset)",
+  "harbor_binary": "~/.local/bin/harbor (EVALITH_HARBOR_BIN)",
+  "notes": [
+    "Fresh install from the ticket checkout: uv sync and npm ci were run by scripts/start-local.sh.",
+    "No authorized OpenAI-compatible endpoint was available; all model-dependent paths are blocked and marked as such.",
+    "HTTP executor target used a local acceptance fixture on 127.0.0.1."
+  ],
+  "fresh_install_commit": "4aa725e836760c3196d4dedd5bb1e10fe3719c21",
+  "acceptance_commit": "28190065e286eb455fab663fd9ef1ceec273334a",
+  "ui_fix_commit": "7734c3aa7666edd9e80341b17b0a3f1cdf88c072"
+}

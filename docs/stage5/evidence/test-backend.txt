@@ -1,0 +1,9 @@
+$ UV_CACHE_DIR="$PWD/.evalith/cache/uv" uv run --project evalith pytest -c evalith/pyproject.toml evalith/tests --basetemp .evalith/tmp/final-pytest
+........................................................................ [ 24%]
+........................................................................ [ 48%]
+........................................................................ [ 72%]
+........................................................................ [ 96%]
+.........                                                                [100%]
+297 passed, 1 warning in 354.74s (0:05:54)
+
+Warning: fastapi/testclient.py StarletteDeprecationWarning (third-party httpx deprecation, no test failure).

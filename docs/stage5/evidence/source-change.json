@@ -1,0 +1,40 @@
+{
+  "before": {
+    "readiness": {
+      "generation_allowed": true,
+      "generation_implemented": true,
+      "unknowns_confirmed": false,
+      "reason": "可以设计评测题目。用户继续或模型判断足够都不等于未知业务规则已确认。"
+    },
+    "digest": "6a87e55b1dddefc62c04dd99e1007d62bc40b07132dbddf83c9dc7139ee59bd5"
+  },
+  "after_change": {
+    "status": 200,
+    "readiness": {
+      "generation_allowed": false,
+      "generation_implemented": true,
+      "unknowns_confirmed": false,
+      "reason": "资料已变化，当前理解来自历史快照；请重新分析后再继续。"
+    },
+    "digest": "85ee42d0e54d2af502620c44fbf813c5bfb7f828b5e1a12bed6d019d7d5c42d2",
+    "understanding_reason": "资料快照已变化，需重新确认依据；未知项保留，推进门保持关闭。"
+  },
+  "run_after_change": {
+    "status": 409,
+    "body": {
+      "error": "题目、环境与当前资料不一致，请更新后再运行",
+      "code": "source_changed"
+    }
+  },
+  "restored": {
+    "status": 200,
+    "readiness": {
+      "generation_allowed": false,
+      "generation_implemented": true,
+      "unknowns_confirmed": false,
+      "reason": "尚未满足继续条件：请补充资料、纠正理解，或明确表示继续。"
+    },
+    "digest": "6a87e55b1dddefc62c04dd99e1007d62bc40b07132dbddf83c9dc7139ee59bd5",
+    "understanding_reason": "资料快照已变化，需重新确认依据；未知项保留，推进门保持关闭。"
+  }
+}

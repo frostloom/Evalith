@@ -1,0 +1,45 @@
+{
+  "id": "run_e2b4f156882741c98541",
+  "name": "评分模型拒绝后的待复核",
+  "status": "completed",
+  "cleanup_status": "completed",
+  "usage": {
+    "model_calls": 1,
+    "cost_usd": null,
+    "input_tokens": null,
+    "output_tokens": null
+  },
+  "results": [
+    {
+      "title": "需要模型判断",
+      "status": "review_required",
+      "score": null,
+      "error": "评分调用失败：离线演示模型不生成真实评测资产，请选择 OpenAI 兼容服务模型",
+      "checks": [
+        {
+          "type": "judge",
+          "expected": "目标读取 stdin 中的 items，写出 report.json 并打印相同 JSON。\n判断要求：输出包含 count 和 total_cent",
+          "path": "",
+          "description": "",
+          "judge_model": "stub-understanding",
+          "status": "needs_judge",
+          "actual": null,
+          "reason": ""
+        }
+      ],
+      "observation": {
+        "stdout": "{\"count\": 0, \"total_cent\": 0}\n",
+        "stderr": "",
+        "exit_code": 0,
+        "process_error": null,
+        "duration_ms": 57,
+        "cleanup_status": "completed",
+        "evidence_directory": "~/.evalith/stage5/final-evalith/.evalith/app/runs/run_e2b4f156882741c98541/result_10a29cd3496842ff8cf2/source",
+        "json": {
+          "count": 0,
+          "total_cent": 0
+        }
+      }
+    }
+  ]
+}
