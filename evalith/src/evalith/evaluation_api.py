@@ -82,7 +82,7 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
                 item["project_id"],
                 "run",
                 item["id"],
-                lambda current: {
+                lambda current, error=error, cleanup=cleanup: {
                     **current,
                     "status": "interrupted",
                     "error": error,

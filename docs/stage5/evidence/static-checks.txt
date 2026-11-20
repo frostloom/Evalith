@@ -1,0 +1,27 @@
+$ ruff check (changed files)
+evalith/src/evalith/evaluation_api.py:48:65: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+evalith/src/evalith/evaluation_api.py:115:69: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+evalith/src/evalith/evaluation_api.py:127:73: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+evalith/src/evalith/evaluation_api.py:141:62: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+evalith/src/evalith/evaluation_api.py:192:35: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+evalith/src/evalith/evaluation_api.py:203:35: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+evalith/src/evalith/evaluation_api.py:220:52: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+evalith/src/evalith/evaluation_api.py:230:66: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+evalith/src/evalith/evaluation_api.py:313:20: BLE001 Do not catch blind exception: `Exception`
+evalith/src/evalith/evaluation_api.py:340:52: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+evalith/src/evalith/evaluation_api.py:346:52: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+Found 11 errors.
+
+Baseline 4aa725e evaluation_api.py:
+.evalith/stage5/ruff-baseline/evaluation_api.py:47:65: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+.evalith/stage5/ruff-baseline/evaluation_api.py:78:69: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+.evalith/stage5/ruff-baseline/evaluation_api.py:90:73: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+.evalith/stage5/ruff-baseline/evaluation_api.py:104:62: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+.evalith/stage5/ruff-baseline/evaluation_api.py:155:35: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+.evalith/stage5/ruff-baseline/evaluation_api.py:166:35: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+.evalith/stage5/ruff-baseline/evaluation_api.py:183:52: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+.evalith/stage5/ruff-baseline/evaluation_api.py:193:66: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+.evalith/stage5/ruff-baseline/evaluation_api.py:276:20: BLE001 Do not catch blind exception: `Exception`
+.evalith/stage5/ruff-baseline/evaluation_api.py:303:52: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+.evalith/stage5/ruff-baseline/evaluation_api.py:309:52: B008 Do not perform function call `Body` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+Found 11 errors.

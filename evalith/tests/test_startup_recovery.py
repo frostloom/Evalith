@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi.testclient import TestClient
-
 from conftest import create_stub_model, import_project
 from evalith.api import create_app
 from evalith.evaluation_store import EvaluationStore
+from fastapi.testclient import TestClient
 
 
 def _result(identifier: str, status: str, passed_score: float | None) -> dict[str, Any]:
