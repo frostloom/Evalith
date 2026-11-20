@@ -31,8 +31,10 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 import threading
 import time
+import uuid
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -192,6 +194,18 @@ def wait_run(api: Api, pid: str, run_id: str, timeout: float = 180) -> dict[str,
     raise AcceptanceError(f"run {run_id} did not finish within {timeout}s")
 
 
+def wait_analysis(
+    api: Api, pid: str, analysis_id: str, timeout: float = 30
+) -> dict[str, Any]:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        _, analysis = api.get(f"/api/projects/{pid}/analyses/{analysis_id}")
+        if analysis["status"] not in {"running", "pending"}:
+            return analysis
+        time.sleep(0.1)
+    raise AcceptanceError(f"analysis {analysis_id} did not finish within {timeout}s")
+
+
 def result_by_title(run: dict[str, Any], title: str) -> dict[str, Any]:
     for result in run["results"]:
         if result["task"]["definition"]["title"] == title:
@@ -226,9 +240,9 @@ def task_payload(
 
 
 def make_project_fixtures(root: Path, repo: Path) -> dict[str, Path]:
-    fixtures = root / "fixtures"
-    if fixtures.exists():
-        shutil.rmtree(fixtures)
+    # Always use a fresh script-owned directory. Never delete a path that a
+    # previous --out invocation may own: --out is caller-supplied.
+    fixtures = Path(tempfile.mkdtemp(prefix="stage5-fixtures-", dir=root))
     file_project = fixtures / "file-transform"
     file_project.mkdir(parents=True)
     for name in ("README.md", "main.py"):
@@ -1136,9 +1150,7 @@ def phase_boundaries(
 
     # Command sandbox: writes outside the per-case directory and non-loopback
     # network are denied by the macOS profile.
-    outside = work / "outside-write-marker"
-    if outside.exists():
-        outside.unlink()
+    outside = work / f"outside-write-marker-{uuid.uuid4().hex}"
     write_exec = create_executor(
         api,
         results,
@@ -1437,13 +1449,7 @@ def phase_analysis(api: Api, results: Results, state: State) -> None:
         expected=(202,),
         name="analysis-zero-budget",
     )
-    deadline = time.monotonic() + 30
-    while time.monotonic() < deadline:
-        _, current = api.get(f"/api/projects/{pid}/analyses/{analysis['id']}")
-        if current["status"] not in {"running", "pending"}:
-            break
-        time.sleep(0.1)
-    _, current = api.get(f"/api/projects/{pid}/analyses/{analysis['id']}")
+    current = wait_analysis(api, pid, analysis["id"])
     results.expect(
         "分析预算为零时保持预算独立且停止",
         current["status"] == "budget_stopped" and current["usage"]["model_calls"] == 0,
@@ -1461,13 +1467,7 @@ def phase_analysis(api: Api, results: Results, state: State) -> None:
         expected=(202,),
         name="analysis-low-scope",
     )
-    deadline = time.monotonic() + 30
-    while time.monotonic() < deadline:
-        _, current = api.get(f"/api/projects/{pid}/analyses/{low['id']}")
-        if current["status"] not in {"running", "pending"}:
-            break
-        time.sleep(0.1)
-    _, current = api.get(f"/api/projects/{pid}/analyses/{low['id']}")
+    current = wait_analysis(api, pid, low["id"])
     results.expect(
         "低分范围不把缺失分数当作零分",
         current["status"] == "budget_stopped"
@@ -1485,15 +1485,7 @@ def phase_analysis(api: Api, results: Results, state: State) -> None:
         expected=(202,),
         name="analysis-stub-rejected",
     )
-    deadline = time.monotonic() + 30
-    while time.monotonic() < deadline:
-        _, current = api.get(
-            f"/api/projects/{pid}/analyses/{model_required['id']}"
-        )
-        if current["status"] not in {"running", "pending"}:
-            break
-        time.sleep(0.1)
-    _, current = api.get(f"/api/projects/{pid}/analyses/{model_required['id']}")
+    current = wait_analysis(api, pid, model_required["id"])
     results.expect(
         "真实分析需要真实模型，离线演示显式失败",
         current["status"] == "failed"

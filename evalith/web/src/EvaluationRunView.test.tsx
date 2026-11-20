@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { it, expect, vi } from "vitest";
 import { EvaluationRunView } from "./EvaluationRunView";
@@ -117,5 +117,9 @@ it("localizes cleanup state and interrupted cases after a restart", async () => 
   await user.click(screen.getByRole("tab", { name: "运行配置" }));
   expect(await screen.findByText("服务重启，清理状态未知")).toBeVisible();
   await user.click(screen.getByRole("tab", { name: "测试结果" }));
-  expect((await screen.findAllByText("已中断")).length).toBeGreaterThan(0);
+  const resultRow = (await screen.findByRole("button", { name: /Query/ })).closest(
+    ".eval-result-row",
+  );
+  expect(resultRow).not.toBeNull();
+  expect(within(resultRow as HTMLElement).getAllByText("已中断")).toHaveLength(1);
 });

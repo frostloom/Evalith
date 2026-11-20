@@ -54,4 +54,4 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --frozen
       # Syntax/undefined-name/unused-import gate; configured in pyproject.toml.
-      - run: uv run ruff check src/evalith
+      - run: uv run ruff check src/evalith ../scripts/stage5_acceptance.py
