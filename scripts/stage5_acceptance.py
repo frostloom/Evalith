@@ -18,9 +18,9 @@ Usage (server already running):
     python3 scripts/stage5_acceptance.py --base-url http://127.0.0.1:8094 \
         --out .evalith/stage5/acceptance --phase all
 
-Phases: setup, core, cancel, boundaries, analysis, restart-prepare,
-restart-verify.  `all` runs every phase except the restart pair, which needs the
-service to be stopped and started between them.
+Phases: setup, core, review, harbor, cancel, boundaries, analysis,
+restart-prepare, restart-verify.  `all` runs every phase except the restart
+pair, which needs the service to be stopped and started between them.
 """
 
 from __future__ import annotations
@@ -29,16 +29,15 @@ import argparse
 import json
 import os
 import shutil
-import socket
 import sys
 import threading
 import time
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 TERMINAL = {"completed", "failed", "cancelled", "budget_stopped", "interrupted"}
 
@@ -118,6 +117,7 @@ class Results:
     def __init__(self, path: Path):
         self.path = path
         self.items: list[dict[str, Any]] = []
+        self.blocked_items: list[dict[str, Any]] = []
 
     def expect(self, name: str, condition: bool, detail: Any = None) -> None:
         entry = {"name": name, "passed": bool(condition), "detail": detail}
@@ -128,6 +128,17 @@ class Results:
         if not condition:
             raise AcceptanceError(f"assertion failed: {name}: {detail}")
 
+    def blocked(self, name: str, detail: Any) -> None:
+        """Record a requirement that this environment cannot verify.
+
+        A blocked capability is never a passing assertion; it is written to
+        blocked.jsonl and excluded from the pass count.
+        """
+        entry = {"name": name, "blocked": True, "detail": detail}
+        self.blocked_items.append(entry)
+        print(f"[BLOCKED] {name}")
+        record(self.path.with_name("blocked.jsonl"), entry)
+
     def summary(self) -> None:
         failures = [item for item in self.items if not item["passed"]]
         payload = {
@@ -135,6 +146,8 @@ class Results:
             "passed": len(self.items) - len(failures),
             "failed": len(failures),
             "failures": failures,
+            "blocked": len(self.blocked_items),
+            "blocked_items": self.blocked_items,
         }
         self.path.with_name("summary.json").write_text(
             json.dumps(payload, ensure_ascii=False, indent=2)
@@ -241,10 +254,10 @@ def make_project_fixtures(root: Path, repo: Path) -> dict[str, Path]:
 
 
 class _TargetHandler(BaseHTTPRequestHandler):
-    def log_message(self, *_args: Any) -> None:  # noqa: N802 - stdlib hook
+    def log_message(self, *_args: Any) -> None:
         return
 
-    def do_POST(self) -> None:  # noqa: N802 - stdlib hook
+    def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length", "0"))
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
@@ -278,7 +291,7 @@ def ensure_model(api: Api, results: Results, state: State) -> str:
     for item in models["items"]:
         if item["provider"] == "stub":
             state.set("model_id", item["id"])
-            results.expect("离线演示模型可复用", True, item["id"])
+            results.expect("离线演示模型可复用", item["provider"] == "stub" and bool(item["id"]), item)
             return item["id"]
     _, model = api.post(
         "/api/model-configs",
@@ -983,7 +996,7 @@ def phase_boundaries(
         expected=(422,),
         name="reject-traversal-check",
     )
-    results.expect("路径越界的检查规则被拒绝", True, invalid.get("code"))
+    results.expect("路径越界的检查规则被拒绝", invalid.get("code") == "invalid_task", invalid)
 
     # HTTP adapter only accepts loopback targets and an explicit synthetic-data
     # confirmation.
@@ -1028,7 +1041,7 @@ def phase_boundaries(
         expected=(422,),
         name="reject-http-without-confirmation",
     )
-    results.expect("HTTP 环境未确认独立数据时拒绝", True, denied.get("code"))
+    results.expect("HTTP 环境未确认独立数据时拒绝", "独立测试数据" in (denied.get("error") or ""), denied)
     http_env = make_environment(
         api,
         results,
@@ -1190,12 +1203,12 @@ def phase_boundaries(
     _, cross = api.get(
         f"/api/projects/{pid}/runs/{state.get('run_mixed')}", expected=(404,)
     )
-    results.expect("跨项目运行 ID 不可读取", True, cross)
+    results.expect("跨项目运行 ID 不可读取", cross.get("code") == "evaluation_not_found", cross)
     _, other = api.get(
         f"/api/projects/{support_pid}/tasks/{state.get('http_task_id')}",
         expected=(404,),
     )
-    results.expect("跨项目题目 ID 不可读取", True, other)
+    results.expect("跨项目题目 ID 不可读取", other.get("code") == "evaluation_not_found", other)
     conversation = create_task(
         api,
         results,
@@ -1242,10 +1255,9 @@ def phase_boundaries(
         mismatch.get("code") == "task_adapter_mismatch",
         mismatch,
     )
-    results.expect(
-        "对话执行依赖真实模型，本环境标记为未验证",
-        True,
-        "No authorized OpenAI-compatible endpoint; aigateway_go target path remains unverified.",
+    results.blocked(
+        "对话执行依赖真实模型，本环境未验证",
+        "No authorized OpenAI-compatible endpoint; the aigateway_go conversation target path remains unverified.",
     )
     server.shutdown()
 
@@ -1485,6 +1497,8 @@ def phase_restart_prepare(api: Api, results: Results, state: State) -> None:
         name="start-restart",
     )
     state.set("run_restart", run["id"])
+    _, project_detail = api.get(f"/api/projects/{pid}")
+    state.set("file_session", project_detail["session"]["id"])
     deadline = time.monotonic() + 60
     while time.monotonic() < deadline:
         _, current = api.get(f"/api/projects/{pid}/runs/{run['id']}")
@@ -1492,7 +1506,12 @@ def phase_restart_prepare(api: Api, results: Results, state: State) -> None:
             "running",
             "validating",
         }:
-            results.expect("重启前存在运行中记录", True, current["results"][0]["status"])
+            status = current["results"][0]["status"]
+            results.expect(
+                "重启前存在运行中记录",
+                status in {"running", "validating"},
+                status,
+            )
             return
         time.sleep(0.2)
     raise AcceptanceError("restart run did not reach a running case")
@@ -1519,12 +1538,23 @@ def phase_restart_verify(api: Api, results: Results, state: State) -> None:
     )
     _, projects = api.get("/api/projects")
     ids = {item["id"] for item in projects["items"]}
+    _, detail = api.get(f"/api/projects/{pid}")
+    expected_session = state.get("file_session")
     results.expect(
         "重启后项目与会话仍可恢复",
-        pid in ids,
-        sorted(ids),
+        pid in ids
+        and detail["session"]["id"] == expected_session
+        and any(
+            message["role"] in {"system", "assistant"}
+            for message in detail["messages"]
+        ),
+        {
+            "project_in_list": pid in ids,
+            "session_id": detail["session"]["id"],
+            "expected_session_id": expected_session,
+            "messages": len(detail["messages"]),
+        },
     )
-    _, detail = api.get(f"/api/projects/{pid}")
     _, runs = api.get(f"/api/projects/{pid}/runs")
     results.expect(
         "重启后历史运行列表完整",

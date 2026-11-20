@@ -45,6 +45,8 @@ def test_restart_interrupts_in_flight_results_and_keeps_finished_ones(settings, 
                 "tasks": [],
                 "results": [
                     _result("in_flight", "running", None),
+                    _result("validating", "validating", None),
+                    _result("pending", "pending", None),
                     _result("already_passed", "passed", 1),
                 ],
                 "usage": {
@@ -65,9 +67,10 @@ def test_restart_interrupts_in_flight_results_and_keeps_finished_ones(settings, 
     assert recovered["cleanup_status"] == "unknown_after_restart"
     assert "服务已重启" in recovered["error"]
     by_id = {item["id"]: item for item in recovered["results"]}
-    assert by_id["in_flight"]["status"] == "interrupted"
-    assert "未完成" in by_id["in_flight"]["error"]
-    assert by_id["in_flight"]["finished_at"]
+    for identifier in ("in_flight", "validating", "pending"):
+        assert by_id[identifier]["status"] == "interrupted", identifier
+        assert "未完成" in by_id[identifier]["error"], identifier
+        assert by_id[identifier]["finished_at"], identifier
     assert by_id["already_passed"]["status"] == "passed"
     assert by_id["already_passed"]["score"] == 1
 
