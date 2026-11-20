@@ -115,7 +115,7 @@ it("localizes cleanup state and interrupted cases after a restart", async () => 
     </EvaluationRunView>,
   );
   await user.click(screen.getByRole("tab", { name: "运行配置" }));
-  expect(screen.getByText("服务重启，清理状态未知")).toBeVisible();
+  expect(await screen.findByText("服务重启，清理状态未知")).toBeVisible();
   await user.click(screen.getByRole("tab", { name: "测试结果" }));
-  expect(screen.getAllByText("已中断").length).toBeGreaterThan(0);
+  expect((await screen.findAllByText("已中断")).length).toBeGreaterThan(0);
 });
