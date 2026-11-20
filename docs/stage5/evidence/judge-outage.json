@@ -1,5 +1,5 @@
 {
-  "id": "run_1bfc31552b364773b7ed",
+  "id": "run_f18f4b620f9243b0a122",
   "name": "评分模型拒绝后的待复核",
   "status": "completed",
   "cleanup_status": "completed",
@@ -32,9 +32,9 @@
         "stderr": "",
         "exit_code": 0,
         "process_error": null,
-        "duration_ms": 56,
+        "duration_ms": 55,
         "cleanup_status": "completed",
-        "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_1bfc31552b364773b7ed/result_404d6b1a89e54e41aeff/source",
+        "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_f18f4b620f9243b0a122/result_406032ae6a884e8eb644/source",
         "json": {
           "count": 0,
           "total_cent": 0

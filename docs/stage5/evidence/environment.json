@@ -1,7 +1,7 @@
 {
-  "collected_at": "2026-11-20T12:40:00+0800",
-  "commit": "4f3d81329636129f3a9ad0cb0cbfc42bc19d3e3b",
-  "commit_subject": "fix: keep unverified conversation blocked and verify session recovery",
+  "collected_at": "2026-11-20T14:48:00+0800",
+  "commit": "b597d56776763fa18de1304c50deb619f409a8f8",
+  "commit_subject": "test: expose stable digests for exact acceptance snapshots",
   "platform": "macOS-26.6.2-arm64-arm-64bit",
   "machine": "arm64",
   "macos": "26.6.2",
@@ -17,7 +17,7 @@
   "harbor_binary": "EVALITH_HARBOR_BIN (harbor 0.24.0)",
   "fresh_install_commit": "4aa725e836760c3196d4dedd5bb1e10fe3719c21",
   "notes": [
-    "Fresh checkout at 4f3d813 with a new data directory; scripts/start-local.sh installed and started the service.",
+    "Fresh checkout at b597d56 with a new data directory; scripts/start-local.sh installed and started the service.",
     "No authorized OpenAI-compatible endpoint was available; model-dependent paths are blocked and recorded in blocked.jsonl.",
     "Harbor and HTTP acceptance used real local Docker/Harbor and a loopback fixture; screenshots are from the same UI build."
   ]

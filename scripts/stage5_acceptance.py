@@ -26,6 +26,7 @@ pair, which needs the service to be stopped and started between them.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -44,6 +45,13 @@ TERMINAL = {"completed", "failed", "cancelled", "budget_stopped", "interrupted"}
 
 class AcceptanceError(RuntimeError):
     pass
+
+
+def digest(value: Any) -> str:
+    """Stable hash for an assertion detail without dumping private content."""
+    return hashlib.sha256(
+        json.dumps(value, ensure_ascii=False, sort_keys=True).encode()
+    ).hexdigest()
 
 
 def record(path: Path, data: Any) -> None:
@@ -460,6 +468,7 @@ def start_run(
     *,
     label: str,
     expect_ok: bool = True,
+    timeout: float = 180,
 ) -> dict[str, Any]:
     _, preview = api.post(
         f"/api/projects/{pid}/runs/preview", payload, name=f"preview-{label}"
@@ -475,7 +484,7 @@ def start_run(
         expected=(202,),
         name=f"start-{label}",
     )
-    finished = wait_run(api, pid, run["id"])
+    finished = wait_run(api, pid, run["id"], timeout=timeout)
     if expect_ok:
         results.expect(
             f"{label} 运行结束", finished["status"] == "completed", finished["status"]
@@ -649,10 +658,27 @@ def phase_core(api: Api, results: Results, state: State) -> None:
         len(run["results"]) == 3 and run["cleanup_status"] == "completed",
         run["cleanup_status"],
     )
+    expected_definitions = {
+        item["version_id"]: item["definition"]
+        for item in (passing, failing, missing)
+    }
+    frozen_ok = all(
+        r["task"]["version_id"] in expected_definitions
+        and r["task"]["definition"] == expected_definitions[r["task"]["version_id"]]
+        for r in run["results"]
+    )
     results.expect(
         "运行冻结题目版本快照",
-        all(r["task"]["definition"]["title"] for r in run["results"]),
-        [r["task"]["version_id"] for r in run["results"]],
+        frozen_ok,
+        [
+            {
+                "version_id": r["task"]["version_id"],
+                "title": r["task"]["definition"]["title"],
+                "definition_matches": r["task"]["definition"]
+                == expected_definitions.get(r["task"]["version_id"]),
+            }
+            for r in run["results"]
+        ],
     )
 
     # Budget stop: deterministic case completes, the judge case stops before a
@@ -819,6 +845,9 @@ def phase_core(api: Api, results: Results, state: State) -> None:
     )
 
     # Task edit creates a new version; the earlier run keeps its frozen copy.
+    _, pre_edit_run = api.get(f"/api/projects/{pid}/runs/{run['id']}")
+    pre_edit_result = result_by_title(pre_edit_run, "两笔金额求和")
+    pre_edit_snapshot = pre_edit_result["task"]
     _, edited = api.put(
         f"/api/projects/{pid}/tasks/{passing['id']}",
         task_payload(
@@ -844,10 +873,21 @@ def phase_core(api: Api, results: Results, state: State) -> None:
         [v["version"] for v in versions["items"]],
     )
     _, old_run = api.get(f"/api/projects/{pid}/runs/{run['id']}")
+    old_result = result_by_title(old_run, "两笔金额求和")
     results.expect(
         "修改题目不改写历史运行",
-        result_by_title(old_run, "两笔金额求和")["status"] == "passed",
-        old_run["results"][0]["task"]["version_id"],
+        old_result["task"] == pre_edit_snapshot
+        and old_result["status"] == pre_edit_result["status"]
+        and old_result["score"] == pre_edit_result["score"]
+        and old_result["checks"] == pre_edit_result["checks"],
+        {
+            "version_id": old_result["task"]["version_id"],
+            "title": old_result["task"]["definition"]["title"],
+            "task_matches": old_result["task"] == pre_edit_snapshot,
+            "status_matches": old_result["status"] == pre_edit_result["status"],
+            "score_matches": old_result["score"] == pre_edit_result["score"],
+            "checks_match": old_result["checks"] == pre_edit_result["checks"],
+        },
     )
     state.set(
         "edited_task", {"id": edited["id"], "version_id": edited["version_id"]}
@@ -1363,6 +1403,7 @@ def phase_harbor(api: Api, results: Results, state: State) -> None:
             "name": "Harbor 容器执行",
         },
         label="Harbor 容器执行",
+        timeout=600,
     )
     state.set("run_harbor", run["id"])
     passed = result_by_title(run, "容器内金额求和")
@@ -1497,8 +1538,6 @@ def phase_restart_prepare(api: Api, results: Results, state: State) -> None:
         name="start-restart",
     )
     state.set("run_restart", run["id"])
-    _, project_detail = api.get(f"/api/projects/{pid}")
-    state.set("file_session", project_detail["session"]["id"])
     deadline = time.monotonic() + 60
     while time.monotonic() < deadline:
         _, current = api.get(f"/api/projects/{pid}/runs/{run['id']}")
@@ -1512,6 +1551,19 @@ def phase_restart_prepare(api: Api, results: Results, state: State) -> None:
                 status in {"running", "validating"},
                 status,
             )
+            # Capture the exact pre-shutdown message history, the completed
+            # mixed run and the in-flight restart results. Startup recovery
+            # may change only the in-flight status/error, never the captured
+            # content or scores.
+            _, project_detail = api.get(f"/api/projects/{pid}")
+            state.set("file_session", project_detail["session"]["id"])
+            state.set("file_messages", project_detail["messages"])
+            _, mixed_before = api.get(
+                f"/api/projects/{pid}/runs/{state.get('run_mixed')}"
+            )
+            state.set("mixed_status", mixed_before["status"])
+            state.set("mixed_results", mixed_before["results"])
+            state.set("restart_results_before", current["results"])
             return
         time.sleep(0.2)
     raise AcceptanceError("restart run did not reach a running case")
@@ -1531,28 +1583,58 @@ def phase_restart_verify(api: Api, results: Results, state: State) -> None:
         run["cleanup_status"] == "unknown_after_restart",
         run["cleanup_status"],
     )
+    before_results = state.get("restart_results_before")
+
+    def stable_result(result: dict[str, Any]) -> dict[str, Any]:
+        return {
+            key: result.get(key)
+            for key in ("id", "task", "score", "checks", "observation")
+        }
+
+    def restart_result_ok(before: dict[str, Any], after: dict[str, Any]) -> bool:
+        if stable_result(before) != stable_result(after):
+            return False
+        if before["status"] in {"running", "validating", "pending"}:
+            return after["status"] == "interrupted" and bool(after.get("error"))
+        return after["status"] == before["status"]
+
     results.expect(
         "中断运行保留已保存的逐题记录",
-        len(run["results"]) >= 1,
-        [(r["status"], r.get("error")) for r in run["results"]],
+        len(run["results"]) == len(before_results)
+        and all(
+            restart_result_ok(before, after)
+            for before, after in zip(before_results, run["results"])
+        ),
+        [
+            {
+                "id": after["id"],
+                "before": before["status"],
+                "after": after["status"],
+                "stable_fields_equal": stable_result(before)
+                == stable_result(after),
+            }
+            for before, after in zip(before_results, run["results"])
+        ],
     )
     _, projects = api.get("/api/projects")
     ids = {item["id"] for item in projects["items"]}
     _, detail = api.get(f"/api/projects/{pid}")
     expected_session = state.get("file_session")
+    expected_messages = state.get("file_messages")
     results.expect(
         "重启后项目与会话仍可恢复",
         pid in ids
         and detail["session"]["id"] == expected_session
-        and any(
-            message["role"] in {"system", "assistant"}
-            for message in detail["messages"]
-        ),
+        and detail["messages"] == expected_messages,
         {
             "project_in_list": pid in ids,
             "session_id": detail["session"]["id"],
             "expected_session_id": expected_session,
-            "messages": len(detail["messages"]),
+            "messages_before": len(expected_messages),
+            "messages_after": len(detail["messages"]),
+            "messages_equal": detail["messages"] == expected_messages,
+            "messages_digest_before": digest(expected_messages),
+            "messages_digest_after": digest(detail["messages"]),
         },
     )
     _, runs = api.get(f"/api/projects/{pid}/runs")
@@ -1565,9 +1647,16 @@ def phase_restart_verify(api: Api, results: Results, state: State) -> None:
     mixed = next(item for item in runs["items"] if item["id"] == state.get("run_mixed"))
     results.expect(
         "重启后已完成结果与分数保留",
-        mixed["status"] == "completed"
-        and any(r["status"] == "passed" for r in mixed["results"]),
-        mixed["status"],
+        mixed["status"] == state.get("mixed_status")
+        and mixed["results"] == state.get("mixed_results"),
+        {
+            "status": mixed["status"],
+            "result_ids": [r["id"] for r in mixed["results"]],
+            "scores": [r.get("score") for r in mixed["results"]],
+            "results_equal": mixed["results"] == state.get("mixed_results"),
+            "results_digest_before": digest(state.get("mixed_results")),
+            "results_digest_after": digest(mixed["results"]),
+        },
     )
 
 

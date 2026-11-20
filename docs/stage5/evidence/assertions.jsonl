@@ -1,24 +1,24 @@
 {"name": "服务健康", "passed": true, "detail": {"ok": true, "service": "evalith", "version": "0.1.0", "access_mode": "host"}}
-{"name": "离线演示模型创建", "passed": true, "detail": "mdl_0616fe03029b4c20"}
-{"name": "阶段 5 文件转换验收 导入成功", "passed": true, "detail": "prj_a65348dce2f74659"}
+{"name": "离线演示模型创建", "passed": true, "detail": "mdl_56186fa879624618"}
+{"name": "阶段 5 文件转换验收 导入成功", "passed": true, "detail": "prj_d0a1538bb88741f5"}
 {"name": "文件转换项目 在显式继续前不生成资产", "passed": true, "detail": "尚未满足继续条件：请补充资料、纠正理解，或明确表示继续。"}
 {"name": "文件转换项目 显式继续后允许设计资产", "passed": true, "detail": {"generation_allowed": true, "generation_implemented": true, "unknowns_confirmed": false, "reason": "可以设计评测题目。用户继续或模型判断足够都不等于未知业务规则已确认。"}}
 {"name": "文件转换项目 未知项不因继续被确认", "passed": true, "detail": {"generation_allowed": true, "generation_implemented": true, "unknowns_confirmed": false, "reason": "可以设计评测题目。用户继续或模型判断足够都不等于未知业务规则已确认。"}}
-{"name": "阶段 5 边界验收 导入成功", "passed": true, "detail": "prj_86010e055c7847da"}
+{"name": "阶段 5 边界验收 导入成功", "passed": true, "detail": "prj_5b52907a4d3c4f5d"}
 {"name": "边界项目 在显式继续前不生成资产", "passed": true, "detail": "尚未满足继续条件：请补充资料、纠正理解，或明确表示继续。"}
 {"name": "边界项目 显式继续后允许设计资产", "passed": true, "detail": {"generation_allowed": true, "generation_implemented": true, "unknowns_confirmed": false, "reason": "可以设计评测题目。用户继续或模型判断足够都不等于未知业务规则已确认。"}}
 {"name": "边界项目 未知项不因继续被确认", "passed": true, "detail": {"generation_allowed": true, "generation_implemented": true, "unknowns_confirmed": false, "reason": "可以设计评测题目。用户继续或模型判断足够都不等于未知业务规则已确认。"}}
-{"name": "阶段 5 对话验收 导入成功", "passed": true, "detail": "prj_aa4da21227854fd6"}
+{"name": "阶段 5 对话验收 导入成功", "passed": true, "detail": "prj_0afcc8dafc6b427f"}
 {"name": "对话项目 在显式继续前不生成资产", "passed": true, "detail": "尚未满足继续条件：请补充资料、纠正理解，或明确表示继续。"}
 {"name": "对话项目 显式继续后允许设计资产", "passed": true, "detail": {"generation_allowed": true, "generation_implemented": true, "unknowns_confirmed": false, "reason": "可以设计评测题目。用户继续或模型判断足够都不等于未知业务规则已确认。"}}
 {"name": "对话项目 未知项不因继续被确认", "passed": true, "detail": {"generation_allowed": true, "generation_implemented": true, "unknowns_confirmed": false, "reason": "可以设计评测题目。用户继续或模型判断足够都不等于未知业务规则已确认。"}}
-{"name": "执行器可保存（阶段 5 本地命令）", "passed": true, "detail": "exe_153bee9f8d964210"}
-{"name": "本地命令环境 方案需要确认", "passed": true, "detail": "env_5ab28a9f39cf45388864"}
+{"name": "执行器可保存（阶段 5 本地命令）", "passed": true, "detail": "exe_4f38cb75912e4255"}
+{"name": "本地命令环境 方案需要确认", "passed": true, "detail": "env_e0756dcc65a74d11b177"}
 {"name": "本地命令环境 环境准备完成", "passed": true, "detail": "ready"}
-{"name": "题目可创建：两笔金额求和", "passed": true, "detail": "task_4595e5becc654864b691"}
-{"name": "题目可创建：错误的金额预期", "passed": true, "detail": "task_46a3c3dcc42c49a8bc2f"}
-{"name": "题目可创建：缺失证据", "passed": true, "detail": "task_aa2476da3b524ab2879e"}
-{"name": "题目可创建：需要模型判断", "passed": true, "detail": "task_74b8f1d3b0c342ba9d84"}
+{"name": "题目可创建：两笔金额求和", "passed": true, "detail": "task_97a661af0f454a5c8dc6"}
+{"name": "题目可创建：错误的金额预期", "passed": true, "detail": "task_a67fdb5253a54fd6b9ff"}
+{"name": "题目可创建：缺失证据", "passed": true, "detail": "task_bfed12c425164539a3da"}
+{"name": "题目可创建：需要模型判断", "passed": true, "detail": "task_adae2334128242089820"}
 {"name": "确定性结果分类 预检不执行目标且返回评分方案", "passed": true, "detail": "embedded"}
 {"name": "确定性结果分类 运行结束", "passed": true, "detail": "completed"}
 {"name": "通过结果有分数与证据目录", "passed": true, "detail": "passed"}
@@ -26,41 +26,41 @@
 {"name": "缺失证据不判为通过也不记零分", "passed": true, "detail": "validation_error"}
 {"name": "未知费用保持未知", "passed": true, "detail": {"model_calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": null}}
 {"name": "运行记录逐题持久化", "passed": true, "detail": "completed"}
-{"name": "运行冻结题目版本快照", "passed": true, "detail": ["ver_7e2b68c8a8a94ad88c05", "ver_057f250534cd4343ab1b", "ver_668df5da00bc4cf08bc9"]}
+{"name": "运行冻结题目版本快照", "passed": true, "detail": [{"version_id": "ver_b53d01a3c83d492f813a", "title": "两笔金额求和", "definition_matches": true}, {"version_id": "ver_508f36c540e94315bf37", "title": "错误的金额预期", "definition_matches": true}, {"version_id": "ver_54d15d0837ae43f880c6", "title": "缺失证据", "definition_matches": true}]}
 {"name": "预算停止 预检不执行目标且返回评分方案", "passed": true, "detail": "embedded"}
 {"name": "预算停止保留已完成结果", "passed": true, "detail": "budget_stopped"}
 {"name": "预算停止的未运行题不计失败或零分", "passed": true, "detail": ["passed", "budget_stopped", "skipped"]}
-{"name": "执行器可保存（阶段 5 超时命令）", "passed": true, "detail": "exe_d7ca7e0f724d4dfa"}
-{"name": "超时命令环境 方案需要确认", "passed": true, "detail": "env_3580be7e336d472ca353"}
+{"name": "执行器可保存（阶段 5 超时命令）", "passed": true, "detail": "exe_082bd5e9dcba400a"}
+{"name": "超时命令环境 方案需要确认", "passed": true, "detail": "env_6ef4cf680e9a4284860d"}
 {"name": "超时命令环境 环境准备完成", "passed": true, "detail": "ready"}
-{"name": "题目可创建：超时任务", "passed": true, "detail": "task_8e2ba85bdec648db896b"}
+{"name": "题目可创建：超时任务", "passed": true, "detail": "task_a9f619ccac8744a5b699"}
 {"name": "执行错误 预检不执行目标且返回评分方案", "passed": true, "detail": "embedded"}
 {"name": "超时记为执行错误", "passed": true, "detail": "execution_error"}
 {"name": "测试集与 Grader 预检不执行目标且返回评分方案", "passed": true, "detail": "test_set"}
 {"name": "测试集与 Grader 运行结束", "passed": true, "detail": "completed"}
 {"name": "测试集 Grader 在预检与结果中生效", "passed": true, "detail": "test_set"}
-{"name": "修改 Grader 不改写历史运行快照", "passed": true, "detail": {"name": "报告总额标准", "description": "确定性文件检查，不调用模型", "rubric": "report.json 的总金额必须是 350。", "steps": [], "check": {"type": "file_contains", "expected": "\"total_cent\": 350", "path": "report.json", "description": ""}, "model_config_id": null, "threshold": 0.8, "task_kinds": ["command"], "source_refs": ["README.md"], "uncertainties": [], "version": 1, "calibration_state": "unverified", "id": "grader_01f82fceaa84482cb624", "project_id": "prj_a65348dce2f74659", "kind": "grader", "status": "active", "created_at": "2026-11-20T04:35:37+00:00", "updated_at": "2026-11-20T04:35:37+00:00"}}
+{"name": "修改 Grader 不改写历史运行快照", "passed": true, "detail": {"name": "报告总额标准", "description": "确定性文件检查，不调用模型", "rubric": "report.json 的总金额必须是 350。", "steps": [], "check": {"type": "file_contains", "expected": "\"total_cent\": 350", "path": "report.json", "description": ""}, "model_config_id": null, "threshold": 0.8, "task_kinds": ["command"], "source_refs": ["README.md"], "uncertainties": [], "version": 1, "calibration_state": "unverified", "id": "grader_ce122e753e6a4b3aa5d5", "project_id": "prj_d0a1538bb88741f5", "kind": "grader", "status": "active", "created_at": "2026-11-20T06:45:54+00:00", "updated_at": "2026-11-20T06:45:54+00:00"}}
 {"name": "编辑题目生成新版本", "passed": true, "detail": 2}
 {"name": "旧版本仍可追溯", "passed": true, "detail": [2, 1]}
-{"name": "修改题目不改写历史运行", "passed": true, "detail": "ver_7e2b68c8a8a94ad88c05"}
+{"name": "修改题目不改写历史运行", "passed": true, "detail": {"version_id": "ver_b53d01a3c83d492f813a", "title": "两笔金额求和", "task_matches": true, "status_matches": true, "score_matches": true, "checks_match": true}}
 {"name": "评分模型拒绝 预检不执行目标且返回评分方案", "passed": true, "detail": "embedded"}
 {"name": "评分失败保留目标证据并标记待复核", "passed": true, "detail": "review_required"}
-{"name": "执行器可保存（阶段 5 Harbor 容器）", "passed": true, "detail": "exe_6c8cf4f70e1c4462"}
-{"name": "Harbor 容器环境 方案需要确认", "passed": true, "detail": "env_889bfcfb4a324679afd1"}
+{"name": "执行器可保存（阶段 5 Harbor 容器）", "passed": true, "detail": "exe_c18dab31b1c14cc2"}
+{"name": "Harbor 容器环境 方案需要确认", "passed": true, "detail": "env_29bf061706014231a4fe"}
 {"name": "Harbor 容器环境 环境准备完成", "passed": true, "detail": "ready"}
 {"name": "Harbor 环境记录 CLI 与 Docker 版本", "passed": true, "detail": {"harbor": "0.24.0", "docker": "29.8.2"}}
-{"name": "题目可创建：容器内金额求和", "passed": true, "detail": "task_6ff3622eba9c49c7a1a5"}
-{"name": "题目可创建：容器内错误预期", "passed": true, "detail": "task_594f75757dec41f09004"}
+{"name": "题目可创建：容器内金额求和", "passed": true, "detail": "task_b596252b1c074815ae14"}
+{"name": "题目可创建：容器内错误预期", "passed": true, "detail": "task_e9a874cb7e1944c4995a"}
 {"name": "Harbor 容器执行 预检不执行目标且返回评分方案", "passed": true, "detail": "embedded"}
 {"name": "Harbor 容器执行 运行结束", "passed": true, "detail": "completed"}
-{"name": "Harbor 真实容器通过题回收产物证据", "passed": true, "detail": {"reward": "1", "verifier_mode": "separate", "job_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_dfadba828a9b456083a0/result_3dd8c5943833431d91ad/harbor/jobs/case-task_6ff3622eba9c49c7a1a5", "trial": "task__kejVQ6E", "harbor_version": "0.24.0"}}
+{"name": "Harbor 真实容器通过题回收产物证据", "passed": true, "detail": {"reward": "1", "verifier_mode": "separate", "job_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_1c85f03004d14ae5bdc2/result_6590e611502840c8b71a/harbor/jobs/case-task_b596252b1c074815ae14", "trial": "task__ZcXQE6t", "harbor_version": "0.24.0"}}
 {"name": "Harbor 容器内业务失败可区分", "passed": true, "detail": "failed"}
 {"name": "Harbor 批次不产生模型调用", "passed": true, "detail": {"model_calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": null}}
-{"name": "执行器可保存（阶段 5 取消命令）", "passed": true, "detail": "exe_216d323869e34661"}
-{"name": "取消命令环境 方案需要确认", "passed": true, "detail": "env_e9b69853b53c44a3a6d2"}
+{"name": "执行器可保存（阶段 5 取消命令）", "passed": true, "detail": "exe_afa72859586c4d98"}
+{"name": "取消命令环境 方案需要确认", "passed": true, "detail": "env_bfea1b9dcbb34299affd"}
 {"name": "取消命令环境 环境准备完成", "passed": true, "detail": "ready"}
-{"name": "题目可创建：快速用例", "passed": true, "detail": "task_db5d33fa9aae4b19b59b"}
-{"name": "题目可创建：慢速用例", "passed": true, "detail": "task_277e8888f1654b758237"}
+{"name": "题目可创建：快速用例", "passed": true, "detail": "task_4e9d1cf675a444668a7e"}
+{"name": "题目可创建：慢速用例", "passed": true, "detail": "task_402144467ab94a83b8cb"}
 {"name": "取消保留已完成结果", "passed": true, "detail": "cancelled"}
 {"name": "取消的题目不伪装为通过", "passed": true, "detail": "cancelled"}
 {"name": "敏感名称文件不进入资料范围", "passed": true, "detail": ["README.md", "notes.txt", "src/agent.py"]}
@@ -70,44 +70,44 @@
 {"name": "显式选择符号链接被拒绝", "passed": true, "detail": {"error": "选定的路径包含符号链接，已拒绝：outside-link", "code": "symlink_rejected"}}
 {"name": "路径越界的检查规则被拒绝", "passed": true, "detail": {"error": "题目格式无效：1 validation error for TaskSpec\nchecks.0\n  Value error, file checks require a relative contained path [type=value_error, input_value={'type': 'file_contains',...tside', 'expected': 'x'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.14/v/value_error", "code": "invalid_task"}}
 {"name": "非 loopback HTTP 目标在环境方案中被明确拒绝", "passed": true, "detail": {"error": "当前 HTTP 执行器仅支持明确确认的本机隔离服务", "code": "workspace_error"}}
-{"name": "执行器可保存（阶段 5 本机 HTTP）", "passed": true, "detail": "exe_8911800a63244ae3"}
+{"name": "执行器可保存（阶段 5 本机 HTTP）", "passed": true, "detail": "exe_047863e544b54aa4"}
 {"name": "HTTP 环境未确认独立数据时拒绝", "passed": true, "detail": {"error": "请先确认 HTTP 目标使用独立测试数据", "code": "workspace_error"}}
-{"name": "HTTP 环境 方案需要确认", "passed": true, "detail": "env_eac8934cc43c479f969a"}
+{"name": "HTTP 环境 方案需要确认", "passed": true, "detail": "env_08674187a1b74dd29289"}
 {"name": "HTTP 环境 环境准备完成", "passed": true, "detail": "ready"}
-{"name": "题目可创建：HTTP 求和", "passed": true, "detail": "task_6f386b0e2a8449c4becd"}
+{"name": "题目可创建：HTTP 求和", "passed": true, "detail": "task_92188780c20d44dcb10b"}
 {"name": "HTTP 合成任务 预检不执行目标且返回评分方案", "passed": true, "detail": "embedded"}
 {"name": "HTTP 合成任务 运行结束", "passed": true, "detail": "completed"}
 {"name": "HTTP 任务真实调用本机目标并核对证据", "passed": true, "detail": "passed"}
-{"name": "执行器可保存（阶段 5 越界写入）", "passed": true, "detail": "exe_82ffc12236d74d4d"}
-{"name": "越界写入环境 方案需要确认", "passed": true, "detail": "env_eb7ca74e90f04f2bb41e"}
+{"name": "执行器可保存（阶段 5 越界写入）", "passed": true, "detail": "exe_f14b188fd42a49a4"}
+{"name": "越界写入环境 方案需要确认", "passed": true, "detail": "env_e8dd1e5e04714c1880fa"}
 {"name": "越界写入环境 环境准备完成", "passed": true, "detail": "ready"}
-{"name": "题目可创建：越界写入被拒绝", "passed": true, "detail": "task_71f6bab3a0da4a958feb"}
+{"name": "题目可创建：越界写入被拒绝", "passed": true, "detail": "task_314da786e7c54cebad94"}
 {"name": "越界写入 预检不执行目标且返回评分方案", "passed": true, "detail": "embedded"}
-{"name": "命令不能写出单题目录", "passed": true, "detail": "~/.evalith/stage5/review-acceptance/outside-write-marker"}
+{"name": "命令不能写出单题目录", "passed": true, "detail": "~/.evalith/stage5/review3-acceptance/outside-write-marker"}
 {"name": "越界写入在结果中失败而非通过", "passed": true, "detail": "failed"}
-{"name": "执行器可保存（阶段 5 网络边界）", "passed": true, "detail": "exe_91136ac2ac60420b"}
-{"name": "网络边界环境 方案需要确认", "passed": true, "detail": "env_c19f1404c7e54ad99a8c"}
+{"name": "执行器可保存（阶段 5 网络边界）", "passed": true, "detail": "exe_566749a6b8c54bb8"}
+{"name": "网络边界环境 方案需要确认", "passed": true, "detail": "env_5a31d62ef1c6412287d7"}
 {"name": "网络边界环境 环境准备完成", "passed": true, "detail": "ready"}
-{"name": "题目可创建：网络访问被拒绝", "passed": true, "detail": "task_b5939ce9d9c9411a937c"}
+{"name": "题目可创建：网络访问被拒绝", "passed": true, "detail": "task_40f215f25a1c40239966"}
 {"name": "网络边界 预检不执行目标且返回评分方案", "passed": true, "detail": "embedded"}
 {"name": "命令沙盒拒绝网络连接", "passed": true, "detail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"~/.local/share/uv/python/cpython-3.12.15-macos-aarch64-none/lib/python3.12/socket.py\", line 865, in create_connection\n    raise exceptions[0]\n  File \"~/.local/share/uv/python/cpython-3.12.15-macos-aarch"}
 {"name": "跨项目运行 ID 不可读取", "passed": true, "detail": {"error": "评测记录不存在", "code": "evaluation_not_found"}}
 {"name": "跨项目题目 ID 不可读取", "passed": true, "detail": {"error": "评测记录不存在", "code": "evaluation_not_found"}}
-{"name": "题目可创建：多轮退款边界", "passed": true, "detail": "task_b6b255bd53a549f2afd1"}
-{"name": "对话项目本地环境 方案需要确认", "passed": true, "detail": "env_34c51f9b14da4d6aa538"}
+{"name": "题目可创建：多轮退款边界", "passed": true, "detail": "task_7a3c24f45deb4b3886f9"}
+{"name": "对话项目本地环境 方案需要确认", "passed": true, "detail": "env_87e00b51a239492aa20c"}
 {"name": "对话项目本地环境 环境准备完成", "passed": true, "detail": "ready"}
 {"name": "对话题目不会被本地命令执行器静默降级", "passed": true, "detail": {"error": "选中题目类型与环境执行器不匹配", "code": "task_adapter_mismatch"}}
 {"name": "分析预算为零时保持预算独立且停止", "passed": true, "detail": "budget_stopped"}
 {"name": "分析不改写原始运行结果", "passed": true, "detail": "results unchanged"}
-{"name": "低分范围不把缺失分数当作零分", "passed": true, "detail": ["result_2441308f041b4b06b9e9"]}
+{"name": "低分范围不把缺失分数当作零分", "passed": true, "detail": ["result_0d02d161aa2d4092b83d"]}
 {"name": "真实分析需要真实模型，离线演示显式失败", "passed": true, "detail": "离线演示模型不生成真实评测资产，请选择 OpenAI 兼容服务模型"}
-{"name": "重启前环境 方案需要确认", "passed": true, "detail": "env_be7825c0fce44cf8bf23"}
+{"name": "重启前环境 方案需要确认", "passed": true, "detail": "env_df6ecc81c3d74bc289fa"}
 {"name": "重启前环境 环境准备完成", "passed": true, "detail": "ready"}
-{"name": "题目可创建：重启时运行中", "passed": true, "detail": "task_970309a1f893454c9fcc"}
+{"name": "题目可创建：重启时运行中", "passed": true, "detail": "task_3bec09249c8642b69744"}
 {"name": "重启前存在运行中记录", "passed": true, "detail": "running"}
 {"name": "重启后未结束运行标为中断", "passed": true, "detail": "interrupted"}
 {"name": "无法确认的清理状态显示未知", "passed": true, "detail": "unknown_after_restart"}
-{"name": "中断运行保留已保存的逐题记录", "passed": true, "detail": [["interrupted", "服务已重启；该题未完成，已保存的部分证据保留"]]}
-{"name": "重启后项目与会话仍可恢复", "passed": true, "detail": {"project_in_list": true, "session_id": "ses_prj_a65348dce2f74659", "expected_session_id": "ses_prj_a65348dce2f74659", "messages": 3}}
-{"name": "重启后历史运行列表完整", "passed": true, "detail": ["run_1bfc31552b364773b7ed", "run_3cb9dfc7796149a0b861", "run_7332d1f437f24645981d", "run_a71df0b1e7d849f9ae56", "run_acdc397cefd04350be4d", "run_b115a09f427446668355", "run_b1f55c3d580f44418292", "run_c526d0f44f65404c96f5", "run_c726b2570c954c1cbc8a", "run_ca6fdd2bbaa5483b9c86", "run_dfadba828a9b456083a0"]}
-{"name": "重启后已完成结果与分数保留", "passed": true, "detail": "completed"}
+{"name": "中断运行保留已保存的逐题记录", "passed": true, "detail": [{"id": "result_4a08bc3d81f64318a165", "before": "running", "after": "interrupted", "stable_fields_equal": true}]}
+{"name": "重启后项目与会话仍可恢复", "passed": true, "detail": {"project_in_list": true, "session_id": "ses_prj_d0a1538bb88741f5", "expected_session_id": "ses_prj_d0a1538bb88741f5", "messages_before": 3, "messages_after": 3, "messages_equal": true, "messages_digest_before": "83e3896e0fea19b4fe4d5061eb255ada0c1350dce6704bd386dfde236111623c", "messages_digest_after": "83e3896e0fea19b4fe4d5061eb255ada0c1350dce6704bd386dfde236111623c"}}
+{"name": "重启后历史运行列表完整", "passed": true, "detail": ["run_004444f4019a479fbfd1", "run_0d01e36173484c1c9503", "run_16f2dec3a1ed4439a465", "run_1c85f03004d14ae5bdc2", "run_2de7816b94184dc78730", "run_33559b4f23d8405e8648", "run_5e0802f1a2cb429097b9", "run_88ecb25ff30d4ff5adce", "run_c9ae6cfb6ba34fc6a536", "run_d8e4644b46284f2f9d12", "run_f18f4b620f9243b0a122"]}
+{"name": "重启后已完成结果与分数保留", "passed": true, "detail": {"status": "completed", "result_ids": ["result_0761c7cf2ea04cfb9618", "result_0d02d161aa2d4092b83d", "result_98c727a63460458c8fae"], "scores": [1, 0, null], "results_equal": true, "results_digest_before": "33204a67aa15272e0b9d0c482e376a0dbfcc0efb855ba72c87071e8298d75f32", "results_digest_after": "33204a67aa15272e0b9d0c482e376a0dbfcc0efb855ba72c87071e8298d75f32"}}
