@@ -869,7 +869,6 @@ class WorkspaceService:
             )
             scope["history_messages"] = len(model_history)
             if base_current is not None:
-                retained = new_scope | {"会话", "snapshot"}
                 provider_current = dict(base_current)
                 provider_current["known"] = _known_for_sources(
                     base_current.get("known", []),

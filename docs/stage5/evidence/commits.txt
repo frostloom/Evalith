@@ -1,3 +1,4 @@
+e65f358 frostloom2 docs: refer to the pushed acceptance commit
 9102623 frostloom2 test: verify exact acceptance snapshots and refresh evidence
 d1d6f4e frostloom2 docs: rerun acceptance evidence after review fixes
 4f3d813 frostloom2 fix: keep unverified conversation blocked and verify session recovery
@@ -7,4 +8,3 @@ a2a1391 frostloom2 chore: bind restart recovery closure and record static checks
 3e8b920 frostloom2 docs: fix stage 5 screenshot links
 ecf2092 frostloom2 docs: record stage 5 MVP acceptance with reproducible evidence
 567fc87 frostloom2 test: await restored run panels before asserting
-7734c3a frostloom2 fix: stack evaluation headers on narrow screens

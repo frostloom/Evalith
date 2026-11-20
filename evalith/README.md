@@ -59,6 +59,7 @@
 UV_CACHE_DIR="$PWD/.evalith/cache/uv" uv run --project evalith pytest -c evalith/pyproject.toml evalith/tests --basetemp .evalith/tmp/pytest
 npm --prefix evalith/web test
 npm --prefix evalith/web run build
+cd evalith && uv run ruff check src/evalith
 ```
 
 [真实 aigateway 与文件执行验证](../docs/validation/2026-11-12-real-evaluation.md)。原有 EE-free Rhesis 实验工作台保留在 `workbench/`，与此服务独立。

@@ -561,7 +561,8 @@ class EvaluationRunner:
         env = run["environment_snapshot"]
         runtime = env["runtime"]
         definition = task["definition"]
-        cancellation = lambda: self.cancelled(run["project_id"], run["id"])
+        def cancellation() -> bool:
+            return self.cancelled(run["project_id"], run["id"])
         if env["adapter"] == "http_api":
             request = definition["input"]
             url = runtime["base_url"].rstrip("/") + "/" + request["path"].lstrip("/")
@@ -679,7 +680,8 @@ class EvaluationRunner:
             evidence_path(work, str(relative))
         # Every interpolated path segment is model-generated or configured;
         # quote it so solve.sh can only ever write inside /app/source.
-        inside = lambda *parts: shlex.quote(str(Path("/app/source", working_rel, *parts)))
+        def inside(*parts: str) -> str:
+            return shlex.quote(str(Path("/app/source", working_rel, *parts)))
         stdin_b64 = base64.b64encode(
             str(definition["input"].get("stdin", "")).encode()
         ).decode()
