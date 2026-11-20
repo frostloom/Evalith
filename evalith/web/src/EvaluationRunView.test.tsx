@@ -81,3 +81,41 @@ it("opens a saved run from the list and exposes its frozen configuration", async
   await user.click(screen.getByRole("tab", { name: "测试结果" }));
   expect(screen.getByRole("button", { name: /Query/ })).toBeVisible();
 });
+
+it("localizes cleanup state and interrupted cases after a restart", async () => {
+  const user = userEvent.setup();
+  const interrupted = {
+    ...run,
+    status: "interrupted",
+    cleanup_status: "unknown_after_restart",
+    results: [
+      {
+        ...run.results[0],
+        status: "interrupted",
+        score: null,
+        error: "服务已重启；该题未完成，已保存的部分证据保留",
+      },
+    ],
+  } as unknown as EvalRun;
+  render(
+    <EvaluationRunView
+      runs={[interrupted]}
+      run={interrupted}
+      section="runs"
+      selectedRunId={interrupted.id}
+      busy={false}
+      selectedResultIds={[]}
+      onSelect={vi.fn()}
+      onResult={vi.fn()}
+      onSelection={vi.fn()}
+      onAnalyze={vi.fn()}
+      onCancel={vi.fn()}
+    >
+      {null}
+    </EvaluationRunView>,
+  );
+  await user.click(screen.getByRole("tab", { name: "运行配置" }));
+  expect(screen.getByText("服务重启，清理状态未知")).toBeVisible();
+  await user.click(screen.getByRole("tab", { name: "测试结果" }));
+  expect(screen.getAllByText("已中断").length).toBeGreaterThan(0);
+});
