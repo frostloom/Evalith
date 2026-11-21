@@ -1,0 +1,1 @@
+{"name": "对话执行依赖真实模型，本环境未验证", "blocked": true, "detail": "No authorized OpenAI-compatible endpoint; the aigateway_go conversation target path remains unverified."}

@@ -10,12 +10,16 @@ Evalith 是一个本地 Agent 评测工作台：从项目资料和持续会话�
 真实模型经 OpenAI 兼容服务接入（付费模型默认禁用）。见[运行与功能说明](evalith/README.md)和[真实 aigateway 验证](docs/validation/2026-11-12-real-evaluation.md)。
 
 
-## 阶段 1：项目工作区与开源底座
+## 阶段 5：MVP 验收与发布前收口
+
+- [阶段 5 验收报告](docs/stage5/2026-11-20-阶段5-MVP验收.md)：全新环境、主流程、两类合成任务、边界与恢复、版本与来源、界面与可访问性、发布收口与仍存在的阻塞项。
+- 可复现的确定性验收脚本：`scripts/stage5_acceptance.py`（需要已启动的服务，见报告中的命令）。
+
+## 阶段 1：项目工作区与基础设施
 
 - [最新产品导航、会话与对话框](docs/stage1/2026-11-11-产品交互与会话.md)
-- [交付说明](docs/stage1/阶段1-交付说明.md)：EE-free 构建、项目访问边界、主会话、理解门、凭据保护和验证证据。
+- [交付说明](docs/stage1/阶段1-交付说明.md)：项目访问边界、主会话、理解门、凭据保护和验证证据。
 - [本地项目访问边界](docs/stage1/project-access.md)
-- [EE-free Rhesis 工作台](workbench/README.md)
 - [Evalith 阶段 1 服务](evalith/README.md)
 - 合成项目：[approval-agent](examples/approval-agent)、[support-agent](examples/support-agent)
 
@@ -31,5 +35,4 @@ uv run --directory evalith uvicorn evalith.api:app --host 127.0.0.1 --port 8090
 uv run --project evalith pytest -c evalith/pyproject.toml evalith/tests
 npm --prefix evalith/web test
 
-# EE-free 工作台构建、依赖与启动详见 workbench/README.md
 ```

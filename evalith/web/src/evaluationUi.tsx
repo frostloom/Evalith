@@ -20,6 +20,15 @@ export const statusNames: Record<string, string> = {
   missing_evidence: "缺少证据",
   needs_judge: "待模型判断",
 };
+export const cleanupNames: Record<string, string> = {
+  completed: "子进程已回收，证据保留",
+  not_started: "尚未开始",
+  ready: "环境已就绪",
+  no_services_started: "未启动需要清理的服务",
+  no_services_owned: "外部服务不在本系统管理范围",
+  unknown_after_restart: "服务重启，清理状态未知",
+  failed: "清理失败，目标进程可能仍在运行",
+};
 export const active = (status: string) =>
   ["running", "pending", "validating", "preparing", "cancelling"].includes(
     status,

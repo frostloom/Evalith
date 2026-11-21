@@ -1295,3 +1295,27 @@
     padding: 12px;
   }
 }
+
+/* Narrow screens: the evaluation header stacks instead of squeezing the
+   title, description and counter into a single row. */
+@media (max-width: 600px) {
+  .page-heading-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .page-actions {
+    flex-wrap: wrap;
+  }
+  .eval-toolbar {
+    flex-wrap: wrap;
+  }
+  .eval-toolbar > span {
+    width: 100%;
+    margin-left: 0;
+  }
+  .run-detail-heading {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}

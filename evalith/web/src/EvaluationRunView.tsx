@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import type { EvalRun, EvalResult, Check } from "./evaluationTypes";
 import type { WorkspaceTab } from "./types";
-import { StateBadge, UsageLine, active, statusNames } from "./evaluationUi";
+import { StateBadge, UsageLine, active, cleanupNames, statusNames } from "./evaluationUi";
 import { checkLabels } from "./EvaluationLibraryPage";
 import { SelectInput } from "./ui";
 const date = (s: string) =>
@@ -460,9 +460,7 @@ export function EvaluationRunView({
               </dd>
               <dt>清理状态</dt>
               <dd>
-                {run.cleanup_status === "completed"
-                  ? "子进程已回收，证据保留"
-                  : run.cleanup_status}
+                {cleanupNames[run.cleanup_status] ?? run.cleanup_status}
               </dd>
             </dl>
             {run.environment_snapshot.plan?.limitations?.map((s, i) => (

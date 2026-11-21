@@ -1,0 +1,24 @@
+{
+  "collected_at": "2026-11-20T14:48:00+0800",
+  "commit": "9102623e4d94c70c8796d9adec83be5080c0cdd6",
+  "commit_subject": "test: expose stable digests for exact acceptance snapshots",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "machine": "arm64",
+  "macos": "26.6.2",
+  "python": "Python 3.12.15",
+  "uv": "uv 0.13.1 (62faed335 2026-10-13 aarch64-apple-darwin)",
+  "node": "v24.22.0",
+  "npm": "11.19.1",
+  "harbor": "0.24.0",
+  "docker": "29.8.2",
+  "api_url": "http://127.0.0.1:8096",
+  "data_dir": "review-evalith/.evalith/app",
+  "paid_models": "disabled (EVALITH_ALLOW_PAID_MODELS unset)",
+  "harbor_binary": "EVALITH_HARBOR_BIN (harbor 0.24.0)",
+  "fresh_install_commit": "4aa725e836760c3196d4dedd5bb1e10fe3719c21",
+  "notes": [
+    "Fresh checkout of the review-fix tree at pushed commit 9102623 with a new data directory; scripts/start-local.sh installed and started the service.",
+    "No authorized OpenAI-compatible endpoint was available; model-dependent paths are blocked and recorded in blocked.jsonl.",
+    "Harbor and HTTP acceptance used real local Docker/Harbor and a loopback fixture; screenshots are from the same UI build."
+  ]
+}

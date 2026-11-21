@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import Body, FastAPI, Header
 from fastapi.responses import JSONResponse
 
+from .db import utc_now
 from .environments import EnvironmentManager
 from .evaluation_assets import EvaluationAssets
 from .evaluation_runner import BudgetStop, EvaluationRunner, RunCancelled
@@ -50,18 +51,54 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
 
     # No worker from a previous process can still report progress to this app.
     # Preserve its evidence and expose the uncertainty about orphan cleanup.
+    # A run also embeds per-case results; an in-flight case must stop looking
+    # active once its owning worker is gone, otherwise the UI shows "running"
+    # inside an interrupted batch.
+    def interrupt_results(current: dict[str, Any]) -> list[dict[str, Any]]:
+        interrupted = []
+        for result in current.get("results", []):
+            if result.get("status") in {"running", "validating", "pending"}:
+                interrupted.append(
+                    {
+                        **result,
+                        "status": "interrupted",
+                        "error": "服务已重启；该题未完成，已保存的部分证据保留",
+                        "finished_at": utc_now(),
+                    }
+                )
+            else:
+                interrupted.append(result)
+        return interrupted
+
     with workspace.db.connection() as connection:
         active = connection.execute(
             "SELECT project_id,kind,id FROM evaluation_records WHERE status IN ('running','pending','preparing','cancelling') AND kind IN ('run','job','environment','analysis')"
         ).fetchall()
     for item in active:
+        error = "服务已重启；已有记录保留，请重新启动未完成的操作"
+        cleanup = "unknown_after_restart"
+        if item["kind"] == "run":
+            store.mutate(
+                item["project_id"],
+                "run",
+                item["id"],
+                lambda current, error=error, cleanup=cleanup: {
+                    **current,
+                    "status": "interrupted",
+                    "error": error,
+                    "cleanup_status": cleanup,
+                    "finished_at": utc_now(),
+                    "results": interrupt_results(current),
+                },
+            )
+            continue
         store.update(
             item["project_id"],
             item["kind"],
             item["id"],
             status="interrupted",
-            error="服务已重启；已有记录保留，请重新启动未完成的操作",
-            cleanup_status="unknown_after_restart",
+            error=error,
+            cleanup_status=cleanup,
         )
 
     @app.get("/api/projects/{project_id}/environments")

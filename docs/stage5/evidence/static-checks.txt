@@ -1,0 +1,6 @@
+$ cd evalith
+$ uv run ruff check src/evalith ../scripts/stage5_acceptance.py
+All checks passed!
+
+Config: evalith/pyproject.toml [tool.ruff.lint] select = ["E4", "E7", "E9", "F"].
+CI job: .github/workflows/evalith-tests.yml `static` runs the same command on the final head.

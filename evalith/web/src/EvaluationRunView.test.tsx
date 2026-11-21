@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { it, expect, vi } from "vitest";
 import { EvaluationRunView } from "./EvaluationRunView";
@@ -80,4 +80,84 @@ it("opens a saved run from the list and exposes its frozen configuration", async
   expect(screen.getByText(/通过阈值 ≥ 0.9/)).toBeVisible();
   await user.click(screen.getByRole("tab", { name: "测试结果" }));
   expect(screen.getByRole("button", { name: /Query/ })).toBeVisible();
+});
+
+it("localizes cleanup state and interrupted cases after a restart", async () => {
+  const user = userEvent.setup();
+  const interrupted = {
+    ...run,
+    status: "interrupted",
+    cleanup_status: "unknown_after_restart",
+    results: [
+      {
+        ...run.results[0],
+        status: "interrupted",
+        score: null,
+        error: "服务已重启；该题未完成，已保存的部分证据保留",
+      },
+    ],
+  } as unknown as EvalRun;
+  render(
+    <EvaluationRunView
+      runs={[interrupted]}
+      run={interrupted}
+      section="runs"
+      selectedRunId={interrupted.id}
+      busy={false}
+      selectedResultIds={[]}
+      onSelect={vi.fn()}
+      onResult={vi.fn()}
+      onSelection={vi.fn()}
+      onAnalyze={vi.fn()}
+      onCancel={vi.fn()}
+    >
+      {null}
+    </EvaluationRunView>,
+  );
+  await user.click(screen.getByRole("tab", { name: "运行配置" }));
+  expect(await screen.findByText("服务重启，清理状态未知")).toBeVisible();
+  await user.click(screen.getByRole("tab", { name: "测试结果" }));
+  const resultRow = (await screen.findByRole("button", { name: /Query/ })).closest(
+    ".eval-result-row",
+  );
+  expect(resultRow).not.toBeNull();
+  expect(within(resultRow as HTMLElement).getAllByText("已中断")).toHaveLength(1);
+});
+
+it("shows cleanup failure as an explicit run state", async () => {
+  const user = userEvent.setup();
+  const failed = {
+    ...run,
+    status: "failed",
+    cleanup_status: "failed",
+    results: [
+      {
+        ...run.results[0],
+        status: "execution_error",
+        score: null,
+        error: "清理失败：operation not permitted",
+      },
+    ],
+  } as unknown as EvalRun;
+  render(
+    <EvaluationRunView
+      runs={[failed]}
+      run={failed}
+      section="runs"
+      selectedRunId={failed.id}
+      busy={false}
+      selectedResultIds={[]}
+      onSelect={vi.fn()}
+      onResult={vi.fn()}
+      onSelection={vi.fn()}
+      onAnalyze={vi.fn()}
+      onCancel={vi.fn()}
+    >
+      {null}
+    </EvaluationRunView>,
+  );
+  await user.click(screen.getByRole("tab", { name: "运行配置" }));
+  expect(
+    await screen.findByText("清理失败，目标进程可能仍在运行"),
+  ).toBeVisible();
 });

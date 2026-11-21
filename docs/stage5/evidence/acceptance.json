@@ -1,0 +1,1523 @@
+{
+  "acceptance_commit": "9102623e4d94c70c8796d9adec83be5080c0cdd6",
+  "ui_fix_commit": "7734c3aa7666edd9e80341b17b0a3f1cdf88c072",
+  "assertions": {
+    "total": 113,
+    "passed": 113,
+    "failed": 0,
+    "source": "assertions.jsonl"
+  },
+  "blocked": {
+    "count": 1,
+    "items": [
+      {
+        "name": "对话执行依赖真实模型，本环境未验证",
+        "blocked": true,
+        "detail": "No authorized OpenAI-compatible endpoint; the aigateway_go conversation target path remains unverified."
+      }
+    ],
+    "source": "blocked.jsonl"
+  },
+  "projects": {
+    "file_pid": "prj_d0a1538bb88741f5",
+    "boundary_pid": "prj_5b52907a4d3c4f5d",
+    "support_pid": "prj_0afcc8dafc6b427f"
+  },
+  "runs": {
+    "run_mixed": {
+      "id": "run_88ecb25ff30d4ff5adce",
+      "name": "确定性结果分类",
+      "status": "completed",
+      "cleanup_status": "completed",
+      "error": null,
+      "grading_source": "embedded",
+      "usage": {
+        "model_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost_usd": null
+      },
+      "budget": {
+        "max_model_calls": 8,
+        "budget_usd": null,
+        "cost_basis": "Unknown monetary cost; call limit is enforced before each model request"
+      },
+      "plan_digest": "ea15591f6acdda2d18b1cef6e0e4dba8cdd50c393bdb8fb0d7354884f73e7ad5",
+      "results": [
+        {
+          "status": "passed",
+          "score": 1,
+          "error": null,
+          "checks": [
+            {
+              "type": "exit_code",
+              "expected": 0,
+              "path": "",
+              "description": "",
+              "status": "passed",
+              "actual": 0,
+              "reason": "检查通过"
+            },
+            {
+              "type": "file_exists",
+              "expected": null,
+              "path": "report.json",
+              "description": "",
+              "status": "passed",
+              "actual": true,
+              "reason": "检查通过"
+            },
+            {
+              "type": "json_equals",
+              "expected": 350,
+              "path": "total_cent",
+              "description": "",
+              "status": "passed",
+              "actual": 350,
+              "reason": "检查通过"
+            }
+          ],
+          "duration_ms": 71,
+          "title": "两笔金额求和",
+          "version_id": "ver_b53d01a3c83d492f813a",
+          "version": 1,
+          "observation": {
+            "stdout": "{\"count\": 2, \"total_cent\": 350}\n",
+            "stderr": "",
+            "exit_code": 0,
+            "process_error": null,
+            "duration_ms": 55,
+            "cleanup_status": "completed",
+            "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_88ecb25ff30d4ff5adce/result_0761c7cf2ea04cfb9618/source",
+            "json": {
+              "count": 2,
+              "total_cent": 350
+            }
+          }
+        },
+        {
+          "status": "failed",
+          "score": 0,
+          "error": null,
+          "checks": [
+            {
+              "type": "json_equals",
+              "expected": 999,
+              "path": "total_cent",
+              "description": "",
+              "status": "failed",
+              "actual": 350,
+              "reason": "实际输出不满足评分规则"
+            }
+          ],
+          "duration_ms": 74,
+          "title": "错误的金额预期",
+          "version_id": "ver_508f36c540e94315bf37",
+          "version": 1,
+          "observation": {
+            "stdout": "{\"count\": 2, \"total_cent\": 350}\n",
+            "stderr": "",
+            "exit_code": 0,
+            "process_error": null,
+            "duration_ms": 65,
+            "cleanup_status": "completed",
+            "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_88ecb25ff30d4ff5adce/result_0d02d161aa2d4092b83d/source",
+            "json": {
+              "count": 2,
+              "total_cent": 350
+            }
+          }
+        },
+        {
+          "status": "validation_error",
+          "score": null,
+          "error": null,
+          "checks": [
+            {
+              "type": "file_contains",
+              "expected": "ok",
+              "path": "missing.json",
+              "description": "",
+              "status": "missing_evidence",
+              "actual": null,
+              "reason": "所需输出或文件不存在，不能判为通过"
+            }
+          ],
+          "duration_ms": 63,
+          "title": "缺失证据",
+          "version_id": "ver_54d15d0837ae43f880c6",
+          "version": 1,
+          "observation": {
+            "stdout": "{\"count\": 0, \"total_cent\": 0}\n",
+            "stderr": "",
+            "exit_code": 0,
+            "process_error": null,
+            "duration_ms": 54,
+            "cleanup_status": "completed",
+            "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_88ecb25ff30d4ff5adce/result_98c727a63460458c8fae/source",
+            "json": {
+              "count": 0,
+              "total_cent": 0
+            }
+          }
+        }
+      ],
+      "graders": [],
+      "grading_plan": {
+        "source": "embedded",
+        "tasks": [
+          {
+            "task_id": "task_97a661af0f454a5c8dc6",
+            "version_id": "ver_b53d01a3c83d492f813a",
+            "title": "两笔金额求和",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "exit_code",
+                "expected": 0,
+                "path": "",
+                "description": ""
+              },
+              {
+                "type": "file_exists",
+                "expected": null,
+                "path": "report.json",
+                "description": ""
+              },
+              {
+                "type": "json_equals",
+                "expected": 350,
+                "path": "total_cent",
+                "description": ""
+              }
+            ],
+            "not_applicable": []
+          },
+          {
+            "task_id": "task_a67fdb5253a54fd6b9ff",
+            "version_id": "ver_508f36c540e94315bf37",
+            "title": "错误的金额预期",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "json_equals",
+                "expected": 999,
+                "path": "total_cent",
+                "description": ""
+              }
+            ],
+            "not_applicable": []
+          },
+          {
+            "task_id": "task_bfed12c425164539a3da",
+            "version_id": "ver_54d15d0837ae43f880c6",
+            "title": "缺失证据",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "file_contains",
+                "expected": "ok",
+                "path": "missing.json",
+                "description": ""
+              }
+            ],
+            "not_applicable": []
+          }
+        ]
+      },
+      "models": {
+        "target": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        },
+        "judge": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        }
+      }
+    },
+    "run_budget": {
+      "id": "run_0d01e36173484c1c9503",
+      "name": "预算停止验证",
+      "status": "budget_stopped",
+      "cleanup_status": "completed",
+      "error": "模型调用次数达到预算上限",
+      "grading_source": "embedded",
+      "usage": {
+        "model_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost_usd": null
+      },
+      "budget": {
+        "max_model_calls": 0,
+        "budget_usd": null,
+        "cost_basis": "Unknown monetary cost; call limit is enforced before each model request"
+      },
+      "plan_digest": "6855f0068b7123136bceb3b1662d50283148e382fe9f13c0e7b4da9ff01e21a3",
+      "results": [
+        {
+          "status": "passed",
+          "score": 1,
+          "error": null,
+          "checks": [
+            {
+              "type": "exit_code",
+              "expected": 0,
+              "path": "",
+              "description": "",
+              "status": "passed",
+              "actual": 0,
+              "reason": "检查通过"
+            },
+            {
+              "type": "file_exists",
+              "expected": null,
+              "path": "report.json",
+              "description": "",
+              "status": "passed",
+              "actual": true,
+              "reason": "检查通过"
+            },
+            {
+              "type": "json_equals",
+              "expected": 350,
+              "path": "total_cent",
+              "description": "",
+              "status": "passed",
+              "actual": 350,
+              "reason": "检查通过"
+            }
+          ],
+          "duration_ms": 67,
+          "title": "两笔金额求和",
+          "version_id": "ver_b53d01a3c83d492f813a",
+          "version": 1,
+          "observation": {
+            "stdout": "{\"count\": 2, \"total_cent\": 350}\n",
+            "stderr": "",
+            "exit_code": 0,
+            "process_error": null,
+            "duration_ms": 55,
+            "cleanup_status": "completed",
+            "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_0d01e36173484c1c9503/result_0ac6492eec8b4a4b99cc/source",
+            "json": {
+              "count": 2,
+              "total_cent": 350
+            }
+          }
+        },
+        {
+          "status": "budget_stopped",
+          "score": null,
+          "error": "模型调用次数达到预算上限",
+          "checks": [
+            {
+              "type": "judge",
+              "expected": "目标读取 stdin 中的 items，写出 report.json 并打印相同 JSON。\n判断要求：输出包含 count 和 total_cent",
+              "path": "",
+              "description": "",
+              "judge_model": "stub-understanding",
+              "status": "needs_judge",
+              "actual": null,
+              "reason": ""
+            }
+          ],
+          "duration_ms": 64,
+          "title": "需要模型判断",
+          "version_id": "ver_72815efc8ac0405086f6",
+          "version": 1,
+          "observation": {
+            "stdout": "{\"count\": 0, \"total_cent\": 0}\n",
+            "stderr": "",
+            "exit_code": 0,
+            "process_error": null,
+            "duration_ms": 54,
+            "cleanup_status": "completed",
+            "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_0d01e36173484c1c9503/result_d8bbcd96ae174ae2a6ce/source",
+            "json": {
+              "count": 0,
+              "total_cent": 0
+            }
+          }
+        },
+        {
+          "status": "skipped",
+          "score": null,
+          "error": "模型调用次数达到预算上限",
+          "checks": [],
+          "duration_ms": null,
+          "title": "错误的金额预期",
+          "version_id": "ver_508f36c540e94315bf37",
+          "version": 1,
+          "observation": null
+        }
+      ],
+      "graders": [],
+      "grading_plan": {
+        "source": "embedded",
+        "tasks": [
+          {
+            "task_id": "task_97a661af0f454a5c8dc6",
+            "version_id": "ver_b53d01a3c83d492f813a",
+            "title": "两笔金额求和",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "exit_code",
+                "expected": 0,
+                "path": "",
+                "description": ""
+              },
+              {
+                "type": "file_exists",
+                "expected": null,
+                "path": "report.json",
+                "description": ""
+              },
+              {
+                "type": "json_equals",
+                "expected": 350,
+                "path": "total_cent",
+                "description": ""
+              }
+            ],
+            "not_applicable": []
+          },
+          {
+            "task_id": "task_adae2334128242089820",
+            "version_id": "ver_72815efc8ac0405086f6",
+            "title": "需要模型判断",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "judge",
+                "expected": "目标读取 stdin 中的 items，写出 report.json 并打印相同 JSON。\n判断要求：输出包含 count 和 total_cent",
+                "path": "",
+                "description": "",
+                "judge_model": "stub-understanding"
+              }
+            ],
+            "not_applicable": []
+          },
+          {
+            "task_id": "task_a67fdb5253a54fd6b9ff",
+            "version_id": "ver_508f36c540e94315bf37",
+            "title": "错误的金额预期",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "json_equals",
+                "expected": 999,
+                "path": "total_cent",
+                "description": ""
+              }
+            ],
+            "not_applicable": []
+          }
+        ]
+      },
+      "models": {
+        "target": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        },
+        "judge": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        }
+      }
+    },
+    "run_timeout": {
+      "id": "run_16f2dec3a1ed4439a465",
+      "name": "执行错误验证",
+      "status": "failed",
+      "cleanup_status": "completed",
+      "error": "执行停止：timeout",
+      "grading_source": "embedded",
+      "usage": {
+        "model_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost_usd": null
+      },
+      "budget": {
+        "max_model_calls": 0,
+        "budget_usd": null,
+        "cost_basis": "Unknown monetary cost; call limit is enforced before each model request"
+      },
+      "plan_digest": "039c85d94aa403b187237b6dd70e3ea5ffb0d299047b5561ba67149de6a7ee7a",
+      "results": [
+        {
+          "status": "execution_error",
+          "score": null,
+          "error": "执行停止：timeout",
+          "checks": [],
+          "duration_ms": 2027,
+          "title": "超时任务",
+          "version_id": "ver_361b7f01162d4ba89ab4",
+          "version": 1,
+          "observation": {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": -15,
+            "process_error": "timeout",
+            "duration_ms": 2016,
+            "cleanup_status": "completed",
+            "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_16f2dec3a1ed4439a465/result_d1c49aa513d54913bbf6/source",
+            "json": null
+          }
+        }
+      ],
+      "graders": [],
+      "grading_plan": {
+        "source": "embedded",
+        "tasks": [
+          {
+            "task_id": "task_a9f619ccac8744a5b699",
+            "version_id": "ver_361b7f01162d4ba89ab4",
+            "title": "超时任务",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "exit_code",
+                "expected": 0,
+                "path": "",
+                "description": ""
+              }
+            ],
+            "not_applicable": []
+          }
+        ]
+      },
+      "models": {
+        "target": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        },
+        "judge": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        }
+      }
+    },
+    "run_set": {
+      "id": "run_5e0802f1a2cb429097b9",
+      "name": "测试集与 Grader",
+      "status": "completed",
+      "cleanup_status": "completed",
+      "error": null,
+      "grading_source": "test_set",
+      "usage": {
+        "model_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost_usd": null
+      },
+      "budget": {
+        "max_model_calls": 0,
+        "budget_usd": null,
+        "cost_basis": "Unknown monetary cost; call limit is enforced before each model request"
+      },
+      "plan_digest": "3b8141f12eadef1571b99bf816d3afbd8cafb62427b4a2d2943c036715b87864",
+      "results": [
+        {
+          "status": "passed",
+          "score": 1,
+          "error": null,
+          "checks": [
+            {
+              "type": "file_contains",
+              "expected": "\"total_cent\": 350",
+              "path": "report.json",
+              "description": "",
+              "grader_id": "grader_ce122e753e6a4b3aa5d5",
+              "grader_name": "报告总额标准",
+              "grader_version": 1,
+              "threshold": 0.8,
+              "uncertainties": [],
+              "status": "passed",
+              "actual": "{\"count\": 2, \"total_cent\": 350}",
+              "reason": "检查通过"
+            }
+          ],
+          "duration_ms": 70,
+          "title": "两笔金额求和",
+          "version_id": "ver_b53d01a3c83d492f813a",
+          "version": 1,
+          "observation": {
+            "stdout": "{\"count\": 2, \"total_cent\": 350}\n",
+            "stderr": "",
+            "exit_code": 0,
+            "process_error": null,
+            "duration_ms": 59,
+            "cleanup_status": "completed",
+            "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_5e0802f1a2cb429097b9/result_7e79f10b9741496fa06e/source",
+            "json": {
+              "count": 2,
+              "total_cent": 350
+            }
+          }
+        }
+      ],
+      "graders": [
+        {
+          "id": "grader_ce122e753e6a4b3aa5d5",
+          "name": "报告总额标准",
+          "version": 1,
+          "threshold": 0.8,
+          "check": {
+            "type": "file_contains",
+            "expected": "\"total_cent\": 350",
+            "path": "report.json",
+            "description": ""
+          }
+        }
+      ],
+      "grading_plan": {
+        "source": "test_set",
+        "tasks": [
+          {
+            "task_id": "task_97a661af0f454a5c8dc6",
+            "version_id": "ver_b53d01a3c83d492f813a",
+            "title": "两笔金额求和",
+            "source": "test_set",
+            "checks": [
+              {
+                "type": "file_contains",
+                "expected": "\"total_cent\": 350",
+                "path": "report.json",
+                "description": "",
+                "grader_id": "grader_ce122e753e6a4b3aa5d5",
+                "grader_name": "报告总额标准",
+                "grader_version": 1,
+                "threshold": 0.8,
+                "uncertainties": []
+              }
+            ],
+            "not_applicable": []
+          }
+        ]
+      },
+      "models": {
+        "target": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        },
+        "judge": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        }
+      }
+    },
+    "run_cancel": {
+      "id": "run_004444f4019a479fbfd1",
+      "name": "取消与部分结果",
+      "status": "cancelled",
+      "cleanup_status": "completed",
+      "error": "用户中止运行；已保存结果保留",
+      "grading_source": "embedded",
+      "usage": {
+        "model_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost_usd": null
+      },
+      "budget": {
+        "max_model_calls": 0,
+        "budget_usd": null,
+        "cost_basis": "Unknown monetary cost; call limit is enforced before each model request"
+      },
+      "plan_digest": "e0a60da223096ed4a4c7ea9217606532940810d71c1928550daec5c854eef695",
+      "results": [
+        {
+          "status": "passed",
+          "score": 1,
+          "error": null,
+          "checks": [
+            {
+              "type": "exit_code",
+              "expected": 0,
+              "path": "",
+              "description": "",
+              "status": "passed",
+              "actual": 0,
+              "reason": "检查通过"
+            }
+          ],
+          "duration_ms": 65,
+          "title": "快速用例",
+          "version_id": "ver_d4b4121587ca4181a0ee",
+          "version": 1,
+          "observation": {
+            "stdout": "{\"case\": \"fast\", \"ok\": true}\n",
+            "stderr": "",
+            "exit_code": 0,
+            "process_error": null,
+            "duration_ms": 55,
+            "cleanup_status": "completed",
+            "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_004444f4019a479fbfd1/result_5d87b19e0cb14503bd3b/source",
+            "json": {
+              "case": "fast",
+              "ok": true
+            }
+          }
+        },
+        {
+          "status": "cancelled",
+          "score": null,
+          "error": "用户中止运行；已保存结果保留",
+          "checks": [],
+          "duration_ms": 175,
+          "title": "慢速用例",
+          "version_id": "ver_7b647da0fb6044f2ae71",
+          "version": 1,
+          "observation": {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": -15,
+            "process_error": "cancelled",
+            "duration_ms": 168,
+            "cleanup_status": "completed",
+            "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_004444f4019a479fbfd1/result_7cfcba0356c1401d83e3/source",
+            "json": null
+          }
+        }
+      ],
+      "graders": [],
+      "grading_plan": {
+        "source": "embedded",
+        "tasks": [
+          {
+            "task_id": "task_4e9d1cf675a444668a7e",
+            "version_id": "ver_d4b4121587ca4181a0ee",
+            "title": "快速用例",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "exit_code",
+                "expected": 0,
+                "path": "",
+                "description": ""
+              }
+            ],
+            "not_applicable": []
+          },
+          {
+            "task_id": "task_402144467ab94a83b8cb",
+            "version_id": "ver_7b647da0fb6044f2ae71",
+            "title": "慢速用例",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "exit_code",
+                "expected": 0,
+                "path": "",
+                "description": ""
+              }
+            ],
+            "not_applicable": []
+          }
+        ]
+      },
+      "models": {
+        "target": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        },
+        "judge": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        }
+      }
+    },
+    "run_http": {
+      "id": "run_d8e4644b46284f2f9d12",
+      "name": "HTTP 合成任务",
+      "status": "completed",
+      "cleanup_status": "completed",
+      "error": null,
+      "grading_source": "embedded",
+      "usage": {
+        "model_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost_usd": null
+      },
+      "budget": {
+        "max_model_calls": 0,
+        "budget_usd": null,
+        "cost_basis": "Unknown monetary cost; call limit is enforced before each model request"
+      },
+      "plan_digest": "a6058dcb1ee3721315839cbfcf78bcb795ee7f1aa4034beaea820a77033c0781",
+      "results": [
+        {
+          "status": "passed",
+          "score": 1,
+          "error": null,
+          "checks": [
+            {
+              "type": "status_code",
+              "expected": 200,
+              "path": "",
+              "description": "",
+              "status": "passed",
+              "actual": 200,
+              "reason": "检查通过"
+            },
+            {
+              "type": "json_equals",
+              "expected": 5,
+              "path": "sum",
+              "description": "",
+              "status": "passed",
+              "actual": 5,
+              "reason": "检查通过"
+            }
+          ],
+          "duration_ms": 40,
+          "title": "HTTP 求和",
+          "version_id": "ver_e10450e4126947d69469",
+          "version": 1,
+          "observation": {
+            "status_code": 200,
+            "text": "{\"path\": \"/eval\", \"received\": {\"a\": 2, \"b\": 3}, \"sum\": 5}",
+            "json": {
+              "path": "/eval",
+              "received": {
+                "a": 2,
+                "b": 3
+              },
+              "sum": 5
+            },
+            "cleanup_status": "no_services_owned"
+          }
+        }
+      ],
+      "graders": [],
+      "grading_plan": {
+        "source": "embedded",
+        "tasks": [
+          {
+            "task_id": "task_92188780c20d44dcb10b",
+            "version_id": "ver_e10450e4126947d69469",
+            "title": "HTTP 求和",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "status_code",
+                "expected": 200,
+                "path": "",
+                "description": ""
+              },
+              {
+                "type": "json_equals",
+                "expected": 5,
+                "path": "sum",
+                "description": ""
+              }
+            ],
+            "not_applicable": []
+          }
+        ]
+      },
+      "models": {
+        "target": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        },
+        "judge": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        }
+      }
+    },
+    "run_harbor": {
+      "id": "run_1c85f03004d14ae5bdc2",
+      "name": "Harbor 容器执行",
+      "status": "completed",
+      "cleanup_status": "completed",
+      "error": null,
+      "grading_source": "embedded",
+      "usage": {
+        "model_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost_usd": null
+      },
+      "budget": {
+        "max_model_calls": 0,
+        "budget_usd": null,
+        "cost_basis": "Unknown monetary cost; call limit is enforced before each model request"
+      },
+      "plan_digest": "73f374976dcf3b6897eaef64d2cbd6a6efd321dcb7f16d926f9755a77a8ed9db",
+      "results": [
+        {
+          "status": "passed",
+          "score": 1,
+          "error": null,
+          "checks": [
+            {
+              "type": "exit_code",
+              "expected": 0,
+              "path": "",
+              "description": "",
+              "status": "passed",
+              "actual": 0,
+              "reason": "检查通过"
+            },
+            {
+              "type": "file_contains",
+              "expected": "\"total_cent\": 350",
+              "path": "report.json",
+              "description": "",
+              "status": "passed",
+              "actual": "{\"count\": 2, \"total_cent\": 350}",
+              "reason": "检查通过"
+            }
+          ],
+          "duration_ms": 34333,
+          "title": "容器内金额求和",
+          "version_id": "ver_172efa5d1d0a471db0d5",
+          "version": 1,
+          "observation": {
+            "stdout": "{\"count\": 2, \"total_cent\": 350}\n",
+            "stderr": "",
+            "exit_code": 0,
+            "process_error": null,
+            "duration_ms": 34322,
+            "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_1c85f03004d14ae5bdc2/result_6590e611502840c8b71a/harbor/jobs/case-task_b596252b1c074815ae14/task__ZcXQE6t/artifacts/app/source",
+            "harbor": {
+              "reward": "1",
+              "verifier_mode": "separate",
+              "job_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_1c85f03004d14ae5bdc2/result_6590e611502840c8b71a/harbor/jobs/case-task_b596252b1c074815ae14",
+              "trial": "task__ZcXQE6t",
+              "harbor_version": "0.24.0"
+            },
+            "cleanup_status": "completed"
+          }
+        },
+        {
+          "status": "failed",
+          "score": 0,
+          "error": null,
+          "checks": [
+            {
+              "type": "file_contains",
+              "expected": "\"total_cent\": 999",
+              "path": "report.json",
+              "description": "",
+              "status": "failed",
+              "actual": "{\"count\": 2, \"total_cent\": 350}",
+              "reason": "实际输出不满足评分规则"
+            }
+          ],
+          "duration_ms": 34653,
+          "title": "容器内错误预期",
+          "version_id": "ver_220fb7a48f7042cb90a0",
+          "version": 1,
+          "observation": {
+            "stdout": "{\"count\": 2, \"total_cent\": 350}\n",
+            "stderr": "",
+            "exit_code": 0,
+            "process_error": null,
+            "duration_ms": 34641,
+            "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_1c85f03004d14ae5bdc2/result_60f7054992f44e179609/harbor/jobs/case-task_e9a874cb7e1944c4995a/task__oHUSG2h/artifacts/app/source",
+            "harbor": {
+              "reward": "1",
+              "verifier_mode": "separate",
+              "job_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_1c85f03004d14ae5bdc2/result_60f7054992f44e179609/harbor/jobs/case-task_e9a874cb7e1944c4995a",
+              "trial": "task__oHUSG2h",
+              "harbor_version": "0.24.0"
+            },
+            "cleanup_status": "completed"
+          }
+        }
+      ],
+      "graders": [],
+      "grading_plan": {
+        "source": "embedded",
+        "tasks": [
+          {
+            "task_id": "task_b596252b1c074815ae14",
+            "version_id": "ver_172efa5d1d0a471db0d5",
+            "title": "容器内金额求和",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "exit_code",
+                "expected": 0,
+                "path": "",
+                "description": ""
+              },
+              {
+                "type": "file_contains",
+                "expected": "\"total_cent\": 350",
+                "path": "report.json",
+                "description": ""
+              }
+            ],
+            "not_applicable": []
+          },
+          {
+            "task_id": "task_e9a874cb7e1944c4995a",
+            "version_id": "ver_220fb7a48f7042cb90a0",
+            "title": "容器内错误预期",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "file_contains",
+                "expected": "\"total_cent\": 999",
+                "path": "report.json",
+                "description": ""
+              }
+            ],
+            "not_applicable": []
+          }
+        ]
+      },
+      "models": {
+        "target": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        },
+        "judge": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        }
+      }
+    },
+    "run_restart": {
+      "id": "run_33559b4f23d8405e8648",
+      "name": "重启恢复验证",
+      "status": "interrupted",
+      "cleanup_status": "unknown_after_restart",
+      "error": "服务已重启；已有记录保留，请重新启动未完成的操作",
+      "grading_source": "embedded",
+      "usage": {
+        "model_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost_usd": null
+      },
+      "budget": {
+        "max_model_calls": 0,
+        "budget_usd": null,
+        "cost_basis": "Unknown monetary cost; call limit is enforced before each model request"
+      },
+      "plan_digest": "909b073a7e6da4b6f563d5da733d9a79498a0d64ab06e49a1742dba689b80893",
+      "results": [
+        {
+          "status": "interrupted",
+          "score": null,
+          "error": "服务已重启；该题未完成，已保存的部分证据保留",
+          "checks": [],
+          "duration_ms": null,
+          "title": "重启时运行中",
+          "version_id": "ver_1c1f98463f9944babc4c",
+          "version": 1,
+          "observation": null
+        }
+      ],
+      "graders": [],
+      "grading_plan": {
+        "source": "embedded",
+        "tasks": [
+          {
+            "task_id": "task_3bec09249c8642b69744",
+            "version_id": "ver_1c1f98463f9944babc4c",
+            "title": "重启时运行中",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "exit_code",
+                "expected": 0,
+                "path": "",
+                "description": ""
+              }
+            ],
+            "not_applicable": []
+          }
+        ]
+      },
+      "models": {
+        "target": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        },
+        "judge": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        }
+      }
+    },
+    "run_review": {
+      "id": "run_f18f4b620f9243b0a122",
+      "name": "评分模型拒绝后的待复核",
+      "status": "completed",
+      "cleanup_status": "completed",
+      "error": null,
+      "grading_source": "embedded",
+      "usage": {
+        "model_calls": 1,
+        "cost_usd": null,
+        "input_tokens": null,
+        "output_tokens": null
+      },
+      "budget": {
+        "max_model_calls": 1,
+        "budget_usd": null,
+        "cost_basis": "Unknown monetary cost; call limit is enforced before each model request"
+      },
+      "plan_digest": "e8a0ab066113302410f5e7e21dda960b0721317a5354626881fef45cbaba58f6",
+      "results": [
+        {
+          "status": "review_required",
+          "score": null,
+          "error": "评分调用失败：离线演示模型不生成真实评测资产，请选择 OpenAI 兼容服务模型",
+          "checks": [
+            {
+              "type": "judge",
+              "expected": "目标读取 stdin 中的 items，写出 report.json 并打印相同 JSON。\n判断要求：输出包含 count 和 total_cent",
+              "path": "",
+              "description": "",
+              "judge_model": "stub-understanding",
+              "status": "needs_judge",
+              "actual": null,
+              "reason": ""
+            }
+          ],
+          "duration_ms": 72,
+          "title": "需要模型判断",
+          "version_id": "ver_72815efc8ac0405086f6",
+          "version": 1,
+          "observation": {
+            "stdout": "{\"count\": 0, \"total_cent\": 0}\n",
+            "stderr": "",
+            "exit_code": 0,
+            "process_error": null,
+            "duration_ms": 55,
+            "cleanup_status": "completed",
+            "evidence_directory": "~/.evalith/stage5/review-evalith/.evalith/app/runs/run_f18f4b620f9243b0a122/result_406032ae6a884e8eb644/source",
+            "json": {
+              "count": 0,
+              "total_cent": 0
+            }
+          }
+        }
+      ],
+      "graders": [],
+      "grading_plan": {
+        "source": "embedded",
+        "tasks": [
+          {
+            "task_id": "task_adae2334128242089820",
+            "version_id": "ver_72815efc8ac0405086f6",
+            "title": "需要模型判断",
+            "source": "embedded",
+            "checks": [
+              {
+                "type": "judge",
+                "expected": "目标读取 stdin 中的 items，写出 report.json 并打印相同 JSON。\n判断要求：输出包含 count 和 total_cent",
+                "path": "",
+                "description": "",
+                "judge_model": "stub-understanding"
+              }
+            ],
+            "not_applicable": []
+          }
+        ]
+      },
+      "models": {
+        "target": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        },
+        "judge": {
+          "id": "mdl_56186fa879624618",
+          "name": "stub",
+          "model": "stub-understanding"
+        }
+      }
+    }
+  },
+  "environments": {
+    "local_env": {
+      "id": "env_e0756dcc65a74d11b177",
+      "adapter": "local_command",
+      "status": "ready",
+      "cleanup_status": "ready",
+      "runtime": {
+        "command": [
+          "python3",
+          "main.py"
+        ],
+        "timeout_seconds": 10,
+        "source_copy": "~/.evalith/stage5/review-evalith/.evalith/app/environments/env_e0756dcc65a74d11b177/source",
+        "working_relative": ".",
+        "source_manifest_digest": "d62c365c664021a690bbd90a3b3efa784f73f60838260d97cb015e2c34d33b37"
+      },
+      "plan": {
+        "adapter": "local_command",
+        "source_directory": "~/.evalith/stage5/review3-acceptance/fixtures/file-transform",
+        "source_access": "read_only_copy",
+        "write_directory": "~/.evalith/stage5/review-evalith/.evalith/app/environments/env_e0756dcc65a74d11b177",
+        "copy_scope": "Non-sensitive ordinary source files; no symlinks or dependency/runtime directories",
+        "services": [
+          "Explicitly configured local executable"
+        ],
+        "credential_sources": [],
+        "network": [
+          "No network inside command sandbox"
+        ],
+        "executor": {
+          "name": "阶段 5 本地命令",
+          "backend": "local_command",
+          "command": [
+            "python3",
+            "main.py"
+          ],
+          "working_directory": null,
+          "base_url": null,
+          "timeout_seconds": 10,
+          "id": "exe_4f38cb75912e4255",
+          "created_at": "2026-11-20T06:45:51+00:00",
+          "updated_at": "2026-11-20T06:45:51+00:00",
+          "verified": false,
+          "execution_available": false
+        },
+        "estimated_cost_usd": null,
+        "cost_note": "真实模型按所选 OpenAI 兼容服务计费；金额费用未知，运行前另设调用次数上限。",
+        "cleanup": "Per-case child processes and local services are reaped; evidence files retained in Evalith",
+        "limitations": []
+      }
+    },
+    "http_env": {
+      "id": "env_08674187a1b74dd29289",
+      "adapter": "http_api",
+      "status": "ready",
+      "cleanup_status": "ready",
+      "runtime": {
+        "base_url": "http://127.0.0.1:61847",
+        "timeout_seconds": 10
+      },
+      "plan": {
+        "adapter": "http_api",
+        "source_directory": "~/.evalith/stage5/review3-acceptance/fixtures/file-transform",
+        "source_access": "read_only_copy",
+        "write_directory": "~/.evalith/stage5/review-evalith/.evalith/app/environments/env_08674187a1b74dd29289",
+        "copy_scope": "Non-sensitive ordinary source files; no symlinks or dependency/runtime directories",
+        "services": [
+          "Existing isolated loopback HTTP target (owned by user; not started or stopped by Evalith)"
+        ],
+        "credential_sources": [],
+        "network": [
+          "http://127.0.0.1:61847"
+        ],
+        "executor": {
+          "name": "阶段 5 本机 HTTP",
+          "backend": "http_api",
+          "command": [],
+          "working_directory": null,
+          "base_url": "http://127.0.0.1:61847",
+          "timeout_seconds": 10,
+          "id": "exe_047863e544b54aa4",
+          "created_at": "2026-11-20T06:47:07+00:00",
+          "updated_at": "2026-11-20T06:47:07+00:00",
+          "verified": false,
+          "execution_available": false
+        },
+        "estimated_cost_usd": null,
+        "cost_note": "真实模型按所选 OpenAI 兼容服务计费；金额费用未知，运行前另设调用次数上限。",
+        "cleanup": "Per-case child processes and local services are reaped; evidence files retained in Evalith",
+        "limitations": []
+      }
+    },
+    "harbor_env": {
+      "id": "env_29bf061706014231a4fe",
+      "adapter": "harbor",
+      "status": "ready",
+      "cleanup_status": "ready",
+      "runtime": {
+        "command": [
+          "python3",
+          "main.py"
+        ],
+        "harbor_command": [
+          "~/.local/share/uv/tools/harbor/bin/harbor"
+        ],
+        "timeout_seconds": 180,
+        "source_copy": "~/.evalith/stage5/review-evalith/.evalith/app/environments/env_29bf061706014231a4fe/source",
+        "working_relative": ".",
+        "harbor_version": "0.24.0",
+        "docker_version": "29.8.2",
+        "base_image": "python:3.13-slim",
+        "source_manifest_digest": "d62c365c664021a690bbd90a3b3efa784f73f60838260d97cb015e2c34d33b37"
+      },
+      "plan": {
+        "adapter": "harbor",
+        "source_directory": "~/.evalith/stage5/review3-acceptance/fixtures/file-transform",
+        "source_access": "read_only_copy",
+        "write_directory": "~/.evalith/stage5/review-evalith/.evalith/app/environments/env_29bf061706014231a4fe",
+        "copy_scope": "Non-sensitive ordinary source files baked into the task image; no symlinks or dependency/runtime directories",
+        "services": [
+          "Harbor Docker sandbox per case; the configured command runs inside the task container"
+        ],
+        "credential_sources": [],
+        "network": [
+          "Task execution: no-network inside the Harbor container (egress-control sidecar)",
+          "Orchestration: the harbor CLI runs unsandboxed and needs the Docker socket; image builds may pull base images"
+        ],
+        "executor": {
+          "name": "阶段 5 Harbor 容器",
+          "backend": "harbor",
+          "command": [
+            "python3",
+            "main.py"
+          ],
+          "working_directory": null,
+          "base_url": null,
+          "timeout_seconds": 180,
+          "id": "exe_c18dab31b1c14cc2",
+          "created_at": "2026-11-20T06:45:55+00:00",
+          "updated_at": "2026-11-20T06:45:55+00:00",
+          "verified": false,
+          "execution_available": false
+        },
+        "estimated_cost_usd": null,
+        "cost_note": "真实模型按所选 OpenAI 兼容服务计费；金额费用未知，运行前另设调用次数上限。",
+        "cleanup": "Per-case child processes and local services are reaped; evidence files retained in Evalith",
+        "limitations": [
+          "容器即隔离边界：harbor CLI 以受监管的非沙箱进程编排 Docker；评分与证据判定在 Evalith 侧进行",
+          "基础镜像固定为 python:3.13-slim；需要其他运行时需另行扩展",
+          "Harbor reward 仅作记录，不是判定来源；任务镜像会保留在本地 Docker 缓存"
+        ]
+      }
+    }
+  },
+  "analyses": [
+    {
+      "id": "analysis_c4be9f8a742c4dd9a88a",
+      "selection": "all",
+      "result_ids": [
+        "result_0761c7cf2ea04cfb9618",
+        "result_0d02d161aa2d4092b83d",
+        "result_98c727a63460458c8fae"
+      ],
+      "status": "failed",
+      "error": "离线演示模型不生成真实评测资产，请选择 OpenAI 兼容服务模型",
+      "budget": {
+        "max_model_calls": 1,
+        "budget_usd": null
+      },
+      "usage": {
+        "model_calls": 1,
+        "input_tokens": null,
+        "output_tokens": null,
+        "cost_usd": null
+      },
+      "model": "stub"
+    },
+    {
+      "id": "analysis_0205bc316d8f42db8173",
+      "selection": "low",
+      "result_ids": [
+        "result_0d02d161aa2d4092b83d"
+      ],
+      "status": "budget_stopped",
+      "error": "分析调用预算为零或费用未知，未启动模型请求",
+      "budget": {
+        "max_model_calls": 0,
+        "budget_usd": null
+      },
+      "usage": {
+        "model_calls": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "cost_usd": null
+      },
+      "model": "stub"
+    },
+    {
+      "id": "analysis_b4d69100369245d29be6",
+      "selection": "all",
+      "result_ids": [
+        "result_0761c7cf2ea04cfb9618",
+        "result_0d02d161aa2d4092b83d",
+        "result_98c727a63460458c8fae"
+      ],
+      "status": "budget_stopped",
+      "error": "分析调用预算为零或费用未知，未启动模型请求",
+      "budget": {
+        "max_model_calls": 0,
+        "budget_usd": null
+      },
+      "usage": {
+        "model_calls": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "cost_usd": null
+      },
+      "model": "stub"
+    }
+  ],
+  "boundary_project": {
+    "snapshot_files": [
+      {
+        "path": "README.md",
+        "context_included": true,
+        "redactions": 0,
+        "reason": null,
+        "sha256": "b51e3034ec89bd2f79b4874bc70b0bc8aa8a53143f041fb21ab4783ebc5dba93",
+        "size": 82
+      },
+      {
+        "path": "notes.txt",
+        "context_included": true,
+        "redactions": 1,
+        "reason": null,
+        "sha256": "cdce4d699cba22cd6345453e4d16b89ef65507d488dfae2ea99c95824c32ced7",
+        "size": 64
+      },
+      {
+        "path": "src/agent.py",
+        "context_included": true,
+        "redactions": 0,
+        "reason": null,
+        "sha256": "820040deed12a51c673a1c4d5bb24445183fcdf4d718863943cacaaff1adaf90",
+        "size": 60
+      }
+    ],
+    "excluded": [
+      {
+        "path": ".env",
+        "reason": "sensitive name denied: .env"
+      },
+      {
+        "path": "outside-link",
+        "reason": "symbolic link is never followed"
+      },
+      {
+        "path": "secrets/",
+        "reason": "excluded: secrets*"
+      }
+    ],
+    "read_errors": [],
+    "selected_scope": [
+      "."
+    ]
+  },
+  "denials": {
+    "reject-env-scope": [
+      {
+        "status": 422,
+        "response": {
+          "error": "选定路径命中敏感凭据排除规则，不会读取：.env",
+          "code": "sensitive_path_denied"
+        }
+      }
+    ],
+    "reject-symlink-scope": [
+      {
+        "status": 422,
+        "response": {
+          "error": "选定的路径包含符号链接，已拒绝：outside-link",
+          "code": "symlink_rejected"
+        }
+      }
+    ],
+    "reject-traversal-check": [
+      {
+        "status": 422,
+        "response": {
+          "error": "题目格式无效：1 validation error for TaskSpec\nchecks.0\n  Value error, file checks require a relative contained path [type=value_error, input_value={'type': 'file_contains',...tside', 'expected': 'x'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.14/v/value_error",
+          "code": "invalid_task"
+        }
+      }
+    ],
+    "reject-remote-http-target": [
+      {
+        "status": 422,
+        "response": {
+          "error": "当前 HTTP 执行器仅支持明确确认的本机隔离服务",
+          "code": "workspace_error"
+        }
+      }
+    ],
+    "reject-http-without-confirmation": [
+      {
+        "status": 422,
+        "response": {
+          "error": "请先确认 HTTP 目标使用独立测试数据",
+          "code": "workspace_error"
+        }
+      }
+    ],
+    "conversation-adapter-mismatch": [
+      {
+        "status": 422,
+        "response": {
+          "error": "选中题目类型与环境执行器不匹配",
+          "code": "task_adapter_mismatch"
+        }
+      }
+    ]
+  },
+  "source_change": {
+    "before": {
+      "readiness": {
+        "generation_allowed": true,
+        "generation_implemented": true,
+        "unknowns_confirmed": false,
+        "reason": "可以设计评测题目。用户继续或模型判断足够都不等于未知业务规则已确认。"
+      },
+      "digest": "6a87e55b1dddefc62c04dd99e1007d62bc40b07132dbddf83c9dc7139ee59bd5"
+    },
+    "after_change": {
+      "status": 200,
+      "readiness": {
+        "generation_allowed": false,
+        "generation_implemented": true,
+        "unknowns_confirmed": false,
+        "reason": "资料已变化，当前理解来自历史快照；请重新分析后再继续。"
+      },
+      "digest": "85ee42d0e54d2af502620c44fbf813c5bfb7f828b5e1a12bed6d019d7d5c42d2",
+      "understanding_reason": "资料快照已变化，需重新确认依据；未知项保留，推进门保持关闭。"
+    },
+    "run_after_change": {
+      "status": 409,
+      "body": {
+        "error": "题目、环境与当前资料不一致，请更新后再运行",
+        "code": "source_changed"
+      }
+    },
+    "restored": {
+      "status": 200,
+      "readiness": {
+        "generation_allowed": false,
+        "generation_implemented": true,
+        "unknowns_confirmed": false,
+        "reason": "尚未满足继续条件：请补充资料、纠正理解，或明确表示继续。"
+      },
+      "digest": "6a87e55b1dddefc62c04dd99e1007d62bc40b07132dbddf83c9dc7139ee59bd5",
+      "understanding_reason": "资料快照已变化，需重新确认依据；未知项保留，推进门保持关闭。"
+    }
+  }
+}

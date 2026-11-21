@@ -561,7 +561,8 @@ class EvaluationRunner:
         env = run["environment_snapshot"]
         runtime = env["runtime"]
         definition = task["definition"]
-        cancellation = lambda: self.cancelled(run["project_id"], run["id"])
+        def cancellation() -> bool:
+            return self.cancelled(run["project_id"], run["id"])
         if env["adapter"] == "http_api":
             request = definition["input"]
             url = runtime["base_url"].rstrip("/") + "/" + request["path"].lstrip("/")
@@ -679,7 +680,8 @@ class EvaluationRunner:
             evidence_path(work, str(relative))
         # Every interpolated path segment is model-generated or configured;
         # quote it so solve.sh can only ever write inside /app/source.
-        inside = lambda *parts: shlex.quote(str(Path("/app/source", working_rel, *parts)))
+        def inside(*parts: str) -> str:
+            return shlex.quote(str(Path("/app/source", working_rel, *parts)))
         stdin_b64 = base64.b64encode(
             str(definition["input"].get("stdin", "")).encode()
         ).decode()
@@ -863,7 +865,8 @@ class EvaluationRunner:
                 "trial": trial.name,
                 "harbor_version": runtime.get("harbor_version"),
             },
-            "cleanup_status": "completed",
+            "cleanup_status": observed.get("cleanup_status", "completed"),
+            "cleanup_error": observed.get("cleanup_error"),
         }
 
     def _save_result(self, project_id: str, run_id: str, result: dict[str, Any]):
@@ -990,6 +993,7 @@ class EvaluationRunner:
         run = self.store.get(project_id, "run", run_id)
         terminal = "completed"
         reason = None
+        cleanup_status = "completed"
         for index, task in enumerate(run["tasks"]):
             result = {
                 "id": new_id("result"),
@@ -1017,6 +1021,15 @@ class EvaluationRunner:
                 )
                 result.update(status="validating", observation=observation)
                 self._save_result(project_id, run_id, result)
+                if observation.get("cleanup_status") == "failed":
+                    raise WorkspaceError(
+                        "清理失败："
+                        + str(
+                            observation.get("cleanup_error")
+                            or "目标进程组状态无法确认"
+                        ),
+                        status_code=422,
+                    )
                 if observation.get("process_error") == "cancelled":
                     raise RunCancelled()
                 if observation.get("process_error"):
@@ -1081,6 +1094,8 @@ class EvaluationRunner:
                 duration_ms=round((time.monotonic() - started) * 1000),
                 finished_at=utc_now(),
             )
+            if (result.get("observation") or {}).get("cleanup_status") == "failed":
+                cleanup_status = "failed"
             self._save_result(project_id, run_id, result)
             if terminal != "completed":
                 for remaining in run["tasks"][index + 1 :]:
@@ -1107,5 +1122,5 @@ class EvaluationRunner:
             status=terminal,
             error=reason,
             finished_at=utc_now(),
-            cleanup_status="completed",
+            cleanup_status=cleanup_status,
         )

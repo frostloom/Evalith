@@ -2,8 +2,6 @@
 
 The navigation, project-directory, detail-tab and drawer patterns and relevant design-token values are adapted from the MIT-licensed Rhesis frontend at commit `ce24bb1993fc545bb0ccb0d8b3951683ac14fff1` (Copyright © 2025 Rhesis AI GmbH). Its license is preserved in `RHESIS-LICENSE`. No proprietary Rhesis logo, mascot or brand artwork is included.
 
-Inter is distributed under the SIL Open Font License 1.1; its copyright and full license accompany the variable font in `public/fonts/inter/OFL.txt`. Linear is a visual reference only; no Linear artwork or source code is distributed.
+Be Vietnam Pro is bundled under the SIL Open Font License 1.1; its copyright and full license accompany the font files in `public/fonts/be-vietnam-pro/OFL.txt`. Inter is bundled as a fallback under the SIL Open Font License 1.1; its copyright and full license accompany the variable font in `public/fonts/inter/OFL.txt`. Linear is a visual reference only; no Linear artwork or source code is distributed.
 
-Material UI and Emotion are used under their respective MIT licenses, distributed with those npm packages.
-
-Lucide icons are distributed under the ISC License provided by the lucide-react package. The Evalith mark is original project artwork.
+The component layer uses Ant Design, distributed under the MIT License with its npm package. React, React DOM and React Markdown are used under the MIT License; Remark GFM is used under the MIT License; Lucide icons are distributed under the ISC License provided by the `lucide-react` package, with the license text preserved in `public/licenses/lucide.txt`. Material UI is no longer used. The previous Emotion styling packages are no longer direct dependencies; Ant Design's CSS-in-JS layer still carries its own transitive `@emotion/hash` and `@emotion/unitless` packages under the MIT license declared by their npm packages. The Evalith mark is original project artwork.

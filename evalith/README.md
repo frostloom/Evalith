@@ -16,13 +16,11 @@
 
 ## 模型配置
 
-本地 ChatGPT 账号通道（Codex CLI / `gpt-6-luna`）已移除；真实模型统一通过 OpenAI 兼容服务接入。在模型配置中选择“OpenAI 兼容服务”，填写服务地址、模型名与可选 API 密钥；密钥加密保存，只出现在请求头，不回传前端，也不交给被测项目。
+真实模型通过标准 OpenAI 兼容服务接入。在模型配置中填写服务地址、模型名与可选 API 密钥；密钥加密保存，只出现在请求头，不回传前端，也不交给被测项目。接入方式不绑定特定模型厂商，凡是提供兼容 Chat Completions 协议的服务均可按相同方式配置。
 
 付费模型默认禁用，需维护者显式开启 `EVALITH_ALLOW_PAID_MODELS=1` 后才能保存与使用。连接测试对服务地址发起一次 `GET /models`；理解、讨论、题目生成、评分与分析都经同一网关调用，超时、取消、网络错误都可见，不自动替换模型或重试。
 
 输入/输出 tokens 仅在服务返回时记录；金额未知时费用显示未知，不记为零。运行调用上限包括 Agent 的每次推理和评分；金额上限在费用未知时阻止模型请求。分析有独立预算。
-
-历史运行与使用记录不因通道移除而改写；旧的本地账号模型配置保留在列表中并标注“已移除”，无法再发起新请求或连接测试。
 
 ## 使用流程
 
@@ -43,7 +41,13 @@
 - **AI Gateway Go 适配器**：在 Evalith 内复制并编译真实 `internal/agent.Handler`；每题使用独立 SQLite、内存 Redis 和合成账务后端，模型经私有通道调用运行所选的模型配置，对话多轮在同一隔离会话内进行。需要 Go 与可用 C 工具链。`EVALITH_GO_PROXY` 可指定模块镜像，`EVALITH_GO_SDKROOT` 可指定本机已安装 SDK，均不更改全局配置。
 本地命令执行依赖 macOS `sandbox-exec`，其他主机明确拒绝执行（操作系统文件和网络限制，无容器级隔离）；Harbor 后端则以容器为隔离边界，见上。安装的系统与语言运行库可读；目标不能读取无关用户文件。仅可信本地单用户使用，不对外开放；Host/Origin 检查保留。
 
-服务重启把未结束操作标为中断并保留记录，无法确认的遗留清理状态显示未知。证据文件保留在 `.evalith/app/runs`，环境副本在 `.evalith/app/environments`，不自动删除。模型判分与小样本结果尚未人工校准，不代表生产质量或真实账务集成。
+服务重启把未结束运行及其中正在执行的题目标为中断并保留记录，无法确认的遗留清理状态显示为“服务重启，清理状态未知”。进程组清理失败会保留输出，但将题目标记为执行错误且不给分，并在批次层显示清理失败。模型判分与小样本结果尚未人工校准，不代表生产质量或真实账务集成。
+
+## 数据保留与清理
+
+- 数据库、密钥、逐题证据与环境副本都位于 `EVALITH_DATA_DIR`（默认 `.evalith/app`）：证据在 `runs/`，环境源副本在 `environments/`。系统不自动删除或轮转这些数据，也没有内置保留期限；需要清理时由用户删除该目录并自行决定归档范围。
+- 本地命令与 Harbor 题目在结束、超时或取消后回收本题进程组；Harbor 任务镜像保留在 Docker 本地缓存。HTTP 目标由用户启动和清理，Evalith 只调用已确认的 loopback 地址。
+- 服务重启后，未结束的运行（含正在执行的题目）、环境、生成/分析任务和分析报告标记为中断，未完成题目不再显示为“运行中”；清理是否完成无法确认时显示未知，清理系统调用失败时显示失败，均不显示为已完成。
 
 ## 验证
 
@@ -53,10 +57,9 @@
 UV_CACHE_DIR="$PWD/.evalith/cache/uv" uv run --project evalith pytest -c evalith/pyproject.toml evalith/tests --basetemp .evalith/tmp/pytest
 npm --prefix evalith/web test
 npm --prefix evalith/web run build
+cd evalith && uv run ruff check src/evalith ../scripts/stage5_acceptance.py
 ```
 
-[真实 aigateway 与文件执行验证](../docs/validation/2026-11-12-real-evaluation.md)。原有 EE-free Rhesis 实验工作台保留在 `workbench/`，与此服务独立。
+[真实 aigateway 与文件执行验证](../docs/validation/2026-11-12-real-evaluation.md)。
 
-[Rhesis 工作流迭代与真实评分验证](../docs/validation/2026-11-13-rhesis-workflow.md)。
-
-[Rhesis 功能实现：自动资产准备与评分编排](../docs/validation/2026-11-13-rhesis-functional.md)。API：`POST /api/projects/{id}/preparations` 后通过 `/jobs/{job_id}` 查询结果；`POST /graders/synthesize` 传 `description` 生成草稿；`POST /runs/preview` 使用与 `/runs` 相同的请求解析评分计划，确认启动时带回 `plan_digest`。原 `/generate` 保留题目生成兼容行为。
+[自动资产准备与评分编排验证](../docs/validation/2026-11-13-functional-review.md)。API：`POST /api/projects/{id}/preparations` 后通过 `/jobs/{job_id}` 查询结果；`POST /graders/synthesize` 传 `description` 生成草稿；`POST /runs/preview` 使用与 `/runs` 相同的请求解析评分计划，确认启动时带回 `plan_digest`。原 `/generate` 保留题目生成兼容行为。
