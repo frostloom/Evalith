@@ -163,8 +163,10 @@ def bounded_process(
                     process.wait(timeout=3)
                 except ProcessLookupError:
                     pass
-                except OSError as exc:
-                    cleanup_error = str(exc)
+                except OSError:
+                    # A forced SIGKILL below is the fallback. Its outcome,
+                    # not the failed graceful attempt, decides cleanup status.
+                    pass
                 except subprocess.TimeoutExpired:
                     try:
                         os.killpg(process.pid, signal.SIGKILL)
@@ -181,6 +183,11 @@ def bounded_process(
         pass
     except OSError as exc:
         cleanup_error = str(exc)
+    else:
+        try:
+            process.wait(timeout=3)
+        except subprocess.TimeoutExpired as exc:
+            cleanup_error = str(exc)
     return {
         "stdout": (directory / "stdout.txt").read_text(errors="replace")[:2_000_000],
         "stderr": (directory / "stderr.txt").read_text(errors="replace")[:200_000],
