@@ -1,0 +1,19 @@
+$ PYTHONPATH=evalith/src .venv/bin/pytest \
+    -c evalith/pyproject.toml \
+    evalith/tests/test_execution_process.py \
+    evalith/tests/test_evaluation_runs.py \
+    -k 'cleanup_failure or process_cleanup_error'
+
+..                                                                       [100%]
+2 passed, 11 deselected, 1 warning in 0.25s
+
+$ npm --prefix evalith/web test -- --run src/EvaluationRunView.test.tsx
+
+Test Files  1 passed (1)
+Tests       3 passed (3)
+
+Assertions:
+- A process-group cleanup error is preserved as cleanup_status=failed.
+- The execution output remains stored, but the result is execution_error with no score or checks.
+- The batch is failed with cleanup_status=failed.
+- The run configuration shows the localized cleanup-failure message.

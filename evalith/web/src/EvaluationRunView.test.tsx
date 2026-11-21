@@ -123,3 +123,41 @@ it("localizes cleanup state and interrupted cases after a restart", async () => 
   expect(resultRow).not.toBeNull();
   expect(within(resultRow as HTMLElement).getAllByText("已中断")).toHaveLength(1);
 });
+
+it("shows cleanup failure as an explicit run state", async () => {
+  const user = userEvent.setup();
+  const failed = {
+    ...run,
+    status: "failed",
+    cleanup_status: "failed",
+    results: [
+      {
+        ...run.results[0],
+        status: "execution_error",
+        score: null,
+        error: "清理失败：operation not permitted",
+      },
+    ],
+  } as unknown as EvalRun;
+  render(
+    <EvaluationRunView
+      runs={[failed]}
+      run={failed}
+      section="runs"
+      selectedRunId={failed.id}
+      busy={false}
+      selectedResultIds={[]}
+      onSelect={vi.fn()}
+      onResult={vi.fn()}
+      onSelection={vi.fn()}
+      onAnalyze={vi.fn()}
+      onCancel={vi.fn()}
+    >
+      {null}
+    </EvaluationRunView>,
+  );
+  await user.click(screen.getByRole("tab", { name: "运行配置" }));
+  expect(
+    await screen.findByText("清理失败，目标进程可能仍在运行"),
+  ).toBeVisible();
+});

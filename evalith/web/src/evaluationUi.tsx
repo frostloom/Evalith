@@ -27,6 +27,7 @@ export const cleanupNames: Record<string, string> = {
   no_services_started: "未启动需要清理的服务",
   no_services_owned: "外部服务不在本系统管理范围",
   unknown_after_restart: "服务重启，清理状态未知",
+  failed: "清理失败，目标进程可能仍在运行",
 };
 export const active = (status: string) =>
   ["running", "pending", "validating", "preparing", "cancelling"].includes(

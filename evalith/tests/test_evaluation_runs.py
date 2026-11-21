@@ -460,3 +460,54 @@ def test_actual_cancel_keeps_first_result_and_partial_output(client, project_roo
     assert current["results"][1]["status"] == "cancelled"
     assert "slow" in current["results"][1]["observation"]["stdout"]
     assert current["results"][1]["observation"]["cleanup_status"] == "completed"
+
+
+def test_cleanup_failure_is_visible_and_never_scored(
+    client, project_root, monkeypatch
+):
+    pid, ws, store, assets, envs = fixture(client, project_root)
+    task = assets.add(pid, definition())
+    env = store.create(
+        pid,
+        "environment",
+        {
+            "adapter": "local_command",
+            "source_digest": task["source_digest"],
+            "plan_digest": "confirmed",
+            "requires_confirmation": False,
+            "plan": {},
+            "runtime": {},
+        },
+        status="ready",
+    )
+    runner = EvaluationRunner(ws, store, envs)
+
+    def execute(*_):
+        return {
+            "stdout": "correct output",
+            "json": None,
+            "exit_code": 0,
+            "process_error": None,
+            "cleanup_status": "failed",
+            "cleanup_error": "operation not permitted",
+        }
+
+    monkeypatch.setattr(runner, "execute_task", execute)
+    run = runner.start(
+        pid,
+        {
+            "environment_id": env["id"],
+            "version_ids": [task["version_id"]],
+            "max_model_calls": 0,
+        },
+        background=False,
+    )
+
+    result = run["results"][0]
+    assert run["status"] == "failed"
+    assert run["cleanup_status"] == "failed"
+    assert result["status"] == "execution_error"
+    assert result["score"] is None
+    assert result["checks"] == []
+    assert "清理失败" in result["error"]
+    assert result["observation"]["cleanup_status"] == "failed"

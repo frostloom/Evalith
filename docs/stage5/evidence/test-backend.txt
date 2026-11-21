@@ -4,6 +4,6 @@ $ UV_CACHE_DIR="$PWD/.evalith/cache/uv" uv run --project evalith pytest -c evali
 ........................................................................ [ 72%]
 ........................................................................ [ 96%]
 .........                                                                [100%]
-297 passed, 1 warning in 354.74s (0:05:54)
+299 passed, 1 warning in 227.66s (0:03:47)
 
 Warning: fastapi/testclient.py StarletteDeprecationWarning (third-party httpx deprecation, no test failure).

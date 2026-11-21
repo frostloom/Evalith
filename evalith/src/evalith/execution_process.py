@@ -125,6 +125,7 @@ def bounded_process(
         # Sandbox callers always stage stdin.txt themselves; only the
         # orchestrator mode may start without one.
         stdin_file.touch()
+    cleanup_error = None
     with (
         (directory / "stdout.txt").open("wb") as out,
         (directory / "stderr.txt").open("wb") as err,
@@ -162,20 +163,30 @@ def bounded_process(
                     process.wait(timeout=3)
                 except ProcessLookupError:
                     pass
+                except OSError as exc:
+                    cleanup_error = str(exc)
                 except subprocess.TimeoutExpired:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    process.wait(timeout=3)
+                    try:
+                        os.killpg(process.pid, signal.SIGKILL)
+                        process.wait(timeout=3)
+                    except ProcessLookupError:
+                        pass
+                    except (OSError, subprocess.TimeoutExpired) as exc:
+                        cleanup_error = str(exc)
     # A target can exit while its own children are still alive. The process
     # group belongs to this case, so reap those descendants as well.
     try:
         os.killpg(process.pid, signal.SIGKILL)
     except ProcessLookupError:
         pass
+    except OSError as exc:
+        cleanup_error = str(exc)
     return {
         "stdout": (directory / "stdout.txt").read_text(errors="replace")[:2_000_000],
         "stderr": (directory / "stderr.txt").read_text(errors="replace")[:200_000],
         "exit_code": process.returncode,
         "process_error": reason,
         "duration_ms": round((time.monotonic() - started) * 1000),
-        "cleanup_status": "completed",
+        "cleanup_status": "failed" if cleanup_error else "completed",
+        "cleanup_error": cleanup_error,
     }
