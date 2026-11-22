@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 import urllib.parse
 from dataclasses import dataclass
 from typing import Any
@@ -357,16 +358,34 @@ class ModelGateway:
             "messages": safe_messages,
             "temperature": 0.1,
         }
-        try:
-            response = httpx.post(
-                url,
-                json=body,
-                headers=headers,
-                timeout=self.timeout,
-                trust_env=False,
-            )
-        except httpx.HTTPError as exc:
-            raise ModelError(f"模型服务请求失败：{self._scrub(str(exc))}") from exc
+        # Chat requests are idempotent from the caller's perspective, so a
+        # transient failure (connect reset, 429, 5xx) is retried with bounded
+        # backoff instead of turning paid execution work into an unscored
+        # result. Cancellation still wins between attempts.
+        response = None
+        for attempt in range(3):
+            if attempt and self.cancel_check and self.cancel_check():
+                raise ModelError("模型调用已取消") from None
+            try:
+                response = httpx.post(
+                    url,
+                    json=body,
+                    headers=headers,
+                    timeout=self.timeout,
+                    trust_env=False,
+                )
+            except httpx.HTTPError as exc:
+                if attempt < 2:
+                    time.sleep(min(0.5 * (2**attempt), 4))
+                    continue
+                raise ModelError(
+                    f"模型服务请求失败：{self._scrub(str(exc))}"
+                ) from exc
+            if response.status_code in (429, 500, 502, 503, 504) and attempt < 2:
+                time.sleep(min(0.5 * (2**attempt), 4))
+                continue
+            break
+        assert response is not None
         if response.status_code >= 400:
             # Scrub the complete body first; truncating first can leave a
             # configured key's prefix in the persisted error.

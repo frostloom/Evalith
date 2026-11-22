@@ -149,6 +149,10 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
     def run_detail(project_id: str, run_id: str):
         return runner.public(store.get(project_id, "run", run_id))
 
+    @app.post("/api/projects/{project_id}/runs/{run_id}/re-judge")
+    def rejudge_run(project_id: str, run_id: str):
+        return runner.rejudge(project_id, run_id)
+
     @app.post("/api/projects/{project_id}/runs/{run_id}/cancel")
     def run_cancel(project_id: str, run_id: str):
         return runner.cancel(project_id, run_id)

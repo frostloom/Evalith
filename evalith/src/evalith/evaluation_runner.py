@@ -354,6 +354,61 @@ class EvaluationRunner:
             "cancelled",
         }
 
+    def rejudge(self, project_id: str, run_id: str) -> dict[str, Any]:
+        """Re-run grading for unscored results of a finished run.
+
+        The target is never re-executed: grading replays against the
+        observation frozen in the run record, so execution cost already
+        spent is recoverable after a transient judge outage. Each result
+        is re-attempted independently; a still-failing judge leaves that
+        result reviewable for a later retry.
+        """
+
+        run = self.store.get(project_id, "run", run_id)
+        if run["status"] != "completed":
+            raise WorkspaceError("只能对已完成的运行补判分", status_code=409)
+        candidates = [
+            result
+            for result in run.get("results", [])
+            if result.get("status") == "review_required"
+            and result.get("observation") is not None
+            and any(check.get("status") == "needs_judge" for check in result.get("checks", []))
+        ]
+        if not candidates:
+            raise WorkspaceError("没有可补判分的结果", status_code=409)
+        for target in candidates:
+            run = self.store.get(project_id, "run", run_id)
+            index = next(
+                i for i, r in enumerate(run["results"]) if r["id"] == target["id"]
+            )
+            result = run["results"][index]
+            try:
+                result.update(
+                    self._judge(
+                        run,
+                        result["task"],
+                        result["observation"],
+                        result,
+                        allow_ended=True,
+                    )
+                )
+                result["error"] = None
+            except (ModelError, BudgetStop) as exc:
+                result.update(
+                    status="review_required",
+                    score=None,
+                    error="评分调用失败："
+                    + self.workspace._scrub_saved_secrets(str(exc))[:1000],
+                )
+
+            def change(item, *, slot=index, updated=result):
+                results = list(item["results"])
+                results[slot] = updated
+                return {**item, "results": results}
+
+            self.store.mutate(project_id, "run", run_id, change)
+        return self.public(self.store.get(project_id, "run", run_id))
+
     def cancel(self, project_id: str, run_id: str) -> dict[str, Any]:
         def change(item):
             if item["status"] in TERMINAL:
@@ -362,15 +417,22 @@ class EvaluationRunner:
 
         return self.public(self.store.mutate(project_id, "run", run_id, change))
 
-    def reserve_call(self, project_id: str, run_id: str, purpose: str) -> str:
+    def reserve_call(
+        self, project_id: str, run_id: str, purpose: str, *, allow_ended: bool = False
+    ) -> str:
         call_id = new_id("call")
 
         def change(item):
             if item["status"] in {"cancelling", "cancelled"}:
                 raise RunCancelled()
-            if item["status"] != "running":
+            if item["status"] != "running" and not (
+                allow_ended and item["status"] == "completed"
+            ):
                 raise BudgetStop("运行已结束，不再启动模型调用")
-            if len(item["calls"]) >= item["budget"]["max_model_calls"]:
+            # Failed attempts are refunded: the cap counts calls that did not
+            # fail, while the ledger keeps every attempt for audit.
+            counted = [c for c in item["calls"] if c.get("status") != "failed"]
+            if len(counted) >= item["budget"]["max_model_calls"]:
                 raise BudgetStop("模型调用次数达到预算上限")
             if item["budget"]["budget_usd"] is not None:
                 raise BudgetStop("金额费用未知，无法保证金额上限；未启动后续模型调用")
@@ -435,8 +497,10 @@ class EvaluationRunner:
         role: str,
         system: str,
         payload: dict[str, Any],
+        *,
+        allow_ended: bool = False,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        call_id = self.reserve_call(project_id, run_id, role)
+        call_id = self.reserve_call(project_id, run_id, role, allow_ended=allow_ended)
         run = self.store.get(project_id, "run", run_id)
         gateway = None
         error = None
@@ -941,6 +1005,8 @@ class EvaluationRunner:
         task: dict[str, Any],
         observation: dict[str, Any],
         verification: dict[str, Any],
+        *,
+        allow_ended: bool = False,
     ) -> dict[str, Any]:
         pending = [
             (index, check)
@@ -971,6 +1037,7 @@ class EvaluationRunner:
                     "criteria": [{"index": index, **check} for index, check in checks],
                     "observed": document,
                 },
+                allow_ended=allow_ended,
             )
             provided = value.get("checks", [])
             if not isinstance(provided, list):
