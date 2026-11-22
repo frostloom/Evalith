@@ -1597,32 +1597,72 @@ def mask_secret(secret: str | None) -> str | None:
 
 
 class CredentialCipher:
-    """Small wrapper around Fernet with an explicit key source."""
+    """Small wrapper around Fernet with an explicit key source.
+
+    A human passphrase is stretched with PBKDF2-HMAC-SHA256 (600k
+    iterations) and a per-install random salt, so a leaked database
+    backup cannot be brute-forced with precomputed tables or shared
+    work across installs. Ciphertexts from the previous single-hash
+    derivation stay readable through a decrypt-only fallback.
+    """
+
+    KDF_ITERATIONS = 600_000
 
     def __init__(self, secret_key: str | None, data_dir: Path) -> None:
-        self._fernet = Fernet(self._resolve_key(secret_key, data_dir))
+        resolved = self._resolve_key(secret_key, data_dir)
+        self._fernet = Fernet(resolved[0])
+        self._legacy_fernet = Fernet(resolved[1]) if resolved[1] else None
 
     @staticmethod
-    def _resolve_key(secret_key: str | None, data_dir: Path) -> bytes:
+    def _load_or_create_salt(data_dir: Path) -> bytes:
+        salt_file = data_dir / "kdf.salt"
+        if salt_file.exists():
+            salt = salt_file.read_bytes()
+            if len(salt) >= 16:
+                return salt
+            # A salt this side never wrote: corrupt or truncated. Anything
+            # encrypted under it is already unreadable, so replace it.
+        data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        salt = os.urandom(32)
+        fd = os.open(
+            salt_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600
+        )
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(salt)
+        return salt
+
+    @staticmethod
+    def _resolve_key(
+        secret_key: str | None, data_dir: Path
+    ) -> tuple[bytes, bytes | None]:
         if secret_key:
             raw = secret_key.encode("utf-8")
             # Accept either a Fernet key or an arbitrary passphrase.
             try:
                 base64.urlsafe_b64decode(raw)
                 if len(base64.urlsafe_b64decode(raw)) == 32:
-                    return raw
+                    return raw, None
             except Exception:  # noqa: BLE001 - fall through to derivation
                 pass
-            return base64.urlsafe_b64encode(hashlib.sha256(raw).digest())
+            salt = CredentialCipher._load_or_create_salt(data_dir)
+            stretched = hashlib.pbkdf2_hmac(
+                "sha256",
+                raw,
+                salt,
+                CredentialCipher.KDF_ITERATIONS,
+                dklen=32,
+            )
+            legacy = base64.urlsafe_b64encode(hashlib.sha256(raw).digest())
+            return base64.urlsafe_b64encode(stretched), legacy
         key_file = data_dir / "secret.key"
         if key_file.exists():
-            return key_file.read_bytes().strip()
+            return key_file.read_bytes().strip(), None
         data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         key = Fernet.generate_key()
         fd = os.open(key_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, "wb") as handle:
             handle.write(key)
-        return key
+        return key, None
 
     def encrypt(self, value: str | None) -> str | None:
         if not value:
@@ -1634,10 +1674,17 @@ class CredentialCipher:
             return None
         try:
             return self._fernet.decrypt(value.encode("ascii")).decode("utf-8")
-        except InvalidToken as exc:  # pragma: no cover - configuration error
+        except InvalidToken:
+            if self._legacy_fernet is not None:
+                try:
+                    return self._legacy_fernet.decrypt(value.encode("ascii")).decode(
+                        "utf-8"
+                    )
+                except InvalidToken:
+                    pass
             raise RuntimeError(
                 "the stored model credential cannot be decrypted; the secret key changed"
-            ) from exc
+            ) from None
 
 
 class RedactionFilter(logging.Filter):

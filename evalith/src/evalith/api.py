@@ -31,6 +31,49 @@ _TRUSTED_ORIGINS = (
 )
 
 
+class _BodyTooLarge(Exception):
+    pass
+
+
+class BodySizeLimitMiddleware:
+    """Cap request bodies before they are buffered or parsed.
+
+    The model bridge accepts calls from sandboxed target code; without a
+    cap a defective target can stream an arbitrarily large JSON body and
+    exhaust orchestrator memory during parsing — the budget check only
+    runs after the body has been read.
+    """
+
+    def __init__(self, app, max_bytes: int = 8 * 1024 * 1024) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        total = 0
+
+        async def limited_receive():
+            nonlocal total
+            message = await receive()
+            if message["type"] == "http.request":
+                total += len(message.get("body", b""))
+                if total > self.max_bytes:
+                    await JSONResponse(
+                        status_code=413,
+                        content={"error": {"message": "请求体过大", "type": "body_too_large"}},
+                    )(scope, receive, send)
+                    raise _BodyTooLarge()
+            return message
+
+        try:
+            await self.app(scope, limited_receive, send)
+        except _BodyTooLarge:
+            pass  # The 413 response has already been sent.
+
+
 class LocalHostMiddleware(BaseHTTPMiddleware):
     """Reject non-loopback Host/Origin values before any project API runs.
 
@@ -144,6 +187,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.service = service
     trusted_origins = (*_TRUSTED_ORIGINS, f"http://127.0.0.1:{settings.api_port}", f"http://localhost:{settings.api_port}")
 
+    app.add_middleware(BodySizeLimitMiddleware)
     app.add_middleware(
         LocalHostMiddleware,
         allowed_hosts=settings.allowed_hosts,

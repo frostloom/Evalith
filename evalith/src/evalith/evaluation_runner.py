@@ -24,6 +24,11 @@ from .evaluation_store import EvaluationStore, new_id
 from .execution_process import bounded_process
 from .grading_plan import validate_judge_verdict
 
+from .model_gateway import ModelError
+from .service import WorkspaceError, WorkspaceService
+
+from .verification import evaluate_checks, evidence_path
+
 
 def parse_observed_json(text: str | None) -> Any:
     """Parse observed stdout as JSON, rejecting non-finite literals.
@@ -43,9 +48,6 @@ def parse_observed_json(text: str | None) -> Any:
         return json.loads(text, parse_constant=reject)
     except ValueError:
         return None
-from .model_gateway import ModelError
-from .service import WorkspaceError, WorkspaceService
-from .verification import evaluate_checks, evidence_path
 
 TERMINAL = {"completed", "failed", "cancelled", "budget_stopped", "interrupted"}
 
@@ -462,7 +464,11 @@ class EvaluationRunner:
 
     def _require_bridge_token(self, run: dict[str, Any], token: str) -> None:
         expected = self.workspace.cipher.decrypt(run["_bridge_token"]) or ""
-        if not secrets.compare_digest(token, expected):
+        # Compare bytes: str arguments must be ASCII-only or compare_digest
+        # itself raises, turning a hostile header into a 500.
+        if not secrets.compare_digest(
+            token.encode("utf-8"), expected.encode("utf-8")
+        ):
             raise WorkspaceError("运行通道未授权", status_code=403)
 
     def bridge(
@@ -642,6 +648,7 @@ class EvaluationRunner:
                 env=extra,
                 cancel=cancellation,
                 loopback=True,
+                bridge_port=self.workspace.settings.api_port,
             )
         else:
             source = work / "source"

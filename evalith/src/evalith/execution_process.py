@@ -27,6 +27,7 @@ def bounded_process(
     env: dict[str, str] | None = None,
     cancel: Callable[[], bool] | None = None,
     loopback: bool = False,
+    bridge_port: int | None = None,
     unsandboxed: bool = False,
 ) -> dict:
     directory = directory.resolve()
@@ -50,6 +51,11 @@ def bounded_process(
             "(version 1)\n(allow default)\n(deny file-write*)\n(allow file-write* (subpath "
             + json.dumps(str(directory), ensure_ascii=False)
             + '))\n(allow file-write* (literal "/dev/null"))\n(deny network*)\n'
+            # The target must not reach arbitrary launchd services: mach IPC
+            # (cfprefd, SecurityServer, ...) is its own channel and would
+            # bypass the file-read denials below. process-info stays allowed:
+            # denying it breaks the dispatch runtime legitimate targets use.
+            "(deny mach-lookup)\n(deny mach-register)\n"
         )
         # The copied target may read its own inputs and installed runtimes, never
         # unrelated projects or the user's login/configuration directories.
@@ -96,8 +102,16 @@ def bounded_process(
         ):
             profile += "(allow file-read* (literal " + json.dumps(path) + "))\n"
         if loopback:
+            if bridge_port is None:
+                raise WorkspaceError(
+                    "启用回环网络时必须提供桥接端口", status_code=500
+                )
+            # seatbelt ip filters only accept host "*" or "localhost"; a tcp
+            # filter scoped to the bridge port is the exact allowance.
             profile += (
-                '(allow network* (local ip "localhost:*") (remote ip "localhost:*"))\n'
+                '(allow network* (remote tcp "localhost:'
+                + str(bridge_port)
+                + '"))\n'
             )
         policy = directory / "sandbox.sb"
         policy.write_text(profile)
@@ -127,8 +141,8 @@ def bounded_process(
         stdin_file.touch()
     cleanup_error = None
     with (
-        (directory / "stdout.txt").open("wb") as out,
-        (directory / "stderr.txt").open("wb") as err,
+        (directory / "stdout.txt").open("w+b") as out,
+        (directory / "stderr.txt").open("w+b") as err,
         stdin_file.open("rb") as inp,
     ):
         process = subprocess.Popen(
@@ -175,22 +189,30 @@ def bounded_process(
                         pass
                     except (OSError, subprocess.TimeoutExpired) as exc:
                         cleanup_error = str(exc)
-    # A target can exit while its own children are still alive. The process
-    # group belongs to this case, so reap those descendants as well.
-    try:
-        os.killpg(process.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
-    except OSError as exc:
-        cleanup_error = str(exc)
-    else:
+        # A target can exit while its own children are still alive. The
+        # process group belongs to this case, so reap those descendants as
+        # well. Everything below stays inside the open-file block: captured
+        # output is read through the descriptors, never through the
+        # stdout/stderr paths, which the target may have replaced with
+        # symlinks to files it cannot read itself.
         try:
-            process.wait(timeout=3)
-        except subprocess.TimeoutExpired as exc:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        except OSError as exc:
             cleanup_error = str(exc)
+        else:
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired as exc:
+                cleanup_error = str(exc)
+        out.seek(0)
+        err.seek(0)
+        stdout_text = out.read().decode("utf-8", errors="replace")[:2_000_000]
+        stderr_text = err.read().decode("utf-8", errors="replace")[:200_000]
     return {
-        "stdout": (directory / "stdout.txt").read_text(errors="replace")[:2_000_000],
-        "stderr": (directory / "stderr.txt").read_text(errors="replace")[:200_000],
+        "stdout": stdout_text,
+        "stderr": stderr_text,
         "exit_code": process.returncode,
         "process_error": reason,
         "duration_ms": round((time.monotonic() - started) * 1000),
