@@ -23,6 +23,26 @@ from .environments import EnvironmentManager
 from .evaluation_store import EvaluationStore, new_id
 from .execution_process import bounded_process
 from .grading_plan import validate_judge_verdict
+
+
+def parse_observed_json(text: str | None) -> Any:
+    """Parse observed stdout as JSON, rejecting non-finite literals.
+
+    Python's default parser accepts the bare ``NaN``/``Infinity``
+    extensions; letting those through would later serialize as invalid
+    JSON and poison the stored run record for every strict parser.
+    """
+
+    if not text:
+        return None
+
+    def reject(token: str) -> Any:
+        raise ValueError(f"non-finite JSON literal: {token}")
+
+    try:
+        return json.loads(text, parse_constant=reject)
+    except ValueError:
+        return None
 from .model_gateway import ModelError
 from .service import WorkspaceError, WorkspaceService
 from .verification import evaluate_checks, evidence_path
@@ -646,10 +666,7 @@ class EvaluationRunner:
                 cancel=cancellation,
             )
             observed["evidence_directory"] = str(working)
-        try:
-            observed["json"] = json.loads(observed["stdout"])
-        except (ValueError, KeyError):
-            observed["json"] = None
+        observed["json"] = parse_observed_json(observed.get("stdout"))
         return observed
 
     def _execute_harbor(

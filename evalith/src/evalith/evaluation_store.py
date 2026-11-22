@@ -13,6 +13,17 @@ def new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:20]}"
 
 
+def encode_record(data: Any) -> str:
+    """Serialize a record body as strict JSON.
+
+    ``allow_nan=False`` guarantees every stored record parses in any
+    strict JSON parser (browsers, jq, export scripts). Non-finite
+    floats raise instead of silently poisoning the record.
+    """
+
+    return json.dumps(data, ensure_ascii=False, allow_nan=False)
+
+
 class EvaluationStore:
     def __init__(self, db: Database):
         self.db = db
@@ -40,7 +51,7 @@ class EvaluationStore:
         record_id = record_id or new_id(kind)
         now = utc_now()
         with self.db.connection() as connection:
-            connection.execute('INSERT INTO evaluation_records VALUES (?,?,?,?,?,?,?)', (record_id, project_id, kind, status, json.dumps(data, ensure_ascii=False), now, now))
+            connection.execute('INSERT INTO evaluation_records VALUES (?,?,?,?,?,?,?)', (record_id, project_id, kind, status, encode_record(data), now, now))
         return self.get(project_id, kind, record_id)
 
     def get(self, project_id: str, kind: str, record_id: str) -> dict[str, Any]:
@@ -92,7 +103,7 @@ class EvaluationStore:
             current = self._record(row)
             changed = change(current)
             data = {k:v for k,v in changed.items() if k not in ('id','project_id','kind','status','created_at','updated_at')}
-            connection.execute('UPDATE evaluation_records SET status=?, data=?, updated_at=? WHERE id=? AND project_id=? AND kind=?', (changed['status'], json.dumps(data, ensure_ascii=False), utc_now(), record_id, project_id, kind))
+            connection.execute('UPDATE evaluation_records SET status=?, data=?, updated_at=? WHERE id=? AND project_id=? AND kind=?', (changed['status'], encode_record(data), utc_now(), record_id, project_id, kind))
         return self.get(project_id, kind, record_id)
 
     def update(self, project_id: str, kind: str, record_id: str, **values: Any) -> dict[str, Any]:
@@ -111,8 +122,8 @@ class EvaluationStore:
                 task_id, version = new_id('task'), 1
             version_id = new_id('ver')
             saved = {**data, 'version':version, 'version_id':version_id, 'task_id':task_id}
-            connection.execute('INSERT INTO evaluation_task_versions VALUES (?,?,?,?,?,?)', (version_id,task_id,project_id,version,json.dumps(saved,ensure_ascii=False),now))
-            encoded = json.dumps(saved,ensure_ascii=False)
+            connection.execute('INSERT INTO evaluation_task_versions VALUES (?,?,?,?,?,?)', (version_id,task_id,project_id,version,encode_record(saved),now))
+            encoded = encode_record(saved)
             if version == 1:
                 connection.execute('INSERT INTO evaluation_records VALUES (?,?,?,?,?,?,?)', (task_id,project_id,'task','active',encoded,now,now))
             else:

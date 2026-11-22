@@ -1,3 +1,6 @@
+# Reference checkout kept beside the repo; never tracked
+rhesis/
+
 # Generated workbench tree and local runtime state
 workbench/.workbench/
 workbench/.workbench/*.env
