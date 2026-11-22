@@ -1081,6 +1081,62 @@ class EvaluationRunner:
         return verification
 
     def _run(self, project_id: str, run_id: str):
+        # The background thread must never die silently: an unexpected
+        # failure below the per-task handlers still settles the run
+        # instead of leaving it stuck in `running`.
+        try:
+            self._run_tasks(project_id, run_id)
+        except BaseException as exc:  # noqa: BLE001 - last-resort guard
+            try:
+                self.finalize_run(
+                    project_id,
+                    run_id,
+                    "failed",
+                    "内部错误：" + self.workspace._scrub_saved_secrets(str(exc))[:2000],
+                    "unknown",
+                )
+            except Exception:  # noqa: BLE001 - storage itself is broken
+                pass
+
+    def finalize_run(
+        self,
+        project_id: str,
+        run_id: str,
+        terminal: str,
+        reason: str | None,
+        cleanup_status: str,
+    ) -> dict[str, Any]:
+        """Settle a run compare-and-swap style.
+
+        A terminal state is never overwritten (restart recovery of a
+        second instance must not resurrect an interrupted run), and a
+        cancellation that landed mid-flight always wins over whatever
+        the worker was about to report.
+        """
+
+        def change(item):
+            current = item["status"]
+            if current in TERMINAL:
+                return item
+            if current == "cancelling" and terminal != "cancelled":
+                return {
+                    **item,
+                    "status": "cancelled",
+                    "error": "用户已中止运行；已保存结果保留",
+                    "finished_at": utc_now(),
+                    "cleanup_status": cleanup_status,
+                }
+            return {
+                **item,
+                "status": terminal,
+                "error": reason,
+                "finished_at": utc_now(),
+                "cleanup_status": cleanup_status,
+            }
+
+        return self.store.mutate(project_id, "run", run_id, change)
+
+    def _run_tasks(self, project_id: str, run_id: str):
         run = self.store.get(project_id, "run", run_id)
         terminal = "completed"
         reason = None
@@ -1206,12 +1262,4 @@ class EvaluationRunner:
                         },
                     )
                 break
-        self.store.update(
-            project_id,
-            "run",
-            run_id,
-            status=terminal,
-            error=reason,
-            finished_at=utc_now(),
-            cleanup_status=cleanup_status,
-        )
+        self.finalize_run(project_id, run_id, terminal, reason, cleanup_status)

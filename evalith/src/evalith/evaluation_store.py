@@ -41,6 +41,11 @@ class EvaluationStore:
                     version INTEGER NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL,
                     UNIQUE(task_id, version)
                 );
+                CREATE TABLE IF NOT EXISTS evaluation_grader_versions (
+                    id TEXT PRIMARY KEY, grader_id TEXT NOT NULL, project_id TEXT NOT NULL,
+                    version INTEGER NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL,
+                    UNIQUE(grader_id, version)
+                );
             ''')
 
     @staticmethod
@@ -129,6 +134,41 @@ class EvaluationStore:
             else:
                 connection.execute("UPDATE evaluation_records SET data=?, updated_at=? WHERE id=? AND project_id=? AND kind='task'", (encoded,now,task_id,project_id))
         return self.get(project_id,'task',task_id)
+
+    def save_grader_versioned(self, project_id: str, data: dict[str, Any], *, grader_id: str | None = None) -> dict[str, Any]:
+        """Write a grader and its immutable version row in one transaction."""
+        now = utc_now()
+        with self.db.connection() as connection:
+            connection.execute('BEGIN IMMEDIATE')
+            if grader_id:
+                row = connection.execute("SELECT status, data FROM evaluation_records WHERE project_id=? AND kind='grader' AND id=?", (project_id, grader_id)).fetchone()
+                if row is None:
+                    raise WorkspaceError('评价标准不存在', status_code=404)
+                version = json.loads(row['data'])['version'] + 1
+                status = row['status']
+            else:
+                grader_id, version, status = new_id('grader'), 1, 'active'
+            version_id = new_id('ver')
+            saved = {**data, 'version': version, 'version_id': version_id}
+            encoded = encode_record(saved)
+            connection.execute('INSERT INTO evaluation_grader_versions VALUES (?,?,?,?,?,?)', (version_id, grader_id, project_id, version, encoded, now))
+            if version == 1:
+                connection.execute('INSERT INTO evaluation_records VALUES (?,?,?,?,?,?,?)', (grader_id, project_id, 'grader', status, encoded, now, now))
+            else:
+                connection.execute("UPDATE evaluation_records SET data=?, updated_at=? WHERE id=? AND project_id=? AND kind='grader'", (encoded, now, grader_id, project_id))
+        return self.get(project_id, 'grader', grader_id)
+
+    def grader_version(self, project_id: str, version_id: str) -> dict[str, Any]:
+        with self.db.connection() as connection:
+            row = connection.execute('SELECT * FROM evaluation_grader_versions WHERE id=? AND project_id=?', (version_id, project_id)).fetchone()
+        if row is None:
+            raise WorkspaceError('评价标准版本不存在', status_code=404, code='evaluation_not_found')
+        return {**json.loads(row['data']), 'id': version_id, 'project_id': project_id, 'grader_id': row['grader_id'], 'created_at': row['created_at']}
+
+    def grader_versions(self, project_id: str, grader_id: str) -> list[dict[str, Any]]:
+        with self.db.connection() as connection:
+            rows = connection.execute('SELECT id FROM evaluation_grader_versions WHERE project_id=? AND grader_id=? ORDER BY version DESC', (project_id, grader_id)).fetchall()
+        return [self.grader_version(project_id, row['id']) for row in rows]
 
     def task_version(self, project_id: str, version_id: str) -> dict[str, Any]:
         with self.db.connection() as connection:

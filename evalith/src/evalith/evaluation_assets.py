@@ -174,9 +174,48 @@ class EvaluationAssets:
             fresh=self.workspace._rescan(project,store_new_snapshot=False)
             if fresh.digest != detail['snapshot']['digest']:
                 raise WorkspaceError('生成期间资料变化，未保存题目；请重新分析',status_code=409,code='source_changed')
-            generation=self.store.create(project_id,'generation',{'model':gateway.name,'usage':gateway.last_usage,'source_snapshot_id':project['snapshot_id'],'direction':direction[:4000]},status='completed')
-            items=[self.store.save_task(project_id,{'definition':definition,'source_snapshot_id':project['snapshot_id'],'source_digest':fresh.digest,'generation_id':generation['id'],'model':gateway.name,'calibration_state':'unverified','preparation_state':'needs_environment','preparation_reasons':['尚未关联并验证运行环境'],'usage':gateway.last_usage}) for definition in definitions]
-            return {'items':items,'generation_id':generation['id'],'usage':gateway.last_usage}
+            # One transaction for the generation and every task: a failure
+            # mid-way must not leave a completed generation with a partial
+            # task set behind.
+            from .evaluation_store import new_id as _new_id
+            generation_id = _new_id('generation')
+            records = [{
+                'id': generation_id,
+                'kind': 'generation',
+                'status': 'completed',
+                'data': {
+                    'model': gateway.name,
+                    'usage': gateway.last_usage,
+                    'source_snapshot_id': project['snapshot_id'],
+                    'direction': direction[:4000],
+                },
+            }]
+            task_ids = []
+            for definition in definitions:
+                task_id, version_id = _new_id('task'), _new_id('ver')
+                task_ids.append(task_id)
+                records.append({
+                    'id': task_id,
+                    'kind': 'task',
+                    'status': 'active',
+                    'data': {
+                        'definition': definition,
+                        'source_snapshot_id': project['snapshot_id'],
+                        'source_digest': fresh.digest,
+                        'generation_id': generation_id,
+                        'model': gateway.name,
+                        'calibration_state': 'unverified',
+                        'preparation_state': 'needs_environment',
+                        'preparation_reasons': ['尚未关联并验证运行环境'],
+                        'usage': gateway.last_usage,
+                        'version': 1,
+                        'version_id': version_id,
+                        'task_id': task_id,
+                    },
+                })
+            self.store.create_bundle(project_id, records)
+            items = [self.store.get(project_id, 'task', task_id) for task_id in task_ids]
+            return {'items': items, 'generation_id': generation_id, 'usage': gateway.last_usage}
 
     def edit(self, project_id: str, task_id: str, raw: dict[str, Any]) -> dict[str, Any]:
         with self.workspace._project_lock(project_id):

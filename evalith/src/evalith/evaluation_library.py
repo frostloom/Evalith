@@ -66,9 +66,12 @@ class EvaluationLibrary:
     def __init__(self, workspace: WorkspaceService, store: EvaluationStore):
         self.workspace, self.store = workspace, store
 
-    def list_graders(self, pid: str):
+    def list_graders(self, pid: str, *, include_archived: bool = False):
         EvaluationAssets(self.workspace, self.store).list(pid)
-        return [g for g in self.store.list(pid, "grader") if g["status"] == "active"]
+        graders = self.store.list(pid, "grader")
+        if include_archived:
+            return graders
+        return [g for g in graders if g["status"] == "active"]
 
     def grader(self, pid: str, identifier: str):
         record = self.store.get(pid, "grader", identifier)
@@ -84,8 +87,15 @@ class EvaluationLibrary:
             old = self.grader(pid, identifier) if identifier else {}
             payload = {
                 **{
+                    # Editing without mentioning a field keeps it: silently
+                    # dropping the judge model would change grading semantics.
                     k: old[k]
-                    for k in ("task_kinds", "source_refs", "uncertainties")
+                    for k in (
+                        "task_kinds",
+                        "source_refs",
+                        "uncertainties",
+                        "model_config_id",
+                    )
                     if k in old
                 },
                 **payload,
@@ -112,23 +122,11 @@ class EvaluationLibrary:
                 for g in existing
             ):
                 raise WorkspaceError("已有同名评价标准", status_code=409)
+            spec = {**spec, "calibration_state": "unverified", "last_calibration_id": None}
             if identifier:
-                old = self.grader(pid, identifier)
-                return self.store.update(
-                    pid,
-                    "grader",
-                    identifier,
-                    **spec,
-                    version=old["version"] + 1,
-                    calibration_state="unverified",
-                    last_calibration_id=None,
-                )
-            return self.store.create(
-                pid,
-                "grader",
-                {**spec, "version": 1, "calibration_state": "unverified"},
-                status="active",
-            )
+                self.grader(pid, identifier)
+                return self.store.save_grader_versioned(pid, spec, grader_id=identifier)
+            return self.store.save_grader_versioned(pid, spec)
 
     def list_sets(self, pid: str):
         tasks = EvaluationAssets(self.workspace, self.store).list(pid)
@@ -217,12 +215,22 @@ def install_library_routes(
     app.state.evaluation_library = library
 
     @app.get("/api/projects/{pid}/graders")
-    def graders(pid: str):
-        return {"items": library.list_graders(pid)}
+    def graders(pid: str, include_archived: int = 0):
+        return {
+            "items": library.list_graders(
+                pid, include_archived=bool(include_archived)
+            )
+        }
 
     @app.get("/api/projects/{pid}/graders/{gid}")
     def grader(pid: str, gid: str):
-        return library.grader(pid, gid)
+        # Read-only: archived graders stay visible for audit; editing
+        # still goes through library.grader's active check.
+        return store.get(pid, "grader", gid)
+
+    @app.get("/api/projects/{pid}/graders/{gid}/versions")
+    def grader_versions(pid: str, gid: str):
+        return {"items": store.grader_versions(pid, gid)}
 
     @app.post("/api/projects/{pid}/graders", status_code=201)
     def add_grader(pid: str, payload: dict[str, Any]):
