@@ -131,10 +131,13 @@ def install_evaluation_routes(app: FastAPI, workspace: WorkspaceService) -> None
         )
 
     @app.get("/api/projects/{project_id}/runs")
-    def run_list(project_id: str):
+    def run_list(project_id: str, limit: int = 200):
         workspace.db.get_project(project_id)
         return {
-            "items": [runner.public(item) for item in store.list(project_id, "run")]
+            "items": [
+                runner.public(runner.summary(item))
+                for item in store.list(project_id, "run", limit=limit)
+            ]
         }
 
     @app.post("/api/projects/{project_id}/runs", status_code=202)

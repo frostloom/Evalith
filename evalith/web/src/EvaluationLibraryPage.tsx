@@ -261,6 +261,7 @@ export function EvaluationLibraryPage({
             setEdit(undefined);
             await refresh();
           }}
+          onCalibrationDone={refresh}
         />
       )}
       {editSet !== undefined && (
@@ -287,6 +288,7 @@ function StandardForm({
   defaultModel,
   onClose,
   onSaved,
+  onCalibrationDone,
 }: {
   projectId: string;
   value: Grader | null;
@@ -295,6 +297,9 @@ function StandardForm({
   defaultModel: string | null;
   onClose: () => void;
   onSaved: () => Promise<void>;
+  /** Calibration finishing refreshes data without closing this dialog:
+   * the fresh report is shown right here, not lost behind a close. */
+  onCalibrationDone: () => Promise<void>;
 }) {
   const [draft, setDraft] = useState<GraderDefinition>(
     value
@@ -639,7 +644,7 @@ function StandardForm({
               projectId={projectId}
               grader={value}
               models={models}
-              onSaved={onSaved}
+              onSaved={onCalibrationDone}
             />
           )}
         </div>

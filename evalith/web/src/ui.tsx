@@ -1,5 +1,5 @@
 import { X as CloseRounded } from "lucide-react";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { Component, useEffect, useId, useRef, type ReactNode } from "react";
 import { Button, Drawer, Input, Modal, Select } from "antd";
 import { ThemeToggle, ui } from "./theme";
 
@@ -296,4 +296,42 @@ export function EvalithMark() {
       <path d="M4 4h16v4H8v2h10v4H8v2h12v4H4V4Z" fill="currentColor" />
     </svg>
   );
+}
+
+
+interface ErrorBoundaryState {
+  message: string | null;
+}
+
+/**
+ * Last-resort render guard: a malformed model payload reaching any page
+ * degrades to a readable error card instead of a blank screen.
+ */
+export class ErrorBoundary extends Component<
+  { children: ReactNode },
+  ErrorBoundaryState
+> {
+  state: ErrorBoundaryState = { message: null };
+
+  static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
+    return {
+      message:
+        error instanceof Error ? error.message : "界面渲染出现未知错误",
+    };
+  }
+
+  render() {
+    if (this.state.message !== null) {
+      return (
+        <div role="alert" className="error-boundary">
+          <h2>界面渲染中断</h2>
+          <p>{this.state.message}</p>
+          <button type="button" onClick={() => window.location.reload()}>
+            重新加载
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }

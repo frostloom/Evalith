@@ -125,3 +125,79 @@ it("explains bound graders before editing a generated task's fallback rules", as
     screen.getByText(/修改 Rubric 或检查后，新版本会改用内置规则/),
   ).toBeVisible();
 });
+
+it("does not show generation progress for an active calibration job (review F2)", async () => {
+  mock.jobs.mockResolvedValue({
+    items: [
+      {
+        id: "job-cal",
+        status: "running",
+        operation: "calibration",
+        error: null,
+      },
+    ],
+  });
+  render(
+    <EvaluationWorkspace detail={detail} section="tasks" onSection={vi.fn()} />,
+  );
+  await screen.findByRole("button", { name: "查看题目 余额查询" });
+  expect(
+    screen.queryByText(/正在生成/),
+  ).toBeNull();
+  expect(
+    screen.queryByText(/题目生成失败/),
+  ).toBeNull();
+});
+
+it("still shows generation progress for an active preparation job (review F2)", async () => {
+  mock.jobs.mockResolvedValue({
+    items: [
+      {
+        id: "job-prep",
+        status: "running",
+        operation: "preparation",
+        count: 4,
+        error: null,
+      },
+    ],
+  });
+  render(
+    <EvaluationWorkspace detail={detail} section="tasks" onSection={vi.fn()} />,
+  );
+  expect(await screen.findByText(/正在生成 4 道题目/)).toBeTruthy();
+});
+
+it("clears the task selection when the test set changes (review F3)", async () => {
+  const user = userEvent.setup();
+  const firstSet = {
+    id: "set-1",
+    name: "第一批",
+    description: "",
+    status: "active",
+    task_ids: ["t1"],
+    grader_ids: [],
+    created_at: "2026-11-11T00:00:00Z",
+  };
+  const { rerender } = render(
+    <EvaluationWorkspace
+      detail={detail}
+      section="tasks"
+      collection={firstSet}
+      onSection={vi.fn()}
+    />,
+  );
+  const box = await screen.findByRole("checkbox", { name: /选择题目 余额查询/ });
+  expect((box as HTMLInputElement).checked).toBe(false);
+  await user.click(box);
+  expect((box as HTMLInputElement).checked).toBe(true);
+  rerender(
+    <EvaluationWorkspace
+      detail={detail}
+      section="tasks"
+      collection={{ ...firstSet, id: "set-2", name: "第二批" }}
+      onSection={vi.fn()}
+    />,
+  );
+  const after = screen.getByRole("checkbox", { name: /选择题目 余额查询/ });
+  expect((after as HTMLInputElement).checked).toBe(false);
+});

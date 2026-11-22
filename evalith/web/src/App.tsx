@@ -22,7 +22,7 @@ import type { TestSet } from "./evaluationTypes";
 import { EvaluationWorkspace } from "./EvaluationWorkspace";
 import { Workspace } from "./Workspace";
 import { Navigation } from "./Navigation";
-import { PageHeader } from "./ui";
+import { ErrorBoundary, PageHeader } from "./ui";
 import { AppThemeProvider } from "./theme";
 import {
   Alert,
@@ -42,9 +42,11 @@ function compactPath(value: string): string {
 
 export function App() {
   return (
-    <AppThemeProvider>
-      <AppContent />
-    </AppThemeProvider>
+    <ErrorBoundary>
+      <AppThemeProvider>
+        <AppContent />
+      </AppThemeProvider>
+    </ErrorBoundary>
   );
 }
 

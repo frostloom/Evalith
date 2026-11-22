@@ -349,10 +349,34 @@ class EvaluationRunner:
         ).hexdigest()
 
     def cancelled(self, project_id: str, run_id: str) -> bool:
-        return self.store.get(project_id, "run", run_id)["status"] in {
-            "cancelling",
-            "cancelled",
+        status = self.store.status_of(project_id, "run", run_id)
+        return status in {"cancelling", "cancelled"}
+
+    @staticmethod
+    def summary(record: dict[str, Any]) -> dict[str, Any]:
+        """Project a run for list endpoints.
+
+        Observations and task definitions dominate record size and are
+        exactly what per-run detail endpoints exist for; lists carry
+        identity rows only.
+        """
+        slim = {
+            key: value
+            for key, value in record.items()
+            if key not in ("results", "tasks", "calls", "grading_plan")
         }
+        slim["results"] = [
+            {
+                "id": result.get("id"),
+                "task_id": (result.get("task") or {}).get("task_id"),
+                "status": result.get("status"),
+                "score": result.get("score"),
+                "error": result.get("error"),
+            }
+            for result in record.get("results", [])
+        ]
+        slim["result_count"] = len(slim["results"])
+        return slim
 
     def rejudge(self, project_id: str, run_id: str) -> dict[str, Any]:
         """Re-run grading for unscored results of a finished run.

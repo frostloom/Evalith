@@ -97,18 +97,41 @@ export function EvaluationWorkspace({
     setJobs(j.items);
     setLoaded(true);
   }, [pid]);
+  const busyRef = useRef(false);
+  const activeWorkRef = useRef(true);
   useEffect(() => {
     let gone = false;
-    const load = () =>
-      refresh().catch((e) => {
-        if (!gone)
-          setLoadError(e instanceof Error ? e.message : "无法加载评测数据");
-      });
+    const load = () => {
+      // Re-entrancy guard: a slow response must never overwrite newer
+      // state when it finally lands.
+      if (busyRef.current) return;
+      busyRef.current = true;
+      refresh()
+        .catch((e) => {
+          if (!gone)
+            setLoadError(e instanceof Error ? e.message : "无法加载评测数据");
+        })
+        .finally(() => {
+          busyRef.current = false;
+        });
+    };
     void load();
-    const timer = window.setInterval(() => void load(), 3000);
+    // Polling cost scales with run history, so the cadence follows the
+    // work: fast while something is running, slow while idle, and never
+    // in a hidden tab (visibility resumes with an immediate load).
+    const tick = () => {
+      if (document.hidden) return;
+      load();
+    };
+    const onVisible = () => {
+      if (!document.hidden) load();
+    };
+    const timer = window.setInterval(tick, activeWorkRef.current ? 3000 : 15000);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       gone = true;
       window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [refresh]);
   const act = async (action: () => Promise<unknown>) => {
@@ -126,6 +149,14 @@ export function EvaluationWorkspace({
   const scopedTasks = collection
     ? tasks.filter((t) => collection.task_ids.includes(t.id))
     : tasks;
+  // A selection belongs to its test set: switching sets (or leaving one)
+  // clears it, so a later run can never mix tasks across sets.
+  const collectionId = collection?.id ?? null;
+  const lastCollectionRef = useRef<string | null>(collectionId);
+  if (lastCollectionRef.current !== collectionId) {
+    lastCollectionRef.current = collectionId;
+    if (selected.length) setSelected([]);
+  }
   const shown = scopedTasks.filter(
     (t) =>
       (category === "all" || t.definition.category === category) &&
@@ -134,7 +165,14 @@ export function EvaluationWorkspace({
         .includes(query.toLowerCase()),
   );
   const run = runs.find((r) => r.id === runId) ?? runs[0];
-  const generation = jobs.find((j) => active(j.status));
+  // Calibration jobs share the job table; they must never pose as
+  // generation work on the tasks page.
+  const generationJobs = jobs.filter((j) => j.operation !== "calibration");
+  const generation = generationJobs.find((j) => active(j.status));
+  activeWorkRef.current =
+    runs.some((r) => active(r.status)) ||
+    jobs.some((j) => active(j.status)) ||
+    analyses.some((a) => active(a.status));
   const selectedTasks = tasks.filter((t) => selected.includes(t.id));
   const selectedResult =
     (result && run?.results.find((r) => r.id === result.id)) || null;
@@ -255,16 +293,18 @@ export function EvaluationWorkspace({
             </div>
           </div>
         )}
-        {section === "tasks" && !generation && jobs[0]?.status === "failed" && (
-          <Alert
-            type="error"
-            message={`题目生成失败：${jobs[0].error}`}
-          />
-        )}
         {section === "tasks" &&
           !generation &&
-          jobs[0]?.status === "completed" &&
-          jobs[0].operation === "preparation" && (
+          generationJobs[0]?.status === "failed" && (
+            <Alert
+              type="error"
+              message={`题目生成失败：${generationJobs[0].error}`}
+            />
+          )}
+        {section === "tasks" &&
+          !generation &&
+          generationJobs[0]?.status === "completed" &&
+          generationJobs[0].operation === "preparation" && (
             <Alert
               type="success"
               action={

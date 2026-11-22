@@ -94,10 +94,25 @@ class EvaluationStore:
                         (data["version_id"], record["id"], project_id, 1, encoded, now),
                     )
 
-    def list(self, project_id: str, kind: str) -> list[dict[str, Any]]:
+    def list(self, project_id: str, kind: str, *, limit: int = 200) -> list[dict[str, Any]]:
+        if not 1 <= limit <= 1000:
+            raise WorkspaceError('limit 必须在 1–1000 之间', status_code=422)
         with self.db.connection() as connection:
-            rows = connection.execute('SELECT * FROM evaluation_records WHERE project_id=? AND kind=? ORDER BY rowid DESC LIMIT 200', (project_id, kind)).fetchall()
+            rows = connection.execute('SELECT * FROM evaluation_records WHERE project_id=? AND kind=? ORDER BY rowid DESC LIMIT ?', (project_id, kind, limit)).fetchall()
         return [self._record(row) for row in rows]
+
+    def status_of(self, project_id: str, kind: str, record_id: str) -> str | None:
+        """Read one status column without decoding the record body.
+
+        Cancellation polling runs twenty times a second against records
+        whose bodies can grow to megabytes; it only ever needs this.
+        """
+        with self.db.connection() as connection:
+            row = connection.execute(
+                'SELECT status FROM evaluation_records WHERE id=? AND project_id=? AND kind=?',
+                (record_id, project_id, kind),
+            ).fetchone()
+        return None if row is None else row['status']
 
     def mutate(self, project_id: str, kind: str, record_id: str, change: Callable[[dict[str, Any]], dict[str, Any]]) -> dict[str, Any]:
         with self.db.connection() as connection:
