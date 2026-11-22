@@ -216,12 +216,22 @@ def test_grader_uncertainties_reach_the_actual_judge_criteria(
     pid, store, library, runner, payload, _first, _other = configured(
         client, project_root
     )
+    real = client.post(
+        "/api/model-configs",
+        json={
+            "name": "judge svc",
+            "provider": "openai_compatible",
+            "base_url": "http://127.0.0.1:9/v1",
+            "model_name": "gpt-test",
+        },
+    ).json()
     grader = library.save_grader(
         pid,
         {
             "name": "Unconfirmed rule",
             "rubric": "Only use observed facts",
             "check": {"type": "judge", "expected": "Read actual output"},
+            "model_config_id": real["id"],
             "uncertainties": ["Overdraft policy is unconfirmed"],
         },
     )

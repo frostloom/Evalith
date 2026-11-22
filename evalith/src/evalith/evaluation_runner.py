@@ -227,6 +227,43 @@ class EvaluationRunner:
             if task["definition"]["kind"] == "conversation"
             and task["definition"]["input"].get("adaptive")
         ]
+
+        def _stub_issue(role_label: str, gateway) -> str | None:
+            if gateway.config is not None and gateway.config.provider == "stub":
+                return (
+                    f"{role_label}使用离线演示模型，无法真实评分；"
+                    "请先在模型配置中添加 OpenAI 兼容服务模型"
+                )
+            return None
+
+        # Runs that structurally need scoring must fail before the target
+        # executes — not at the most expensive moment. Preview surfaces
+        # these as warnings; start refuses.
+        judge_checks = [
+            check
+            for plan_task in grading_plan["tasks"]
+            for check in plan_task["checks"]
+            if check.get("type") == "judge"
+        ]
+        # The base judge role is only consulted for judge checks that do
+        # not carry a grader binding; grader-bound checks use their own.
+        roles: list[tuple[str, str]] = []
+        if any(check.get("grader_id") is None for check in judge_checks):
+            roles.append(("judge", "判分模型"))
+        roles += [
+            ("grader_" + grader["id"], f"评价标准「{grader['name']}」的判分模型")
+            for grader in graders
+            if grader["check"]["type"] == "judge"
+        ]
+        stub_rejections: list[str] = []
+        for role_key, role_label in roles:
+            # Unapplied graders have no role in the run's model table.
+            if role_key in models:
+                issue = _stub_issue(
+                    role_label, self.workspace.gateway_for(models[role_key]["id"])
+                )
+                if issue:
+                    stub_rejections.append(issue)
         if adaptive_tasks:
             if env["adapter"] != "aigateway_go":
                 raise WorkspaceError(
@@ -298,16 +335,34 @@ class EvaluationRunner:
                 status_code=409,
                 code="grading_plan_changed",
             )
-        return {**plan, "plan_digest": digest}
+        return {**plan, "plan_digest": digest, "_stub_rejections": stub_rejections}
 
     def preview(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        return self.public(self._plan(project_id, payload))
+        plan = self._plan(project_id, payload)
+        return self.public({**plan, "warnings": self._warnings(plan)})
+
+    @staticmethod
+    def _warnings(plan: dict[str, Any]) -> list[str]:
+        warnings: list[str] = plan.get("_stub_rejections", [])
+        # budget_usd today means "refuse every model call": with unknown
+        # real costs the first scoring call already stops the batch. The
+        # user sees that trap at preview time, not after the target ran.
+        if plan["budget"].get("budget_usd") is not None:
+            warnings.append(
+                "金额费用未知，无法保证金额上限：本次运行将在第一次模型调用前停止，全部结果不可评分"
+            )
+        return warnings
 
     def start(
         self, project_id: str, payload: dict[str, Any], *, background: bool = True
     ) -> dict[str, Any]:
         with self.workspace._project_lock(project_id):
             plan = self._plan(project_id, payload)
+            rejections = plan.get("_stub_rejections") or []
+            if rejections:
+                raise WorkspaceError(
+                    rejections[0], status_code=422, code="stub_model_unusable"
+                )
             record = self.store.create(
                 project_id,
                 "run",
@@ -892,19 +947,33 @@ class EvaluationRunner:
             "--yes",
             "--quiet",
         ]
+        # The watchdog must outlive what the task itself declares: an image
+        # build alone may take the full build_timeout_sec on a cold cache,
+        # before agent and verifier seconds even start. Killing the CLI
+        # earlier misreads a cold build as an execution failure.
+        watchdog = max(300 + 3 * timeout, 900 + 2 * timeout + 120)
         observed = bounded_process(
             arguments,
             harbor_root / "run",
-            timeout=300 + 3 * timeout,
+            timeout=watchdog,
             cancel=cancellation,
             unsandboxed=True,
         )
         if observed["exit_code"] != 0:
+            # killpg only reaches the CLI: the containers it orchestrated
+            # belong to Docker and keep running to their own timeouts, so a
+            # forced termination can never honestly report cleanup completed.
+            caveat = (
+                "；Harbor CLI 被强制终止，容器由 Docker 托管可能仍在运行，请用 docker ps 检查清理"
+                if observed.get("process_error")
+                else ""
+            )
             raise WorkspaceError(
                 "Harbor 运行失败（exit "
                 + str(observed["exit_code"])
                 + "）："
-                + observed["stderr"][-300:].strip(),
+                + observed["stderr"][-300:].strip()
+                + caveat,
                 status_code=422,
                 code="harbor_run_failed",
             )

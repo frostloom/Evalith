@@ -115,7 +115,18 @@ def test_run_freezes_standard_threshold_model_and_rubric(
 ):
     pid, model, ws, store, task = setup(client, project_root)
     base = f"/api/projects/{pid}"
-    standard = client.post(base + "/graders", json=grader(model)).json()
+    real = client.post(
+        "/api/model-configs",
+        json={
+            "name": "judge svc",
+            "provider": "openai_compatible",
+            "base_url": "http://127.0.0.1:9/v1",
+            "model_name": "gpt-test",
+        },
+    ).json()
+    standard = client.post(
+        base + "/graders", json={**grader(model), "model_config_id": real["id"]}
+    ).json()
     assert "id" in standard, standard
     env = store.create(
         pid,

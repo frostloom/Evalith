@@ -124,7 +124,12 @@ def test_matched_samples_mark_grader_calibrated_and_edit_resets(
         f"/api/projects/{pid}/calibrations/{job['result']['calibration_id']}"
     ).json()
     assert report["grader_version"] == grader["version"]
-    assert report["summary"] == {"total": 2, "matched": 2}
+    assert report["summary"] == {
+        "total": 2,
+        "matched": 2,
+        "expected_mix": {"pass": 1, "fail": 1},
+        "sufficient": False,  # two samples: mixed but below three
+    }
     assert all(sample["matched"] for sample in report["samples"])
     assert report["model_config_id"] == model["id"]
 

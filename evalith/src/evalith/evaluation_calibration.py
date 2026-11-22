@@ -45,6 +45,28 @@ class CalibrationRequest(BaseModel):
         return self
 
 
+def build_summary(samples: list[dict[str, Any]]) -> dict[str, Any]:
+    """Evidence base for a calibration verdict.
+
+    "Calibrated" must say what it rests on: how many samples, which
+    expected outcomes they mixed, and whether that base is enough to
+    mean anything (at least three samples over at least two distinct
+    outcomes).
+    """
+
+    mix: dict[str, int] = {}
+    for sample in samples:
+        key = str(sample.get("expected", "unknown"))
+        mix[key] = mix.get(key, 0) + 1
+    matched = sum(1 for item in samples if item.get("matched"))
+    return {
+        "total": len(samples),
+        "matched": matched,
+        "expected_mix": mix,
+        "sufficient": len(samples) >= 3 and len(mix) >= 2,
+    }
+
+
 class EvaluationCalibration:
     def __init__(self, workspace: WorkspaceService, store: EvaluationStore):
         self.workspace, self.store = workspace, store
@@ -220,7 +242,7 @@ class EvaluationCalibration:
                     "model_config_id": model_id,
                     "model": gateway.name,
                     "samples": samples,
-                    "summary": {"total": len(samples), "matched": matched},
+                    "summary": build_summary(samples),
                     "state": state,
                     "stale": stale,
                     "usage": {

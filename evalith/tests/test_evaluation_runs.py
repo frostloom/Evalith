@@ -332,6 +332,15 @@ def test_scoring_failure_preserves_checks_and_does_not_erase_later_cases(
     from evalith.model_gateway import ModelError
 
     pid, ws, store, assets, envs = fixture(client, project_root)
+    real = client.post(
+        "/api/model-configs",
+        json={
+            "name": "judge svc",
+            "provider": "openai_compatible",
+            "base_url": "http://127.0.0.1:9/v1",
+            "model_name": "gpt-test",
+        },
+    ).json()
     one = assets.add(
         pid,
         {
@@ -372,6 +381,7 @@ def test_scoring_failure_preserves_checks_and_does_not_erase_later_cases(
         {
             "environment_id": env["id"],
             "version_ids": [one["version_id"], two["version_id"]],
+            "judge_model_config_id": real["id"],
         },
         background=False,
     )
