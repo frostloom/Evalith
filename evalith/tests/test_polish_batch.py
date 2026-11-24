@@ -75,7 +75,12 @@ class TestHarborWatchdog:
 
 
 class TestBudgetWarning:
-    def test_preview_warns_when_budget_usd_is_set(self, client, project_root):
+    def test_preview_warns_when_budget_usd_is_set(
+        self, client, project_root, monkeypatch
+    ):
+        monkeypatch.setattr(
+            "evalith.environments.sandbox_available", lambda: True
+        )
         pid, model = seeded(client, project_root)
         env = client.post(
             "/api/executor-configs",
@@ -160,7 +165,12 @@ class TestCalibrationEvidenceBase:
 
 
 class TestPlanRejectsStubScoring:
-    def test_stub_judge_with_judge_checks_refused(self, client, project_root):
+    def test_stub_judge_with_judge_checks_refused(
+        self, client, project_root, monkeypatch
+    ):
+        monkeypatch.setattr(
+            "evalith.environments.sandbox_available", lambda: True
+        )
         pid, model = seeded(client, project_root)
         store = EvaluationStore(client.app.state.db)
         task = client.post(
