@@ -7,6 +7,7 @@ from selected ai-gateway files, with line-level citations. No model is called.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from datetime import datetime, timezone
@@ -81,12 +82,22 @@ def build():
         'task success must be verified against the database/ledger/orders, not the model self-report',
     ]
 
+    file_hashes = {
+        path: hashlib.sha256((AI_GATEWAY / path).read_bytes()).hexdigest()
+        for path in READ_FILES
+    }
+    scope_digest = hashlib.sha256(
+        '\n'.join(f'{path}:{file_hashes[path]}' for path in sorted(file_hashes)).encode('utf-8')
+    ).hexdigest()
+
     return {
         'project': 'ai-gateway customer service',
         'generated_at': datetime.now(timezone.utc).isoformat(timespec='seconds'),
         'scope': {
             'read_only': True,
             'read_files': READ_FILES,
+            'file_hashes': file_hashes,
+            'scope_digest': scope_digest,
             'excluded': ['.env', '.git', 'node_modules', 'secrets/'],
             'max_files': 400,
             'max_context_chars': 24000,

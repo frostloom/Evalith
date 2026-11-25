@@ -57,12 +57,19 @@ def source_block(tools, headings, facts):
     doc_refs = [ref for ref in (_doc_ref(heading) for heading in headings) if ref]
     source_refs = [f"{ref['path']}:{ref['line']}" for ref in code_refs]
     source_refs += [f"{ref['path']}#{ref['heading']}" for ref in doc_refs]
+    files = sorted({ref['path'] for ref in code_refs + doc_refs})
+    materials = [
+        {'path': path, 'sha256': ANALYSIS['scope']['file_hashes'][path]}
+        for path in files
+        if path in ANALYSIS['scope']['file_hashes']
+    ]
     return source_refs, {
         'code_refs': code_refs,
         'doc_refs': doc_refs,
         'facts': facts,
+        'scope_digest': ANALYSIS['scope']['scope_digest'],
         'generated_from': 'source_analysis.json',
-    }
+    }, materials
 
 
 def task(
@@ -80,7 +87,7 @@ def task(
     headings=None,
     facts=None,
 ):
-    source_refs, source_analysis = source_block(
+    source_refs, source_analysis, materials = source_block(
         tools or ['get_balance'],
         headings or ['3.'],
         facts or [],
@@ -107,7 +114,7 @@ def task(
         'pass_threshold': threshold,
         'source_refs': source_refs,
         'origin': 'fact',
-        'materials': [{'path': item, 'sha256': ''} for item in source_refs],
+        'materials': materials,
         'metadata': {
             'uncertainties': [],
             'source_analysis': source_analysis,

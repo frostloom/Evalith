@@ -1,6 +1,6 @@
 {
   "project": "ai-gateway customer service",
-  "generated_at": "2026-11-25T09:29:29+00:00",
+  "generated_at": "2026-11-25T11:18:00+00:00",
   "scope": {
     "read_only": true,
     "read_files": [
@@ -10,6 +10,14 @@
       "docs/customer-service-evaluation-contract-2026-10-09.md",
       "docs/customer-service-task-definitions-2026-10-12.md"
     ],
+    "file_hashes": {
+      "internal/agent/tools.go": "84331774cba87438e12c4c78b8f74d07d742d7e1aab184c2a4487106c8712e5c",
+      "internal/agent/chat.go": "aec3532c3bc0319bbf12487e9c67da6ccc078681b78dd57c994f8ee9ea8da9ac",
+      "internal/billing/store/plan.go": "1f2487b2083c4c998e232002fad74b391f7c05667a1c7901de44d58b1b9dd60b",
+      "docs/customer-service-evaluation-contract-2026-10-09.md": "e28eef7a725baa8bcb19704940f6dea9be9d34ec669ad98f88f0bffc34a78437",
+      "docs/customer-service-task-definitions-2026-10-12.md": "455e74cb09e960c618bccc99ebab1055cfb00b9fa8b189406c420a332608c549"
+    },
+    "scope_digest": "4495b7c1e85a3779aaad5c3e8fd12fe76803e939090cdb24afdf903101f6bf7d",
     "excluded": [
       ".env",
       ".git",
