@@ -42,3 +42,18 @@ python examples/aigateway/evalscope/build_eval_set.py
 - 演示使用 `mock_llm.py` 的可预测回复；接真实 DeepSeek 后结果会更真实，但不再完全确定。
 - Evalith 的 `exit_code`/`json_equals` 检查暂未映射到 EvalScope，导出时会记入
   `metadata.unsupported_checks`。
+
+## EvalScope 补丁
+
+`evalscope-project-eval-219d4bcc.patch` 是针对 `modelscope/evalscope` 提交
+`219d4bcc` 的完整补丁，包含薄核心、adapter、服务 API、Eval Sets 页面、
+rubric 证据面板、测试和文档。
+
+```bash
+cd /path/to/evalscope
+git checkout 219d4bcc
+git apply /path/to/Evalith/examples/aigateway/evalscope/evalscope-project-eval-219d4bcc.patch
+```
+
+补丁已用 `git apply --check --reverse` 对当前 EvalScope 工作区校验过；应用后运行
+`tests/project_eval` 和 `tests/service/test_project_eval_api.py`。
