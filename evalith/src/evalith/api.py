@@ -311,6 +311,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from .evaluation_api import install_evaluation_routes
     install_evaluation_routes(app,service)
 
+    from .integrations.evalscope.api import install_evalscope_routes
+    install_evalscope_routes(app, service, executors, settings.export_root)
+
     # ------------------------------------------------------------------
     # static UI
     # ------------------------------------------------------------------

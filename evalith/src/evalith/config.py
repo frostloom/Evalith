@@ -51,6 +51,9 @@ class Settings:
     #: mount translation is a later-phase deliverable, not a configured path.
     access_mode: str = "host"
     static_dir: Path | None = None
+    #: Directory EvalScope export files are written under. Defaults inside the
+    #: gitignored data directory so exports never land in source trees.
+    export_root: Path | None = None
     #: Host header allowlist for the loopback-only local service.  DNS
     #: rebinding sends the attacker hostname as Host/Origin, so rejecting
     #: non-loopback hosts is required even without authentication.
@@ -66,6 +69,9 @@ class Settings:
             if not candidate.exists():
                 candidate = Path(__file__).resolve().parents[2] / "web" / "dist"
             self.static_dir = candidate
+        if self.export_root is None:
+            self.export_root = self.data_dir / "exports"
+        self.export_root = Path(self.export_root).expanduser().resolve()
 
     def ensure_dirs(self) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -92,6 +98,9 @@ def settings_from_env() -> Settings:
         ).strip().lower()
         in ("1", "true", "yes"),
         access_mode=os.environ.get("EVALITH_ACCESS_MODE", "host"),
+        export_root=Path(os.environ["EVALITH_EXPORT_ROOT"])
+        if os.environ.get("EVALITH_EXPORT_ROOT")
+        else None,
         allowed_hosts=tuple(
             item.strip().lower()
             for item in os.environ.get("EVALITH_ALLOWED_HOSTS", "").split(",")

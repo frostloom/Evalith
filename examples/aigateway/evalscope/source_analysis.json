@@ -1,0 +1,203 @@
+{
+  "project": "ai-gateway customer service",
+  "generated_at": "2026-11-25T09:29:29+00:00",
+  "scope": {
+    "read_only": true,
+    "read_files": [
+      "internal/agent/tools.go",
+      "internal/agent/chat.go",
+      "internal/billing/store/plan.go",
+      "docs/customer-service-evaluation-contract-2026-10-09.md",
+      "docs/customer-service-task-definitions-2026-10-12.md"
+    ],
+    "excluded": [
+      ".env",
+      ".git",
+      "node_modules",
+      "secrets/"
+    ],
+    "max_files": 400,
+    "max_context_chars": 24000
+  },
+  "code_refs": [
+    {
+      "path": "internal/agent/tools.go",
+      "line": 224,
+      "fact": "tool `get_balance` is registered in the customer-service toolbox"
+    },
+    {
+      "path": "internal/agent/tools.go",
+      "line": 243,
+      "fact": "tool `get_consumption` is registered in the customer-service toolbox"
+    },
+    {
+      "path": "internal/agent/tools.go",
+      "line": 269,
+      "fact": "tool `get_recent_bills` is registered in the customer-service toolbox"
+    },
+    {
+      "path": "internal/agent/tools.go",
+      "line": 331,
+      "fact": "tool `list_plans` is registered in the customer-service toolbox"
+    },
+    {
+      "path": "internal/agent/tools.go",
+      "line": 360,
+      "fact": "tool `get_my_subscription` is registered in the customer-service toolbox"
+    },
+    {
+      "path": "internal/agent/tools.go",
+      "line": 425,
+      "fact": "tool `list_models` is registered in the customer-service toolbox"
+    },
+    {
+      "path": "internal/agent/tools.go",
+      "line": 467,
+      "fact": "tool `recharge` is registered in the customer-service toolbox"
+    },
+    {
+      "path": "internal/agent/tools.go",
+      "line": 484,
+      "fact": "tool `refund_recharge` is registered in the customer-service toolbox"
+    },
+    {
+      "path": "internal/agent/tools.go",
+      "line": 553,
+      "fact": "tool `subscribe_plan` is registered in the customer-service toolbox"
+    },
+    {
+      "path": "internal/agent/tools.go",
+      "line": 568,
+      "fact": "tool `change_plan` is registered in the customer-service toolbox"
+    },
+    {
+      "path": "internal/agent/tools.go",
+      "line": 583,
+      "fact": "tool `cancel_subscription` is registered in the customer-service toolbox"
+    },
+    {
+      "path": "internal/agent/chat.go",
+      "line": 42,
+      "fact": "tool trace items expose tool/args/confirmed/preview/result"
+    },
+    {
+      "path": "internal/agent/chat.go",
+      "line": 38,
+      "fact": "write tools can leave a pending action awaiting confirmation"
+    },
+    {
+      "path": "internal/billing/store/plan.go",
+      "line": 183,
+      "fact": "AgentAuditLog records session, tool, args, confirmed and result"
+    }
+  ],
+  "doc_refs": [
+    {
+      "path": "docs/customer-service-evaluation-contract-2026-10-09.md",
+      "line": 10,
+      "heading": "1. 核心问题与版本定义",
+      "fact": "policy/task section: 1. 核心问题与版本定义"
+    },
+    {
+      "path": "docs/customer-service-evaluation-contract-2026-10-09.md",
+      "line": 28,
+      "heading": "2. 高置信不是直接执行授权",
+      "fact": "policy/task section: 2. 高置信不是直接执行授权"
+    },
+    {
+      "path": "docs/customer-service-evaluation-contract-2026-10-09.md",
+      "line": 47,
+      "heading": "3. 每种输入的正确下一步",
+      "fact": "policy/task section: 3. 每种输入的正确下一步"
+    },
+    {
+      "path": "docs/customer-service-evaluation-contract-2026-10-09.md",
+      "line": 67,
+      "heading": "4. 写操作复核与确认规则（两版本完全一致）",
+      "fact": "policy/task section: 4. 写操作复核与确认规则（两版本完全一致）"
+    },
+    {
+      "path": "docs/customer-service-evaluation-contract-2026-10-09.md",
+      "line": 75,
+      "heading": "5. 主评分单位：一个完整任务",
+      "fact": "policy/task section: 5. 主评分单位：一个完整任务"
+    },
+    {
+      "path": "docs/customer-service-evaluation-contract-2026-10-09.md",
+      "line": 87,
+      "heading": "6. 指标和分母",
+      "fact": "policy/task section: 6. 指标和分母"
+    },
+    {
+      "path": "docs/customer-service-evaluation-contract-2026-10-09.md",
+      "line": 111,
+      "heading": "7. 对照实验矩阵与简洁回复",
+      "fact": "policy/task section: 7. 对照实验矩阵与简洁回复"
+    },
+    {
+      "path": "docs/customer-service-evaluation-contract-2026-10-09.md",
+      "line": 123,
+      "heading": "8. 1220案例的保留与迁移",
+      "fact": "policy/task section: 8. 1220案例的保留与迁移"
+    },
+    {
+      "path": "docs/customer-service-evaluation-contract-2026-10-09.md",
+      "line": 135,
+      "heading": "9. 验收顺序与当前差距",
+      "fact": "policy/task section: 9. 验收顺序与当前差距"
+    },
+    {
+      "path": "docs/customer-service-task-definitions-2026-10-12.md",
+      "line": 7,
+      "heading": "覆盖范围",
+      "fact": "policy/task section: 覆盖范围"
+    },
+    {
+      "path": "docs/customer-service-task-definitions-2026-10-12.md",
+      "line": 24,
+      "heading": "文件与运行边界",
+      "fact": "policy/task section: 文件与运行边界"
+    },
+    {
+      "path": "docs/customer-service-task-definitions-2026-10-12.md",
+      "line": 33,
+      "heading": "具体断言",
+      "fact": "policy/task section: 具体断言"
+    },
+    {
+      "path": "docs/customer-service-task-definitions-2026-10-12.md",
+      "line": 47,
+      "heading": "核验与后续",
+      "fact": "policy/task section: 核验与后续"
+    }
+  ],
+  "tools": [
+    "get_balance",
+    "get_consumption",
+    "get_recent_bills",
+    "list_plans",
+    "get_my_subscription",
+    "list_models",
+    "recharge",
+    "refund_recharge",
+    "subscribe_plan",
+    "change_plan",
+    "cancel_subscription"
+  ],
+  "rules": [
+    "read-only tools may answer directly; write tools require review and explicit confirmation",
+    "missing amount/order must trigger a clarification question, not a guessed write",
+    "confirmation must bind to the same tenant, action and arguments",
+    "cancellation must clear the pending action without changing business state",
+    "task success must be verified against the database/ledger/orders, not the model self-report"
+  ],
+  "knowledge_base": {
+    "source": "docs/customer-service-evaluation-contract-2026-10-09.md",
+    "chunks": [
+      "高置信不是直接执行授权：只读查询可以直达，写操作仍要复核和确认。",
+      "缺金额/缺订单时应追问，不能猜参数或提前生成预览。",
+      "写操作流程：申请 → 补参 → 复核 → 预览 → 用户明确确认 → 再校验 → 幂等执行。",
+      "任务通过必须核对数据库/账本/订单/订阅或只读数据真值。"
+    ]
+  }
+}
