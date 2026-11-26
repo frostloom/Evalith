@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-11-26T08:18:45+00:00",
+  "source_scope_digest": "2a009416784bb7c7f04ffe9c8e7203afafca62e3a9c562aed01edf1461eb31ae",
+  "source_root": "/Users/bytedance/项目/evalscope-evalgen/examples/minimal/project",
+  "file_hashes": {
+    "app/data.json": "ebab6a56b06e9d2fc439f4be51ab6a4a2abcc9de7075f8aacaa37f37cb97bc5a",
+    "app/main.py": "dfd9f226e13e82363628561d821dc2899fd3b4625a2fd5f418f34cd5ebb12487",
+    "docs/policy.md": "bd827a3322749841e0cfcbbb9497a49af278bf8e7c9949c24b4daa257483f2c5"
+  },
+  "task_versions": {
+    "minimal-001": 1
+  },
+  "task_count": 1,
+  "eval_set_sha256": "4924b60d5fb3c0ee4cbdacd00d5535a24175d5ac81c5bad82a812f04aa260e1d"
+}

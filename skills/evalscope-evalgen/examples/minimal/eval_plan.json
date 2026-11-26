@@ -1,0 +1,21 @@
+{
+  "plan_id": "plan-20261126061527",
+  "project": "minimal",
+  "count": 1,
+  "difficulty_ratio": {
+    "easy": 0.4,
+    "medium": 0.4,
+    "hard": 0.2
+  },
+  "difficulty_counts": {
+    "easy": 1,
+    "medium": 0,
+    "hard": 0
+  },
+  "failure_ratio": 0.2,
+  "failure_count": 0,
+  "focus": [],
+  "approved_by_user": true,
+  "approved_at": "2026-11-26T06:15:27+00:00",
+  "notes": "Approved example: count and difficulty confirmed by the user."
+}

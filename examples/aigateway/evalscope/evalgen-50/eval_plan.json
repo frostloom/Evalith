@@ -1,0 +1,21 @@
+{
+  "plan_id": "plan-20261126084237121452",
+  "project": "ai-gateway-cs",
+  "count": 50,
+  "difficulty_ratio": {
+    "easy": 0.4,
+    "medium": 0.4,
+    "hard": 0.2
+  },
+  "difficulty_counts": {
+    "easy": 20,
+    "medium": 20,
+    "hard": 10
+  },
+  "failure_ratio": 0.2,
+  "failure_count": 10,
+  "focus": [],
+  "approved_by_user": true,
+  "approved_at": "2026-11-26T08:42:37+00:00",
+  "notes": "Approved by the user request: generate 50 ai-gateway customer-service tasks with the default 4:4:2 ratio."
+}

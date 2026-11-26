@@ -1695,6 +1695,18 @@ index 00000000..aedf528b
 +- 演示视频录制方式。
 +- ai-gateway 合成 wrapper 需要 Go + C 工具链；这是外部侧依赖，不影响 EvalScope 核心。
 +- ai-gateway 的完整 MySQL/Redis/billing 全栈作为后续真实回归，不进首次 demo。
+diff --git a/evalscope/benchmarks/_index.json b/evalscope/benchmarks/_index.json
+index d7c3c5af..dfa21678 100644
+--- a/evalscope/benchmarks/_index.json
++++ b/evalscope/benchmarks/_index.json
+@@ -219,6 +219,7 @@
+  "pope": "evalscope.benchmarks.pope.pope_adapter",
+  "prbench": "evalscope.benchmarks.prbench.prbench_adapter",
+  "process_bench": "evalscope.benchmarks.process_bench.process_bench_adapter",
++ "project_eval": "evalscope.benchmarks.project_eval.project_eval_adapter",
+  "pubmedqa": "evalscope.benchmarks.pumed_qa.pubmed_qa_adapter",
+  "qasc": "evalscope.benchmarks.qasc.qasc_adapter",
+  "qwen_image_bench": "evalscope.benchmarks.qwen_image_bench.qwen_image_bench_adapter",
 diff --git a/evalscope/benchmarks/project_eval/__init__.py b/evalscope/benchmarks/project_eval/__init__.py
 new file mode 100644
 index 00000000..e69de29b

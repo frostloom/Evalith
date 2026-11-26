@@ -1,0 +1,72 @@
+{
+  "root": "/Users/bytedance/项目/evalscope-evalgen/examples/minimal/project",
+  "created_at": "2026-11-26T06:47:57+00:00",
+  "selected": [
+    "app",
+    "docs"
+  ],
+  "exclude_patterns": [],
+  "knowledge_dirs": [
+    "docs"
+  ],
+  "limits": {
+    "max_files": 400,
+    "max_total_chars": 120000,
+    "max_file_bytes": 512000,
+    "excerpt_chars": 8000,
+    "fingerprint_bytes": 8388608
+  },
+  "files": [
+    {
+      "path": "app/data.json",
+      "sha256": "ebab6a56b06e9d2fc439f4be51ab6a4a2abcc9de7075f8aacaa37f37cb97bc5a",
+      "hash_truncated": false,
+      "size": 72,
+      "mtime_ns": 1795669540959933799,
+      "binary": false,
+      "knowledge": false,
+      "headings": [],
+      "line_count": 1,
+      "sent": true,
+      "sent_reason": null,
+      "redactions": 0,
+      "excerpt": "{\"orders\": {\"T-1001\": {\"status\": \"completed\"}}, \"balance_cent\": 200000}\n"
+    },
+    {
+      "path": "app/main.py",
+      "sha256": "dfd9f226e13e82363628561d821dc2899fd3b4625a2fd5f418f34cd5ebb12487",
+      "hash_truncated": false,
+      "size": 82,
+      "mtime_ns": 1795669540957799657,
+      "binary": false,
+      "knowledge": false,
+      "headings": [],
+      "line_count": 2,
+      "sent": true,
+      "sent_reason": null,
+      "redactions": 0,
+      "excerpt": "def get_order(order_id):\n    return {\"order_id\": order_id, \"status\": \"completed\"}\n"
+    },
+    {
+      "path": "docs/policy.md",
+      "sha256": "bd827a3322749841e0cfcbbb9497a49af278bf8e7c9949c24b4daa257483f2c5",
+      "hash_truncated": false,
+      "size": 39,
+      "mtime_ns": 1795669540961124160,
+      "binary": false,
+      "knowledge": true,
+      "headings": [
+        "订单状态"
+      ],
+      "line_count": 3,
+      "sent": true,
+      "sent_reason": null,
+      "redactions": 0,
+      "excerpt": "# 订单状态\n\ncompleted 是终态。\n"
+    }
+  ],
+  "excluded": [],
+  "sensitive_rejected": [],
+  "scope_digest": "2a009416784bb7c7f04ffe9c8e7203afafca62e3a9c562aed01edf1461eb31ae",
+  "total_chars": 177
+}

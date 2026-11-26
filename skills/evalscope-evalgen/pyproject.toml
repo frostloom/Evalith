@@ -1,0 +1,12 @@
+[project]
+name = "evalscope-evalgen"
+version = "0.1.0"
+description = "Coding-agent skill that generates EvalScope business-agent eval sets from local source and knowledge bases"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = []
+
+[tool.setuptools]
+py-modules = []
